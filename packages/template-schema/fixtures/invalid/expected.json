@@ -1,0 +1,142 @@
+{
+  "missing-schema-version.json": {
+    "path": "/schemaVersion",
+    "description": "schemaVersion is required"
+  },
+  "wrong-schema-version.json": {
+    "path": "/schemaVersion",
+    "description": "schemaVersion must be 1"
+  },
+  "float-time.json": {
+    "path": "/tracks/0/items/0/startUs",
+    "description": "Times are integer microseconds"
+  },
+  "negative-time.json": {
+    "path": "/tracks/0/items/0/startUs",
+    "description": "Times are non-negative"
+  },
+  "zero-duration.json": {
+    "path": "/tracks/0/items/0/durationUs",
+    "description": "Item durations are greater than zero"
+  },
+  "zero-template-duration.json": {
+    "path": "/durationUs",
+    "description": "Template duration is greater than zero"
+  },
+  "position-out-of-range.json": {
+    "path": "/tracks/1/items/0/position/x",
+    "description": "Positions are normalized 0-1"
+  },
+  "unknown-slot-kind.json": {
+    "path": "/slots/0/kind",
+    "description": "Slot kind is video, image, audio or text"
+  },
+  "unknown-track-type.json": {
+    "path": "/tracks/0/type",
+    "description": "Track type is video, overlay or audio"
+  },
+  "unknown-transition.json": {
+    "path": "/tracks/0/items/0/transitionIn/type",
+    "description": "Transition type is from the v1 list"
+  },
+  "unknown-animation.json": {
+    "path": "/tracks/1/items/0/animation/in",
+    "description": "Animation name is from the v1 list"
+  },
+  "unknown-anchor.json": {
+    "path": "/tracks/1/items/0/position/anchor",
+    "description": "Anchor is one of the nine named points"
+  },
+  "bad-color.json": {
+    "path": "/canvas/background",
+    "description": "Colors are #RRGGBB or #RRGGBBAA"
+  },
+  "unknown-field.json": {
+    "path": "/canvas",
+    "description": "Unknown fields are rejected"
+  },
+  "bad-id.json": {
+    "path": "/id",
+    "description": "Ids use letters, digits, '-' and '_'"
+  },
+  "canvas-too-small.json": {
+    "path": "/canvas/width",
+    "description": "Canvas width is at least 16 px"
+  },
+  "speed-out-of-range.json": {
+    "path": "/tracks/0/items/0/speed",
+    "description": "Speed is 0.25 to 4"
+  },
+  "unknown-fit.json": {
+    "path": "/tracks/0/items/0/fit",
+    "description": "Fit is cover, contain or fill"
+  },
+  "text-item-on-video-track.json": {
+    "path": "/tracks/0/items/0",
+    "description": "Video tracks hold media items only"
+  },
+  "sticker-missing-asset.json": {
+    "path": "/tracks/1/items/0/asset",
+    "description": "Stickers need an asset"
+  },
+  "duplicate-slot-id.json": {
+    "path": "/slots/1/id",
+    "description": "Slot ids are unique"
+  },
+  "duplicate-track-id.json": {
+    "path": "/tracks/1/id",
+    "description": "Track ids are unique"
+  },
+  "unknown-slot-reference.json": {
+    "path": "/tracks/0/items/0/slot",
+    "description": "Every slot reference exists"
+  },
+  "video-item-uses-audio-slot.json": {
+    "path": "/tracks/0/items/0/slot",
+    "description": "Video tracks use video or image slots"
+  },
+  "audio-item-uses-video-slot.json": {
+    "path": "/tracks/1/items/0/slot",
+    "description": "Audio tracks use audio slots"
+  },
+  "text-item-uses-video-slot.json": {
+    "path": "/tracks/1/items/0/slot",
+    "description": "Text items use text slots"
+  },
+  "item-past-end.json": {
+    "path": "/tracks/0/items/0/durationUs",
+    "description": "Items end within durationUs"
+  },
+  "item-starts-past-end.json": {
+    "path": "/tracks/0/items/0/durationUs",
+    "description": "Items end within durationUs"
+  },
+  "overlapping-video-items.json": {
+    "path": "/tracks/0/items/1/startUs",
+    "description": "Items on a video track don't overlap"
+  },
+  "transition-longer-than-item.json": {
+    "path": "/tracks/0/items/0/transitionIn/durationUs",
+    "description": "A transition fits inside its item"
+  },
+  "text-longer-than-max-chars.json": {
+    "path": "/tracks/1/items/0/text/default",
+    "description": "Default text fits maxChars"
+  },
+  "music-unknown-slot.json": {
+    "path": "/audio/music/slot",
+    "description": "Music references an existing slot"
+  },
+  "music-uses-video-slot.json": {
+    "path": "/audio/music/slot",
+    "description": "Music uses an audio slot"
+  },
+  "music-starts-past-end.json": {
+    "path": "/audio/music/startUs",
+    "description": "Music starts before the template ends"
+  },
+  "unknown-safe-zone-preset.json": {
+    "path": "/safeZones/preset",
+    "description": "Safe zone preset is from the v1 list"
+  }
+}
