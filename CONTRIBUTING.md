@@ -24,6 +24,7 @@ This rule keeps two people from building the same thing, and stops merge conflic
    - After **14 days** with no comment from you, the bot posts a reminder.
    - After **21 days**, the claim is released automatically and anyone can `/claim` it.
 7. **Release it** with `/unclaim` if you stop working on it.
+8. **Closing the issue clears its status.** When the issue closes (for example, when your PR with `Closes #N` merges), the `status: in progress` label is removed automatically.
 
 **Large or shared areas.** Some areas break easily when two people edit them at once: `packages/template-schema`, shared shaders, and the native bridge API. For these, post a short plan in the issue and wait for a maintainer's 👍 before you start.
 
