@@ -59,7 +59,7 @@ Power users can open the same project in Pro mode and edit every layer on a full
 
 ## Product principles
 
-1. **Template-first.** The default flow is *pick → fill → tweak → export*. A timeline is optional.
+1. **Template-first.** The default flow is _pick → fill → tweak → export_. A timeline is optional.
 2. **Vertical-native.** 9:16 at 1080×1920 is the default canvas. Safe zones for TikTok, Reels, and Shorts UI are always visible.
 3. **On-device and private.** No uploads, no account required, no analytics without opt-in.
 4. **Hardware-accelerated.** Every platform uses its native GPU and hardware codecs. We never write our own codecs.
@@ -127,24 +127,24 @@ flowchart TB
 
 ## Tech stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| Monorepo | **pnpm workspaces + Turborepo** | Fast, simple, works well with Expo and Vite |
-| Language (shared) | **TypeScript** (strict) | Team strength. One language for UI and core logic. |
-| Schema | **Zod**, exported to **JSON Schema** | Runtime validation in TS. Codegen for Swift and Kotlin. |
-| Mobile UI | **Expo (React Native)**, Expo Router, Reanimated, Gesture Handler | One UI codebase for iOS and Android, native-quality gestures |
-| Mobile state | **Zustand** + **Immer** | Small and predictable, fits undo/redo |
-| Mobile storage | **expo-sqlite** + app sandbox files | Offline project library |
-| iOS engine | **Swift**, AVFoundation (`AVMutableComposition`, custom `AVVideoCompositing`), **Metal**, Core Text, VideoToolbox | Hardware decode and encode, GPU compositing |
-| Android engine | **Kotlin**, **AndroidX Media3** (`Transformer`, `Composition`, `CompositionPlayer`, `Effect`), OpenGL ES, MediaCodec | Google's supported path for on-device editing |
-| Native bridge | **Expo Modules API** (Swift and Kotlin) | Typed, modern, no hand-written JSI |
-| Web UI | **Vite + React** | Fast dev loop, shares components and logic with mobile |
-| Web engine | **WebCodecs**, **WebGL2 → WebGPU**, **Mediabunny** (demux/mux), Web Workers, OPFS | Hardware codecs in the browser, off-main-thread rendering, local file storage |
-| Desktop | **Tauri 2** | Small binaries. Reuses `apps/web`. Rust side available for native file I/O. |
-| Captions (ASR) | **WhisperKit** (iOS), **whisper.cpp** (Android, Web via WASM) | On-device speech-to-text |
-| Testing | Vitest, Jest (RN), XCTest, JUnit/Robolectric, Playwright, golden-frame diffing | See [Testing strategy](#testing-strategy) |
-| CI | GitHub Actions (+ EAS Build for mobile binaries) | Standard and free for open source |
-| Crash reporting | Opt-in only, self-hostable (e.g. Sentry or GlitchTip) | Privacy principle |
+| Layer             | Choice                                                                                                               | Why                                                                           |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Monorepo          | **pnpm workspaces + Turborepo**                                                                                      | Fast, simple, works well with Expo and Vite                                   |
+| Language (shared) | **TypeScript** (strict)                                                                                              | Team strength. One language for UI and core logic.                            |
+| Schema            | **Zod**, exported to **JSON Schema**                                                                                 | Runtime validation in TS. Codegen for Swift and Kotlin.                       |
+| Mobile UI         | **Expo (React Native)**, Expo Router, Reanimated, Gesture Handler                                                    | One UI codebase for iOS and Android, native-quality gestures                  |
+| Mobile state      | **Zustand** + **Immer**                                                                                              | Small and predictable, fits undo/redo                                         |
+| Mobile storage    | **expo-sqlite** + app sandbox files                                                                                  | Offline project library                                                       |
+| iOS engine        | **Swift**, AVFoundation (`AVMutableComposition`, custom `AVVideoCompositing`), **Metal**, Core Text, VideoToolbox    | Hardware decode and encode, GPU compositing                                   |
+| Android engine    | **Kotlin**, **AndroidX Media3** (`Transformer`, `Composition`, `CompositionPlayer`, `Effect`), OpenGL ES, MediaCodec | Google's supported path for on-device editing                                 |
+| Native bridge     | **Expo Modules API** (Swift and Kotlin)                                                                              | Typed, modern, no hand-written JSI                                            |
+| Web UI            | **Vite + React**                                                                                                     | Fast dev loop, shares components and logic with mobile                        |
+| Web engine        | **WebCodecs**, **WebGL2 → WebGPU**, **Mediabunny** (demux/mux), Web Workers, OPFS                                    | Hardware codecs in the browser, off-main-thread rendering, local file storage |
+| Desktop           | **Tauri 2**                                                                                                          | Small binaries. Reuses `apps/web`. Rust side available for native file I/O.   |
+| Captions (ASR)    | **WhisperKit** (iOS), **whisper.cpp** (Android, Web via WASM)                                                        | On-device speech-to-text                                                      |
+| Testing           | Vitest, Jest (RN), XCTest, JUnit/Robolectric, Playwright, golden-frame diffing                                       | See [Testing strategy](#testing-strategy)                                     |
+| CI                | GitHub Actions (+ EAS Build for mobile binaries)                                                                     | Standard and free for open source                                             |
+| Crash reporting   | Opt-in only, self-hostable (e.g. Sentry or GlitchTip)                                                                | Privacy principle                                                             |
 
 ---
 
@@ -196,13 +196,25 @@ Full example: [`templates/examples/hook-and-reveal.json`](templates/examples/hoo
   "durationUs": 9000000,
   "slots": [{ "id": "clip1", "kind": "video", "label": "Your hook shot" }],
   "tracks": [
-    { "id": "main", "type": "video",
-      "items": [{ "slot": "clip1", "startUs": 0, "durationUs": 3000000, "fit": "cover" }] },
-    { "id": "text", "type": "overlay",
-      "items": [{ "kind": "text", "startUs": 200000, "durationUs": 2600000,
-                  "text": { "default": "Wait for it…", "editable": true },
-                  "animation": { "in": "pop", "out": "fade" } }] }
-  ]
+    {
+      "id": "main",
+      "type": "video",
+      "items": [{ "slot": "clip1", "startUs": 0, "durationUs": 3000000, "fit": "cover" }],
+    },
+    {
+      "id": "text",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "startUs": 200000,
+          "durationUs": 2600000,
+          "text": { "default": "Wait for it…", "editable": true },
+          "animation": { "in": "pop", "out": "fade" },
+        },
+      ],
+    },
+  ],
 }
 ```
 
@@ -212,20 +224,20 @@ Full example: [`templates/examples/hook-and-reveal.json`](templates/examples/hoo
 
 Estimates assume a **small team (2–5 people)** working part-time to full-time. Phases overlap where noted.
 
-| Phase | Name | Est. duration | Depends on | Ships |
-|---|---|---|---|---|
-| 0 | Foundations | 1–2 weeks | | Repo, tooling, CI, design basics |
-| 1 | Template format & core model | 3–4 weeks | 0 | `template-schema` v1, `core` resolver |
-| 2 | iOS render engine | 5–6 weeks | 1 | Preview and export on iPhone |
-| 3 | Android render engine | 5–6 weeks | 1 (parallel with 2) | Preview and export on Android |
-| 4 | Mobile app MVP | 6 weeks | 2, 3 | Internal alpha: full template flow |
-| 5 | Performance system | 3–4 weeks | 4 | Proxies, preview tiers, caching |
-| 6 | On-device auto-captions | 3–4 weeks | 4 | Animated captions from speech |
-| 7 | Beta & store launch | 3–4 weeks | 5, 6 | **v1.0 on App Store & Google Play** |
-| 8 | Web app | 6–8 weeks | 1 (can start after 4) | Browser editor |
-| 9 | Desktop app | 2–3 weeks | 8 | macOS / Windows / Linux builds |
-| 10 | Pro mode | 8+ weeks | 7 | Multi-track timeline, keyframes, 4K tiers |
-| 11 | Community templates & plugins | ongoing | 7 | Template sharing, plugin API |
+| Phase | Name                          | Est. duration | Depends on            | Ships                                     |
+| ----- | ----------------------------- | ------------- | --------------------- | ----------------------------------------- |
+| 0     | Foundations                   | 1–2 weeks     |                       | Repo, tooling, CI, design basics          |
+| 1     | Template format & core model  | 3–4 weeks     | 0                     | `template-schema` v1, `core` resolver     |
+| 2     | iOS render engine             | 5–6 weeks     | 1                     | Preview and export on iPhone              |
+| 3     | Android render engine         | 5–6 weeks     | 1 (parallel with 2)   | Preview and export on Android             |
+| 4     | Mobile app MVP                | 6 weeks       | 2, 3                  | Internal alpha: full template flow        |
+| 5     | Performance system            | 3–4 weeks     | 4                     | Proxies, preview tiers, caching           |
+| 6     | On-device auto-captions       | 3–4 weeks     | 4                     | Animated captions from speech             |
+| 7     | Beta & store launch           | 3–4 weeks     | 5, 6                  | **v1.0 on App Store & Google Play**       |
+| 8     | Web app                       | 6–8 weeks     | 1 (can start after 4) | Browser editor                            |
+| 9     | Desktop app                   | 2–3 weeks     | 8                     | macOS / Windows / Linux builds            |
+| 10    | Pro mode                      | 8+ weeks      | 7                     | Multi-track timeline, keyframes, 4K tiers |
+| 11    | Community templates & plugins | ongoing       | 7                     | Template sharing, plugin API              |
 
 **Milestones**
 
@@ -255,20 +267,21 @@ A phase is done only when every exit criterion is met.
    - [x] Add `CONTRIBUTING.md`, issue and PR templates
    - [x] Write ADR 0001 (build from scratch rather than fork OpenCut)
    - [ ] Enable branch protection on `main`: require PR, 1 review, passing CI, linear history
-   - [ ] Create GitHub Project board with columns *Backlog → Ready → In progress → Review → Done*
+   - [ ] Create GitHub Project board with columns _Backlog → Ready → In progress → Review → Done_
    - [ ] Create labels: `phase:0`…`phase:11`, `area:schema`, `area:ios`, `area:android`, `area:web`, `area:ui`, `good first issue`
    - [ ] Turn every unchecked step in this README into an issue linked to its phase
    - [x] Add the **status rule** automation: `/claim` and `/unclaim` on issues, overlapping-PR warnings, stale-claim release (see [CONTRIBUTING.md](CONTRIBUTING.md#status-rule-claim-work-before-starting))
    - [ ] Create the `status: in progress` label (the claim bot also adds it automatically)
 2. **Toolchain**
-   - [ ] Pin Node 22 LTS (`.nvmrc`) and pnpm 9 (`packageManager` field, Corepack)
-   - [ ] Add Turborepo with `build`, `dev`, `lint`, `test`, `typecheck` pipelines
-   - [ ] Shared `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`)
-   - [ ] ESLint (flat config) + Prettier. Add SwiftLint and ktlint for the native code.
-   - [ ] Husky + lint-staged pre-commit hook. Add commitlint for Conventional Commits.
+   - [x] Pin Node 22 LTS (`.nvmrc`) and pnpm 9 (`packageManager` field, Corepack)
+   - [x] Add Turborepo with `build`, `dev`, `lint`, `test`, `typecheck` pipelines
+   - [x] Shared `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`)
+   - [x] ESLint (flat config) + Prettier
+   - [ ] SwiftLint and ktlint for the native code (lands with Phases 2 and 3)
+   - [x] Husky + lint-staged pre-commit hook. Add commitlint for Conventional Commits.
 3. **CI (GitHub Actions)**
-   - [ ] `ci.yml`: install → lint → typecheck → unit tests on every PR
-   - [ ] Cache the pnpm store and Turborepo outputs
+   - [x] `ci.yml`: install → lint → typecheck → unit tests on every PR
+   - [x] Cache the pnpm store and Turborepo outputs
    - [ ] macOS runner job for iOS build and test (added in Phase 2)
    - [ ] Ubuntu job for Android build and test (added in Phase 3)
 4. **Release tooling**
@@ -280,7 +293,7 @@ A phase is done only when every exit criterion is met.
    - [ ] Register a domain (e.g. `stackreel.app` or `getstackreel.com`)
    - [ ] Draft a privacy policy: "no data collected" plus the opt-in crash reporting clause
 6. **Design basics**
-   - [ ] Figma file with user flows: *Home → Template gallery → Fill slots → Preview/Tweak → Export → Share*
+   - [ ] Figma file with user flows: _Home → Template gallery → Fill slots → Preview/Tweak → Export → Share_
    - [ ] Design tokens (color, type scale, spacing, radii, motion durations) in `packages/ui`
    - [ ] App icon and wordmark v0
    - [ ] Safe-zone overlays for TikTok, Reels, and Shorts (top and bottom UI, right-side buttons)
@@ -288,6 +301,7 @@ A phase is done only when every exit criterion is met.
 **Deliverables:** working monorepo, green CI, project board, name reserved.
 
 **Exit criteria**
+
 - `pnpm install && pnpm test` passes on a fresh clone (macOS, Linux, Windows)
 - CI runs on every PR in under 5 minutes
 - Every Phase 1 step has an issue
@@ -296,7 +310,7 @@ A phase is done only when every exit criterion is met.
 
 ### Phase 1: Template format & core model
 
-**Goal:** Define the template format and the logic that turns *template + user clips* into a *render plan*.
+**Goal:** Define the template format and the logic that turns _template + user clips_ into a _render plan_.
 This phase has no video code. It is pure, fully tested TypeScript.
 
 **Steps**
@@ -304,8 +318,8 @@ This phase has no video code. It is pure, fully tested TypeScript.
 1. **Write the spec first**
    - [ ] `docs/template-format.md`: every field, its units, defaults, and an example
    - [ ] Decide the v1 feature set: video, image, and audio slots; text overlays; 6–8 transitions (cut, crossfade, whip-pan, zoom-punch, slide, spin); 8–10 text animations; fit modes (`cover`, `contain`, `fill`); speed (0.25×–4×); volume and fades; music with ducking
-   - [ ] Write ADR 0002: *integer microseconds for all time values*
-   - [ ] Write ADR 0003: *normalized coordinates and anchor points*
+   - [ ] Write ADR 0002: _integer microseconds for all time values_
+   - [ ] Write ADR 0003: _normalized coordinates and anchor points_
 2. **Implement `@stackreel/template-schema`**
    - [ ] Zod schema for `Template`, `Slot`, `Track`, `Item` (`MediaItem`, `TextItem`, `StickerItem`), `Transition`, `Animation`, `Style`
    - [ ] Strong types exported via `z.infer`
@@ -331,6 +345,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
 **Deliverables:** `@stackreel/template-schema@0.1.0`, `@stackreel/core@0.1.0`, 10 templates, spec doc.
 
 **Exit criteria**
+
 - 100% of sample templates validate and resolve
 - At least 90% line coverage on `core` and `template-schema`
 - JSON Schema is published as a build artifact for the native teams
@@ -340,7 +355,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
 ### Phase 2: iOS render engine
 
 **Goal:** Given a render plan, play a real-time preview and export an H.264 or HEVC MP4 on iPhone, fully hardware-accelerated.
-*Runs in parallel with Phase 3.*
+_Runs in parallel with Phase 3._
 
 **Steps**
 
@@ -376,6 +391,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
    - [ ] Benchmarks on the oldest supported device (iPhone XS / A12): preview fps and export speed
 
 **Exit criteria (M1, iOS)**
+
 - All 10 sample templates export correctly on iPhone 12 or newer
 - Preview holds ≥ 30 fps at 1080p on iPhone 12, with no dropped frames during transitions
 - Exporting a 30 s 1080p30 video takes ≤ 15 s on iPhone 12
@@ -416,6 +432,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
    - [ ] Instrumented tests export each shared fixture and compare golden frames (SSIM ≥ 0.97 vs. iOS goldens)
 
 **Exit criteria (M1, Android)**
+
 - All sample templates export correctly on a Pixel 7-class device and a mid-range Samsung A-series
 - Golden frames match iOS within tolerance
 - The bridge API is **identical** to iOS (same TS types)
@@ -424,17 +441,17 @@ This phase has no video code. It is pure, fully tested TypeScript.
 
 ### Phase 4: Mobile app MVP
 
-**Goal:** The full user flow, *pick a template → fill → tweak → export → share*, works end to end on both platforms.
+**Goal:** The full user flow, _pick a template → fill → tweak → export → share_, works end to end on both platforms.
 
 **Steps**
 
 1. **App scaffold**
    - [ ] `apps/mobile` with Expo SDK (latest), Expo Router, TypeScript strict, development build (not Expo Go, because we need native modules)
-   - [ ] Navigation: tabs *Templates* / *Projects* / *Settings*
+   - [ ] Navigation: tabs _Templates_ / _Projects_ / _Settings_
    - [ ] Theme from `packages/ui` tokens. Dark mode by default.
 2. **Template gallery**
    - [ ] Grid of templates with auto-playing muted previews (lazy, at most 2 playing at once)
-   - [ ] Categories and filters: *Trending style*, *Travel*, *Food*, *Fitness*, *Talking head*, *Product*
+   - [ ] Categories and filters: _Trending style_, _Travel_, _Food_, _Fitness_, _Talking head_, _Product_
    - [ ] Template detail: preview, slot count, duration, "Use template"
 3. **Fill slots**
    - [ ] Media picker (`expo-image-picker` / native picker) with multi-select. Auto-assign clips to slots in order.
@@ -465,6 +482,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
    - [ ] Every team member makes and posts 5 real reels and files issues
 
 **Exit criteria (M2)**
+
 - A new user goes from opening the app to an exported reel in **under 3 minutes** without help
 - No crashes across 50 consecutive exports on the test devices
 - Cold start under 2 s on mid-range devices
@@ -501,6 +519,7 @@ Premiere and CapCut use.
    - [ ] Benchmark suite in CI for the engines (simulator/emulator), tracking regressions
 
 **Exit criteria**
+
 - 4K60 HEVC source clips preview at ≥ 30 fps on a 3-year-old mid-range phone (via proxies)
 - No out-of-memory crashes with 10 × 4K clips in one project
 
@@ -520,7 +539,7 @@ Premiere and CapCut use.
    - [ ] Add a `captions` track type to the template schema (v1 → v2 with a migration): `words[] { text, startUs, endUs }`, grouped into lines
    - [ ] Line-breaking rules: max characters per line, max 2 lines, break on pauses longer than 300 ms
 3. **Caption styles**
-   - [ ] 8–10 presets: *Bold pop*, *Karaoke highlight*, *Word-by-word*, *Boxed*, *Minimal*, *Emoji emphasis*, …
+   - [ ] 8–10 presets: _Bold pop_, _Karaoke highlight_, _Word-by-word_, _Boxed_, _Minimal_, _Emoji emphasis_, …
    - [ ] Highlight the active word (color, scale, or background)
    - [ ] Position with safe-zone awareness (never under platform UI)
 4. **Caption editor**
@@ -531,6 +550,7 @@ Premiere and CapCut use.
    - [ ] Optional `.srt` / `.vtt` sidecar export
 
 **Exit criteria**
+
 - Captions for a 60 s clip are generated in ≤ 20 s on iPhone 12 / Pixel 7
 - Word timing accuracy within ±100 ms on the internal test set
 
@@ -553,7 +573,7 @@ Premiere and CapCut use.
 3. **Store assets**
    - [ ] App Store and Play listings: title, subtitle, keywords ("reels editor", "tiktok editor", "shorts maker", "no watermark")
    - [ ] Screenshots for every required device size, plus an app preview video (made with StackReel)
-   - [ ] Privacy nutrition label: *Data Not Collected*
+   - [ ] Privacy nutrition label: _Data Not Collected_
    - [ ] Age rating questionnaires. Export compliance (uses only standard encryption).
 4. **Compliance**
    - [ ] Verify the licenses of bundled fonts (OFL), music (CC0), and models (MIT)
@@ -565,6 +585,7 @@ Premiere and CapCut use.
    - [ ] Tag `v1.0.0` and publish release notes from Changesets
 
 **Exit criteria (M3)**
+
 - Live on both stores
 - Crash-free sessions ≥ 99.5% over the first week
 - First 1,000 exports with no P0 bugs
@@ -601,6 +622,7 @@ Premiere and CapCut use.
    - [ ] Golden-frame tests in headless Chromium against the shared fixtures
 
 **Exit criteria**
+
 - All sample templates export correctly in the latest Chrome, Edge, and Safari
 - 30 s 1080p export in ≤ 30 s on an M1 MacBook Air
 
@@ -620,6 +642,7 @@ Premiere and CapCut use.
 6. [ ] CI matrix builds on tags
 
 **Exit criteria (M4)**
+
 - Signed installers for all three OSes attached to a GitHub Release
 - Feature parity with the web app
 
@@ -642,6 +665,7 @@ Premiere and CapCut use.
 9. [ ] **Save as template**: turn any Pro project into a reusable template with slots
 
 **Exit criteria (M5)**
+
 - A 3-minute, 8-track, 4K project edits smoothly (via proxies) and exports correctly on High-tier devices
 
 ---
@@ -662,43 +686,43 @@ Premiere and CapCut use.
 
 ## Testing strategy
 
-| Level | Tooling | What it covers |
-|---|---|---|
-| Unit | Vitest | Schema validation, resolver, time math, commands |
-| Property-based | fast-check | Resolver invariants across random templates |
-| Native unit | XCTest, JUnit | Plan decoding, composition building |
-| **Golden-frame** | Engine export → sample frames → SSIM vs. reference PNGs | Visual parity across iOS, Android, and Web |
-| Component | React Native Testing Library | Screens and interactions |
-| E2E mobile | Maestro | Full flows on simulator and emulator |
-| E2E web | Playwright | Full flows in browsers |
-| Performance | Custom benchmark harness | Preview fps, export time, memory per tier |
+| Level            | Tooling                                                 | What it covers                                   |
+| ---------------- | ------------------------------------------------------- | ------------------------------------------------ |
+| Unit             | Vitest                                                  | Schema validation, resolver, time math, commands |
+| Property-based   | fast-check                                              | Resolver invariants across random templates      |
+| Native unit      | XCTest, JUnit                                           | Plan decoding, composition building              |
+| **Golden-frame** | Engine export → sample frames → SSIM vs. reference PNGs | Visual parity across iOS, Android, and Web       |
+| Component        | React Native Testing Library                            | Screens and interactions                         |
+| E2E mobile       | Maestro                                                 | Full flows on simulator and emulator             |
+| E2E web          | Playwright                                              | Full flows in browsers                           |
+| Performance      | Custom benchmark harness                                | Preview fps, export time, memory per tier        |
 
 **Shared fixtures:** `packages/template-schema/fixtures/` holds the plans and small CC0 media clips. Every engine consumes the
 same files, so a new feature is "done" only when its fixture passes on every engine.
 
 ## Performance budgets
 
-| Metric | Target (mid-range phone, 1080p) |
-|---|---|
-| Cold start | < 2 s |
-| Template gallery scroll | 60 fps |
-| Preview playback | ≥ 30 fps, 0 dropped frames during transitions |
-| Seek latency | < 150 ms |
-| Export 30 s @ 1080p30 | ≤ 20 s |
-| Peak memory during export | < 600 MB |
-| App download size | < 60 MB (models downloaded on demand) |
+| Metric                    | Target (mid-range phone, 1080p)               |
+| ------------------------- | --------------------------------------------- |
+| Cold start                | < 2 s                                         |
+| Template gallery scroll   | 60 fps                                        |
+| Preview playback          | ≥ 30 fps, 0 dropped frames during transitions |
+| Seek latency              | < 150 ms                                      |
+| Export 30 s @ 1080p30     | ≤ 20 s                                        |
+| Peak memory during export | < 600 MB                                      |
+| App download size         | < 60 MB (models downloaded on demand)         |
 
 ## Risks & mitigations
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| iOS and Android render output drifts apart | Templates look different per platform | Shared golden-frame fixtures. Shader math defined once in docs and ported carefully. |
-| Android codec fragmentation | Crashes or corrupt exports on some devices | Device matrix, quirks doc, fallback to software or lower-resolution encode |
-| Template format needs breaking changes | Old projects stop opening | `schemaVersion` + migrations from day one |
-| Scope creep toward a "pro editor" | MVP never ships | Pro mode is Phase 10, after v1.0 |
-| Web codec support varies by browser | Web app fails for some users | Feature detection, clear unsupported page, desktop app as fallback |
-| Music copyright | Store rejection, takedowns | Only CC0 bundled music. Users import their own. |
-| Small team burnout | Stalled project | Phases sized to 3–6 weeks with clear exit criteria. Cut scope rather than slip. |
+| Risk                                       | Impact                                     | Mitigation                                                                           |
+| ------------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| iOS and Android render output drifts apart | Templates look different per platform      | Shared golden-frame fixtures. Shader math defined once in docs and ported carefully. |
+| Android codec fragmentation                | Crashes or corrupt exports on some devices | Device matrix, quirks doc, fallback to software or lower-resolution encode           |
+| Template format needs breaking changes     | Old projects stop opening                  | `schemaVersion` + migrations from day one                                            |
+| Scope creep toward a "pro editor"          | MVP never ships                            | Pro mode is Phase 10, after v1.0                                                     |
+| Web codec support varies by browser        | Web app fails for some users               | Feature detection, clear unsupported page, desktop app as fallback                   |
+| Music copyright                            | Store rejection, takedowns                 | Only CC0 bundled music. Users import their own.                                      |
+| Small team burnout                         | Stalled project                            | Phases sized to 3–6 weeks with clear exit criteria. Cut scope rather than slip.      |
 
 ---
 

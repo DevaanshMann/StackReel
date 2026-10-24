@@ -21,10 +21,20 @@
       "type": "video",
       "items": [
         { "slot": "clip1", "startUs": 0, "durationUs": 3000000, "fit": "cover" },
-        { "slot": "clip2", "startUs": 3000000, "durationUs": 2000000, "fit": "cover",
-          "transitionIn": { "type": "whip-pan", "durationUs": 250000 } },
-        { "slot": "clip3", "startUs": 5000000, "durationUs": 4000000, "fit": "cover",
-          "transitionIn": { "type": "zoom-punch", "durationUs": 200000 } }
+        {
+          "slot": "clip2",
+          "startUs": 3000000,
+          "durationUs": 2000000,
+          "fit": "cover",
+          "transitionIn": { "type": "whip-pan", "durationUs": 250000 }
+        },
+        {
+          "slot": "clip3",
+          "startUs": 5000000,
+          "durationUs": 4000000,
+          "fit": "cover",
+          "transitionIn": { "type": "zoom-punch", "durationUs": 200000 }
+        }
       ]
     },
     {
@@ -36,7 +46,12 @@
           "startUs": 200000,
           "durationUs": 2600000,
           "text": { "default": "Wait for it…", "editable": true, "maxChars": 40 },
-          "style": { "font": "Inter-Black", "sizePx": 96, "color": "#FFFFFF", "stroke": { "color": "#000000", "widthPx": 6 } },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 96,
+            "color": "#FFFFFF",
+            "stroke": { "color": "#000000", "widthPx": 6 }
+          },
           "position": { "anchor": "center", "x": 0.5, "y": 0.22 },
           "animation": { "in": "pop", "out": "fade" }
         }
