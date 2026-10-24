@@ -11,3 +11,6 @@ labels: enhancement
 **Roadmap phase this fits into** (see README)
 
 **Alternatives considered**
+
+---
+Want to build this yourself? Comment `/claim` once the issue is open. Check first that nobody else is assigned.

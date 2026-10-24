@@ -2,6 +2,8 @@
 
 Closes #
 
+- [ ] I claimed the linked issue with `/claim` (it's assigned to me)
+
 ## Roadmap phase
 
 ## How I tested it

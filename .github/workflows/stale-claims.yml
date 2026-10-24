@@ -1,0 +1,70 @@
+name: Stale claims
+
+# Runs daily. A claim is "active" while the person who claimed it keeps commenting on the issue.
+# 14 days without a comment from them: reminder. 21 days: the claim is released so others can pick it up.
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const IN_PROGRESS = 'status: in progress';
+            const REMIND_DAYS = 14;
+            const RELEASE_DAYS = 21;
+            const DAY = 24 * 60 * 60 * 1000;
+            const { owner, repo } = context.repo;
+            const now = Date.now();
+
+            const issues = (await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', labels: IN_PROGRESS, per_page: 100,
+            })).filter(i => !i.pull_request);
+
+            for (const issue of issues) {
+              const issue_number = issue.number;
+              const events = await github.paginate(github.rest.issues.listEvents, { owner, repo, issue_number, per_page: 100 });
+              const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
+              let remaining = issue.assignees.map(a => a.login);
+
+              for (const login of issue.assignees.map(a => a.login)) {
+                const marker = `<!-- stale-claim-reminder:${login} -->`;
+                const times = [
+                  ...events.filter(e => e.event === 'assigned' && e.assignee && e.assignee.login === login).map(e => e.created_at),
+                  ...comments.filter(c => c.user.login === login).map(c => c.created_at),
+                ].map(t => Date.parse(t));
+                if (!times.length) continue;
+                const last = Math.max(...times);
+                const idleDays = (now - last) / DAY;
+
+                if (idleDays >= RELEASE_DAYS) {
+                  await github.rest.issues.removeAssignees({ owner, repo, issue_number, assignees: [login] });
+                  remaining = remaining.filter(l => l !== login);
+                  await github.rest.issues.createComment({
+                    owner, repo, issue_number,
+                    body: `@${login}'s claim was released after ${RELEASE_DAYS} days without activity. Anyone can now \`/claim\` this issue.`,
+                  });
+                } else if (idleDays >= REMIND_DAYS) {
+                  const reminded = comments.some(c => c.body && c.body.includes(marker) && Date.parse(c.created_at) > last);
+                  if (!reminded) {
+                    await github.rest.issues.createComment({
+                      owner, repo, issue_number,
+                      body: `${marker}\n👋 @${login}, are you still working on this? Leave a quick comment to keep your claim, ` +
+                        `or \`/unclaim\` to free it. It will be released automatically in ${RELEASE_DAYS - REMIND_DAYS} days.`,
+                    });
+                  }
+                }
+              }
+
+              if (!remaining.length) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name: IN_PROGRESS }).catch(() => {});
+              }
+            }

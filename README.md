@@ -258,6 +258,8 @@ A phase is done only when every exit criterion is met.
    - [ ] Create GitHub Project board with columns *Backlog → Ready → In progress → Review → Done*
    - [ ] Create labels: `phase:0`…`phase:11`, `area:schema`, `area:ios`, `area:android`, `area:web`, `area:ui`, `good first issue`
    - [ ] Turn every unchecked step in this README into an issue linked to its phase
+   - [x] Add the **status rule** automation: `/claim` and `/unclaim` on issues, overlapping-PR warnings, stale-claim release (see [CONTRIBUTING.md](CONTRIBUTING.md#status-rule-claim-work-before-starting))
+   - [ ] Create the `status: in progress` label (the claim bot also adds it automatically)
 2. **Toolchain**
    - [ ] Pin Node 22 LTS (`.nvmrc`) and pnpm 9 (`packageManager` field, Corepack)
    - [ ] Add Turborepo with `build`, `dev`, `lint`, `test`, `typecheck` pipelines
@@ -739,7 +741,10 @@ pnpm --filter web dev
 ## Contributing
 
 StackReel is early and moving fast. Read [CONTRIBUTING.md](CONTRIBUTING.md), then pick an issue labeled `good first issue`
-or the current phase. Architecture decisions are recorded in [`docs/adr/`](docs/adr/).
+or the current phase.
+
+**Status rule:** comment `/claim` on an issue before you start working on it. If someone already holds it, the bot tells you who to
+coordinate with. Open a draft PR early: a bot warns both authors when two open PRs change the same files. Architecture decisions are recorded in [`docs/adr/`](docs/adr/).
 
 ## License
 

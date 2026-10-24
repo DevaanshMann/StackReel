@@ -1,0 +1,79 @@
+name: Overlapping work check
+
+# When a PR is opened or updated, compare its changed files with every other open PR (drafts included).
+# If they touch the same files, post one warning comment that tags the authors involved, so they can
+# coordinate before anyone hits merge conflicts or overwrites someone else's work.
+#
+# Uses pull_request_target so it can comment on PRs from forks. It never checks out or runs PR code.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: overlap-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  overlap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const MARKER = '<!-- stackreel-overlap-check -->';
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+
+            const filesOf = async (pull_number) =>
+              (await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number, per_page: 100 }))
+                .map(f => f.filename);
+
+            const mine = new Set(await filesOf(pr.number));
+            const others = (await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 }))
+              .filter(p => p.number !== pr.number);
+
+            const overlaps = [];
+            for (const other of others) {
+              const shared = (await filesOf(other.number)).filter(f => mine.has(f));
+              if (shared.length) overlaps.push({ other, shared });
+            }
+
+            const existing = (await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number: pr.number, per_page: 100,
+            })).find(c => c.body && c.body.includes(MARKER));
+
+            if (!overlaps.length) {
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner, repo, comment_id: existing.id,
+                  body: `${MARKER}\n✅ No overlap anymore: no other open PR touches the same files.`,
+                });
+              }
+              return;
+            }
+
+            const lines = overlaps.map(({ other, shared }) => {
+              const who = other.user.login === pr.user.login ? 'you' : `@${other.user.login}`;
+              const list = shared.slice(0, 10).map(f => `\`${f}\``).join(', ');
+              const more = shared.length > 10 ? ` and ${shared.length - 10} more` : '';
+              return `- #${other.number} by ${who}${other.draft ? ' (draft)' : ''}: ${list}${more}`;
+            });
+
+            const body =
+              `${MARKER}\n⚠️ **Heads up: overlapping work.** @${pr.user.login}, this PR changes files that other open PRs also change:\n\n` +
+              lines.join('\n') +
+              `\n\nPlease coordinate before continuing: agree on who goes first, split the change, or rebase onto the other PR. ` +
+              `See the "Status rule" in CONTRIBUTING.md.`;
+
+            if (existing) {
+              if (existing.body !== body) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+              }
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body });
+            }
