@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "id": "every-feature",
+  "name": "Every feature",
+  "description": "Uses every field in the v1 format at least once.",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 60,
+    "background": "#101010FF"
+  },
+  "durationUs": 8000000,
+  "audio": {
+    "music": {
+      "slot": "music",
+      "startUs": 0,
+      "gainDb": -8,
+      "fadeInUs": 250000,
+      "fadeOutUs": 750000
+    },
+    "duckMusicUnderVoice": true
+  },
+  "slots": [
+    {
+      "id": "clip1",
+      "kind": "video",
+      "label": "Opener",
+      "minDurationUs": 2000000
+    },
+    {
+      "id": "photo",
+      "kind": "image",
+      "label": "A photo",
+      "optional": false
+    },
+    {
+      "id": "clip2",
+      "kind": "video",
+      "label": "Closer"
+    },
+    {
+      "id": "music",
+      "kind": "audio",
+      "label": "Music",
+      "optional": true,
+      "minDurationUs": 8000000
+    },
+    {
+      "id": "voice",
+      "kind": "audio",
+      "label": "Voice-over",
+      "optional": true
+    },
+    {
+      "id": "headline",
+      "kind": "text",
+      "label": "Headline",
+      "maxChars": 30
+    }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        {
+          "slot": "clip1",
+          "startUs": 0,
+          "durationUs": 3000000,
+          "fit": "cover",
+          "speed": 1.5,
+          "gainDb": -3,
+          "fadeInUs": 100000
+        },
+        {
+          "slot": "photo",
+          "startUs": 3000000,
+          "durationUs": 2000000,
+          "fit": "contain",
+          "transitionIn": {
+            "type": "slide",
+            "durationUs": 300000,
+            "direction": "up"
+          }
+        },
+        {
+          "slot": "clip2",
+          "startUs": 5000000,
+          "durationUs": 3000000,
+          "fit": "fill",
+          "speed": 0.5,
+          "fadeOutUs": 500000,
+          "transitionIn": {
+            "type": "crossfade",
+            "durationUs": 400000
+          }
+        }
+      ]
+    },
+    {
+      "id": "voice-over",
+      "type": "audio",
+      "items": [
+        {
+          "slot": "voice",
+          "startUs": 500000,
+          "durationUs": 4000000,
+          "gainDb": 2
+        }
+      ]
+    },
+    {
+      "id": "overlays",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "slot": "headline",
+          "startUs": 0,
+          "durationUs": 3000000,
+          "text": {
+            "default": "Day in my life",
+            "editable": true,
+            "maxChars": 30
+          },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 88,
+            "color": "#FFFFFF",
+            "align": "center",
+            "stroke": {
+              "color": "#000000",
+              "widthPx": 4
+            },
+            "shadow": {
+              "color": "#00000080",
+              "blurPx": 12,
+              "offsetXPx": 0,
+              "offsetYPx": 4
+            },
+            "background": {
+              "color": "#FF3366",
+              "paddingPx": 16,
+              "cornerRadiusPx": 12
+            }
+          },
+          "position": {
+            "anchor": "top",
+            "x": 0.5,
+            "y": 0.15,
+            "rotationDeg": -4
+          },
+          "animation": {
+            "in": "typewriter",
+            "out": "slide-up",
+            "inDurationUs": 600000,
+            "outDurationUs": 200000
+          }
+        },
+        {
+          "kind": "text",
+          "startUs": 2000000,
+          "durationUs": 2000000,
+          "text": {
+            "default": "Overlapping caption"
+          }
+        },
+        {
+          "kind": "sticker",
+          "startUs": 5000000,
+          "durationUs": 3000000,
+          "asset": "sparkles",
+          "widthNorm": 0.3,
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.95,
+            "y": 0.8
+          },
+          "animation": {
+            "in": "bounce"
+          }
+        }
+      ]
+    }
+  ],
+  "safeZones": {
+    "preset": "instagram-reels",
+    "insets": {
+      "top": 0.08,
+      "bottom": 0.2,
+      "left": 0.04,
+      "right": 0.12
+    }
+  }
+}

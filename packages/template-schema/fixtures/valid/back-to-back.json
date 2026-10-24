@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "back-to-back",
+  "name": "Back to back",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "durationUs": 4000000,
+  "slots": [
+    {
+      "id": "clip1",
+      "kind": "video",
+      "label": "Your clip"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        {
+          "slot": "clip1",
+          "startUs": 0,
+          "durationUs": 2000000
+        },
+        {
+          "slot": "clip1",
+          "startUs": 2000000,
+          "durationUs": 2000000,
+          "transitionIn": {
+            "type": "cut",
+            "durationUs": 0
+          }
+        }
+      ]
+    }
+  ]
+}

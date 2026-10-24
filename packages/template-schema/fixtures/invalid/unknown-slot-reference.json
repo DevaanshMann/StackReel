@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "minimal",
+  "name": "Minimal",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "durationUs": 3000000,
+  "slots": [
+    {
+      "id": "clip1",
+      "kind": "video",
+      "label": "Your clip"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        {
+          "slot": "clip9",
+          "startUs": 0,
+          "durationUs": 3000000
+        }
+      ]
+    }
+  ]
+}

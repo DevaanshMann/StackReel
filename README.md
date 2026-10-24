@@ -321,11 +321,11 @@ This phase has no video code. It is pure, fully tested TypeScript.
    - [ ] Write ADR 0002: _integer microseconds for all time values_
    - [ ] Write ADR 0003: _normalized coordinates and anchor points_
 2. **Implement `@stackreel/template-schema`**
-   - [ ] Zod schema for `Template`, `Slot`, `Track`, `Item` (`MediaItem`, `TextItem`, `StickerItem`), `Transition`, `Animation`, `Style`
-   - [ ] Strong types exported via `z.infer`
-   - [ ] Generate `stackreel-template.v1.json` (JSON Schema) at build time with `zod-to-json-schema`
-   - [ ] `validate(json)`: returns typed errors with JSON paths for the UI
-   - [ ] `migrate(json)`: no-op for v1, but the pipeline and tests exist from day one
+   - [x] Zod schema for `Template`, `Slot`, `Track`, `Item` (`MediaItem`, `TextItem`, `StickerItem`), `Transition`, `Animation`, `Style`
+   - [x] Strong types exported via `z.infer`
+   - [x] Generate `stackreel-template.v1.json` (JSON Schema) at build time with Zod's built-in `z.toJSONSchema`
+   - [x] `validate(json)`: returns typed errors with JSON paths for the UI
+   - [x] `migrate(json)`: no-op for v1, but the pipeline and tests exist from day one
 3. **Implement `@stackreel/core`**
    - [ ] `Project` model: `template` + `bindings` (slot → asset URI, trim in and out, crop) + `overrides` (text edits, style tweaks)
    - [ ] **Slot fitting:** when a user clip is longer than the slot, pick the best trim window (default: start, later "smart" via motion and faces). If it's shorter, freeze the last frame or slow it down, as the template's `shortClipPolicy` says.
@@ -337,7 +337,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
    - [ ] Create 10 built-in templates in `templates/examples/` covering every v1 feature
    - [ ] Each template ships with a `.thumb.jpg` and a short `.preview.mp4` (generated in Phase 4)
 5. **Testing**
-   - [ ] Unit tests for every schema rule (valid and invalid fixtures)
+   - [x] Unit tests for every schema rule (valid and invalid fixtures)
    - [ ] Property-based tests (fast-check) for the resolver: no negative durations, layers stay in bounds, transitions never overlap more than two clips
    - [ ] Snapshot tests: the render plan for each sample template
    - [ ] Export `fixtures/` so Swift and Kotlin tests use **the exact same JSON**
