@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+out/
+.turbo/
+coverage/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# iOS
+ios/Pods/
+ios/build/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+DerivedData/
+
+# Android
+.gradle/
+local.properties
+android/app/build/
+*.apk
+*.aab
+
+# Tauri / Rust
+target/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Media test fixtures (large files live in Git LFS or are downloaded by script)
+fixtures/media/*.mp4
+fixtures/media/*.mov
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
