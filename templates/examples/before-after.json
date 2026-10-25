@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "id": "before-after",
+  "name": "Before / After",
+  "description": "The before clip, a whip-pan to the after clip, corner labels and an optional caption.",
+  "canvas": { "width": 1080, "height": 1920, "fps": 30, "background": "#000000" },
+  "durationUs": 8000000,
+  "audio": { "music": { "slot": "music", "startUs": 0, "gainDb": -5, "fadeOutUs": 500000 } },
+  "slots": [
+    { "id": "before", "kind": "video", "label": "Before", "minDurationUs": 3500000 },
+    { "id": "after", "kind": "video", "label": "After", "minDurationUs": 4500000 },
+    { "id": "caption", "kind": "text", "label": "Caption", "optional": true, "maxChars": 40 },
+    { "id": "music", "kind": "audio", "label": "Background music", "optional": true }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        { "slot": "before", "startUs": 0, "durationUs": 3500000, "fit": "cover" },
+        {
+          "slot": "after",
+          "startUs": 3500000,
+          "durationUs": 4500000,
+          "fit": "cover",
+          "fadeOutUs": 300000,
+          "transitionIn": { "type": "whip-pan", "durationUs": 300000, "direction": "right" }
+        }
+      ]
+    },
+    {
+      "id": "labels",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "startUs": 200000,
+          "durationUs": 3200000,
+          "text": { "default": "BEFORE", "editable": true, "maxChars": 12 },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 72,
+            "color": "#FFFFFF",
+            "align": "left",
+            "background": { "color": "#00000099", "paddingPx": 16, "cornerRadiusPx": 12 }
+          },
+          "position": { "anchor": "top-left", "x": 0.06, "y": 0.09 },
+          "animation": { "in": "slide-down", "out": "none", "inDurationUs": 300000 }
+        },
+        {
+          "kind": "sticker",
+          "startUs": 2900000,
+          "durationUs": 1200000,
+          "asset": "arrow-curved",
+          "widthNorm": 0.24,
+          "position": { "anchor": "center", "x": 0.5, "y": 0.5, "rotationDeg": -20 },
+          "animation": { "in": "scale", "out": "fade" }
+        },
+        {
+          "kind": "text",
+          "startUs": 3700000,
+          "durationUs": 4300000,
+          "text": { "default": "AFTER", "editable": true, "maxChars": 12 },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 72,
+            "color": "#FFFFFF",
+            "align": "right",
+            "background": { "color": "#00000099", "paddingPx": 16, "cornerRadiusPx": 12 }
+          },
+          "position": { "anchor": "top-right", "x": 0.94, "y": 0.09 },
+          "animation": { "in": "slide-down", "out": "none", "inDurationUs": 300000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 4000000,
+          "durationUs": 3800000,
+          "slot": "caption",
+          "text": { "default": "3 months of consistency", "editable": true, "maxChars": 40 },
+          "style": {
+            "font": "Inter-Bold",
+            "sizePx": 60,
+            "color": "#FFFFFF",
+            "align": "center",
+            "stroke": { "color": "#000000", "widthPx": 4 }
+          },
+          "position": { "anchor": "bottom", "x": 0.5, "y": 0.78 },
+          "animation": { "in": "fade", "out": "fade", "inDurationUs": 400000, "outDurationUs": 200000 }
+        }
+      ]
+    }
+  ],
+  "safeZones": { "preset": "tiktok-reels-shorts" }
+}

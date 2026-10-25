@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "id": "travel-postcard",
+  "name": "Travel Postcard",
+  "description": "A destination title over your arrival shot, a map or ticket photo, then three spots with soft slides and crossfades.",
+  "canvas": { "width": 1080, "height": 1920, "fps": 25, "background": "#F4EDE1" },
+  "durationUs": 15000000,
+  "audio": {
+    "music": { "slot": "music", "startUs": 0, "gainDb": -4, "fadeInUs": 1000000, "fadeOutUs": 1500000 },
+    "duckMusicUnderVoice": false
+  },
+  "slots": [
+    { "id": "arrival", "kind": "video", "label": "Arrival shot", "minDurationUs": 3000000 },
+    { "id": "map", "kind": "image", "label": "Map, ticket or boarding pass photo", "optional": true },
+    { "id": "landmark", "kind": "video", "label": "A landmark", "minDurationUs": 2500000 },
+    { "id": "street", "kind": "video", "label": "Street life", "minDurationUs": 2500000 },
+    { "id": "sunset", "kind": "video", "label": "Golden hour", "minDurationUs": 5000000 },
+    { "id": "destination", "kind": "text", "label": "Destination", "maxChars": 24 },
+    { "id": "music", "kind": "audio", "label": "Background music", "optional": true }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        { "slot": "arrival", "startUs": 0, "durationUs": 3000000, "fit": "cover" },
+        {
+          "slot": "map",
+          "startUs": 3000000,
+          "durationUs": 2000000,
+          "fit": "contain",
+          "transitionIn": { "type": "crossfade", "durationUs": 400000 }
+        },
+        {
+          "slot": "landmark",
+          "startUs": 5000000,
+          "durationUs": 2500000,
+          "fit": "cover",
+          "transitionIn": { "type": "slide", "durationUs": 400000, "direction": "right" }
+        },
+        {
+          "slot": "street",
+          "startUs": 7500000,
+          "durationUs": 2500000,
+          "fit": "cover",
+          "transitionIn": { "type": "slide", "durationUs": 400000, "direction": "right" }
+        },
+        {
+          "slot": "sunset",
+          "startUs": 10000000,
+          "durationUs": 5000000,
+          "fit": "cover",
+          "fadeOutUs": 800000,
+          "transitionIn": { "type": "crossfade", "durationUs": 600000 }
+        }
+      ]
+    },
+    {
+      "id": "titles",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "startUs": 300000,
+          "durationUs": 2600000,
+          "slot": "destination",
+          "text": { "default": "Lisbon", "editable": true, "maxChars": 24 },
+          "style": {
+            "font": "PlayfairDisplay-BoldItalic",
+            "sizePx": 132,
+            "color": "#FFFFFF",
+            "align": "left",
+            "shadow": { "color": "#00000099", "blurPx": 12, "offsetXPx": 0, "offsetYPx": 4 }
+          },
+          "position": { "anchor": "top-left", "x": 0.08, "y": 0.14 },
+          "animation": { "in": "slide-right", "out": "fade", "inDurationUs": 400000, "outDurationUs": 300000 }
+        },
+        {
+          "kind": "sticker",
+          "startUs": 3200000,
+          "durationUs": 1600000,
+          "asset": "map-pin",
+          "widthNorm": 0.12,
+          "position": { "anchor": "bottom-left", "x": 0.1, "y": 0.78 },
+          "animation": { "in": "bounce", "out": "fade" }
+        },
+        {
+          "kind": "text",
+          "startUs": 10400000,
+          "durationUs": 4000000,
+          "text": { "default": "Day 1 · Portugal", "editable": true, "maxChars": 32 },
+          "style": {
+            "font": "Inter-Medium",
+            "sizePx": 44,
+            "color": "#FFFFFF",
+            "align": "left",
+            "background": { "color": "#00000080", "paddingPx": 18, "cornerRadiusPx": 14 }
+          },
+          "position": { "anchor": "bottom-left", "x": 0.08, "y": 0.8 },
+          "animation": { "in": "slide-up", "out": "fade" }
+        }
+      ]
+    }
+  ],
+  "safeZones": { "preset": "instagram-reels" }
+}

@@ -334,7 +334,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
    - [ ] **Command stack:** undo/redo with Immer patches. Every edit is a command (`ReplaceSlotAsset`, `EditText`, `SetTrim`, …).
    - [ ] **Serialization:** save and load projects as JSON with `schemaVersion`
 4. **Sample templates**
-   - [ ] Create 10 built-in templates in `templates/examples/` covering every v1 feature
+   - [x] Create 10 built-in templates in `templates/examples/` covering every v1 feature
    - [ ] Each template ships with a `.thumb.jpg` and a short `.preview.mp4` (generated in Phase 4)
 5. **Testing**
    - [x] Unit tests for every schema rule (valid and invalid fixtures)

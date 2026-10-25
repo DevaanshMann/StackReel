@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 1,
+  "id": "top-5-countdown",
+  "name": "Top 5 Countdown",
+  "description": "A list title, then five picks counted down from 5 to 1 with big numbers and names, ending on the winner.",
+  "canvas": { "width": 1080, "height": 1920, "fps": 30, "background": "#000000" },
+  "durationUs": 25000000,
+  "audio": {
+    "music": { "slot": "music", "startUs": 0, "gainDb": -6, "fadeOutUs": 1000000 },
+    "duckMusicUnderVoice": true
+  },
+  "slots": [
+    { "id": "title", "kind": "text", "label": "List title", "maxChars": 36 },
+    { "id": "item5", "kind": "video", "label": "Number 5", "minDurationUs": 4000000 },
+    { "id": "item4", "kind": "video", "label": "Number 4", "minDurationUs": 4000000 },
+    { "id": "item3", "kind": "video", "label": "Number 3", "minDurationUs": 4000000 },
+    { "id": "item2", "kind": "video", "label": "Number 2", "minDurationUs": 4000000 },
+    { "id": "item1", "kind": "video", "label": "Number 1", "minDurationUs": 4000000 },
+    { "id": "name5", "kind": "text", "label": "Name of number 5", "maxChars": 24 },
+    { "id": "name4", "kind": "text", "label": "Name of number 4", "maxChars": 24 },
+    { "id": "name3", "kind": "text", "label": "Name of number 3", "maxChars": 24 },
+    { "id": "name2", "kind": "text", "label": "Name of number 2", "maxChars": 24 },
+    { "id": "name1", "kind": "text", "label": "Name of number 1", "maxChars": 24 },
+    { "id": "music", "kind": "audio", "label": "Background music", "optional": true }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        { "slot": "item5", "startUs": 0, "durationUs": 5000000, "fit": "cover" },
+        {
+          "slot": "item4",
+          "startUs": 5000000,
+          "durationUs": 4500000,
+          "fit": "cover",
+          "transitionIn": { "type": "slide", "durationUs": 300000, "direction": "left" }
+        },
+        {
+          "slot": "item3",
+          "startUs": 9500000,
+          "durationUs": 4500000,
+          "fit": "cover",
+          "transitionIn": { "type": "slide", "durationUs": 300000, "direction": "left" }
+        },
+        {
+          "slot": "item2",
+          "startUs": 14000000,
+          "durationUs": 4500000,
+          "fit": "cover",
+          "transitionIn": { "type": "slide", "durationUs": 300000, "direction": "left" }
+        },
+        {
+          "slot": "item1",
+          "startUs": 18500000,
+          "durationUs": 6500000,
+          "fit": "cover",
+          "transitionIn": { "type": "zoom-punch", "durationUs": 250000 }
+        }
+      ]
+    },
+    {
+      "id": "numbers",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "startUs": 2400000,
+          "durationUs": 2400000,
+          "text": { "default": "5", "editable": false },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 280,
+            "color": "#FFFFFF",
+            "align": "left",
+            "stroke": { "color": "#000000", "widthPx": 10 }
+          },
+          "position": { "anchor": "left", "x": 0.06, "y": 0.5 },
+          "animation": { "in": "scale", "out": "slide-left", "inDurationUs": 250000, "outDurationUs": 200000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 5200000,
+          "durationUs": 4100000,
+          "text": { "default": "4", "editable": false },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 280,
+            "color": "#FFFFFF",
+            "align": "left",
+            "stroke": { "color": "#000000", "widthPx": 10 }
+          },
+          "position": { "anchor": "left", "x": 0.06, "y": 0.5 },
+          "animation": { "in": "scale", "out": "slide-left", "inDurationUs": 250000, "outDurationUs": 200000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 9700000,
+          "durationUs": 4100000,
+          "text": { "default": "3", "editable": false },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 280,
+            "color": "#FFFFFF",
+            "align": "left",
+            "stroke": { "color": "#000000", "widthPx": 10 }
+          },
+          "position": { "anchor": "left", "x": 0.06, "y": 0.5 },
+          "animation": { "in": "scale", "out": "slide-left", "inDurationUs": 250000, "outDurationUs": 200000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 14200000,
+          "durationUs": 4100000,
+          "text": { "default": "2", "editable": false },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 280,
+            "color": "#FFFFFF",
+            "align": "left",
+            "stroke": { "color": "#000000", "widthPx": 10 }
+          },
+          "position": { "anchor": "left", "x": 0.06, "y": 0.5 },
+          "animation": { "in": "scale", "out": "slide-left", "inDurationUs": 250000, "outDurationUs": 200000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 18700000,
+          "durationUs": 6100000,
+          "text": { "default": "1", "editable": false },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 280,
+            "color": "#FFFFFF",
+            "align": "left",
+            "stroke": { "color": "#000000", "widthPx": 10 }
+          },
+          "position": { "anchor": "left", "x": 0.06, "y": 0.5 },
+          "animation": { "in": "scale", "out": "slide-left", "inDurationUs": 250000, "outDurationUs": 200000 }
+        }
+      ]
+    },
+    {
+      "id": "names",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "startUs": 200000,
+          "durationUs": 2200000,
+          "slot": "title",
+          "text": { "default": "Top 5 places in Portugal", "editable": true, "maxChars": 36 },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 80,
+            "color": "#FFFFFF",
+            "align": "center",
+            "background": { "color": "#000000B3", "paddingPx": 24, "cornerRadiusPx": 18 }
+          },
+          "position": { "anchor": "center", "x": 0.5, "y": 0.3 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 1000000, "outDurationUs": 200000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 2500000,
+          "durationUs": 2300000,
+          "slot": "name5",
+          "text": { "default": "Sintra", "editable": true, "maxChars": 24 },
+          "style": {
+            "font": "Inter-ExtraBold",
+            "sizePx": 76,
+            "color": "#FFFFFF",
+            "align": "right",
+            "stroke": { "color": "#000000", "widthPx": 5 }
+          },
+          "position": { "anchor": "right", "x": 0.94, "y": 0.62 },
+          "animation": { "in": "slide-left", "out": "fade" }
+        },
+        {
+          "kind": "text",
+          "startUs": 5300000,
+          "durationUs": 4000000,
+          "slot": "name4",
+          "text": { "default": "Porto", "editable": true, "maxChars": 24 },
+          "style": {
+            "font": "Inter-ExtraBold",
+            "sizePx": 76,
+            "color": "#FFFFFF",
+            "align": "right",
+            "stroke": { "color": "#000000", "widthPx": 5 }
+          },
+          "position": { "anchor": "right", "x": 0.94, "y": 0.62 },
+          "animation": { "in": "slide-left", "out": "fade" }
+        },
+        {
+          "kind": "text",
+          "startUs": 9800000,
+          "durationUs": 4000000,
+          "slot": "name3",
+          "text": { "default": "Lagos", "editable": true, "maxChars": 24 },
+          "style": {
+            "font": "Inter-ExtraBold",
+            "sizePx": 76,
+            "color": "#FFFFFF",
+            "align": "right",
+            "stroke": { "color": "#000000", "widthPx": 5 }
+          },
+          "position": { "anchor": "right", "x": 0.94, "y": 0.62 },
+          "animation": { "in": "slide-left", "out": "fade" }
+        },
+        {
+          "kind": "text",
+          "startUs": 14300000,
+          "durationUs": 4000000,
+          "slot": "name2",
+          "text": { "default": "Évora", "editable": true, "maxChars": 24 },
+          "style": {
+            "font": "Inter-ExtraBold",
+            "sizePx": 76,
+            "color": "#FFFFFF",
+            "align": "right",
+            "stroke": { "color": "#000000", "widthPx": 5 }
+          },
+          "position": { "anchor": "right", "x": 0.94, "y": 0.62 },
+          "animation": { "in": "slide-left", "out": "fade" }
+        },
+        {
+          "kind": "text",
+          "startUs": 18800000,
+          "durationUs": 6000000,
+          "slot": "name1",
+          "text": { "default": "Madeira", "editable": true, "maxChars": 24 },
+          "style": {
+            "font": "Inter-ExtraBold",
+            "sizePx": 76,
+            "color": "#FFFFFF",
+            "align": "right",
+            "stroke": { "color": "#000000", "widthPx": 5 }
+          },
+          "position": { "anchor": "right", "x": 0.94, "y": 0.62 },
+          "animation": { "in": "slide-left", "out": "fade" }
+        },
+        {
+          "kind": "sticker",
+          "startUs": 19000000,
+          "durationUs": 5800000,
+          "asset": "trophy",
+          "widthNorm": 0.2,
+          "position": { "anchor": "top", "x": 0.5, "y": 0.12 },
+          "animation": { "in": "bounce", "out": "fade" }
+        }
+      ]
+    }
+  ],
+  "safeZones": { "preset": "tiktok" }
+}

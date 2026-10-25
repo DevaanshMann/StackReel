@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "product-drop",
+  "name": "Product Drop",
+  "description": "An unboxing shot, two product photos on a stretched backdrop, a detail close-up, a price tag and a NEW badge.",
+  "canvas": { "width": 1080, "height": 1920, "fps": 30, "background": "#EDEDED" },
+  "durationUs": 12000000,
+  "audio": { "music": { "slot": "music", "startUs": 0, "gainDb": -3, "fadeInUs": 300000, "fadeOutUs": 800000 } },
+  "slots": [
+    { "id": "backdrop", "kind": "image", "label": "Background texture or color", "optional": true },
+    { "id": "hero", "kind": "video", "label": "Unboxing or hero shot", "minDurationUs": 3000000 },
+    { "id": "photo1", "kind": "image", "label": "Product photo 1" },
+    { "id": "photo2", "kind": "image", "label": "Product photo 2" },
+    { "id": "detail", "kind": "video", "label": "Detail close-up", "minDurationUs": 3000000 },
+    { "id": "product", "kind": "text", "label": "Product name", "maxChars": 28 },
+    { "id": "price", "kind": "text", "label": "Price", "maxChars": 12 },
+    { "id": "music", "kind": "audio", "label": "Background music", "optional": true }
+  ],
+  "tracks": [
+    {
+      "id": "backdrop",
+      "type": "video",
+      "items": [{ "slot": "backdrop", "startUs": 0, "durationUs": 12000000, "fit": "fill" }]
+    },
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        { "slot": "hero", "startUs": 0, "durationUs": 3000000, "fit": "cover", "gainDb": -60 },
+        {
+          "slot": "photo1",
+          "startUs": 3000000,
+          "durationUs": 2500000,
+          "fit": "contain",
+          "transitionIn": { "type": "spin", "durationUs": 400000 }
+        },
+        {
+          "slot": "photo2",
+          "startUs": 5500000,
+          "durationUs": 2500000,
+          "fit": "contain",
+          "transitionIn": { "type": "slide", "durationUs": 300000, "direction": "left" }
+        },
+        {
+          "slot": "detail",
+          "startUs": 8000000,
+          "durationUs": 4000000,
+          "fit": "cover",
+          "speed": 0.75,
+          "gainDb": -60,
+          "transitionIn": { "type": "zoom-punch", "durationUs": 200000 }
+        }
+      ]
+    },
+    {
+      "id": "labels",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "startUs": 300000,
+          "durationUs": 2500000,
+          "slot": "product",
+          "text": { "default": "AirFlow Bottle", "editable": true, "maxChars": 28 },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 96,
+            "color": "#FFFFFF",
+            "align": "center",
+            "shadow": { "color": "#00000099", "blurPx": 12, "offsetXPx": 0, "offsetYPx": 4 }
+          },
+          "position": { "anchor": "top", "x": 0.5, "y": 0.12 },
+          "animation": { "in": "pop", "out": "fade" }
+        },
+        {
+          "kind": "sticker",
+          "startUs": 3200000,
+          "durationUs": 4800000,
+          "asset": "badge-new",
+          "widthNorm": 0.22,
+          "position": { "anchor": "top-right", "x": 0.92, "y": 0.08, "rotationDeg": 12 },
+          "animation": { "in": "pop", "out": "scale" }
+        },
+        {
+          "kind": "text",
+          "startUs": 8400000,
+          "durationUs": 3400000,
+          "slot": "price",
+          "text": { "default": "$29", "editable": true, "maxChars": 12 },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 110,
+            "color": "#FFFFFF",
+            "align": "center",
+            "background": { "color": "#FF3B30", "paddingPx": 28, "cornerRadiusPx": 36 }
+          },
+          "position": { "anchor": "bottom", "x": 0.5, "y": 0.74 },
+          "animation": { "in": "slide-up", "out": "fade" }
+        },
+        {
+          "kind": "text",
+          "startUs": 10000000,
+          "durationUs": 2000000,
+          "text": { "default": "Link in bio", "editable": true, "maxChars": 24 },
+          "style": {
+            "font": "Inter-SemiBold",
+            "sizePx": 46,
+            "color": "#FFFFFF",
+            "align": "center",
+            "shadow": { "color": "#00000099", "blurPx": 12, "offsetXPx": 0, "offsetYPx": 4 }
+          },
+          "position": { "anchor": "bottom", "x": 0.5, "y": 0.8 },
+          "animation": { "in": "fade", "out": "none" }
+        }
+      ]
+    }
+  ],
+  "safeZones": { "preset": "tiktok-reels-shorts" }
+}
