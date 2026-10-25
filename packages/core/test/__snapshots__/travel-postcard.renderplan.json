@@ -1,0 +1,405 @@
+{
+  "renderPlanVersion": 1,
+  "templateId": "travel-postcard",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 25,
+    "background": "#F4EDE1"
+  },
+  "durationUs": 15000000,
+  "layers": [
+    {
+      "id": "main/0",
+      "trackId": "main",
+      "itemIndex": 0,
+      "z": 0,
+      "startUs": 0,
+      "endUs": 3400000,
+      "opacity": 1,
+      "slotId": "arrival",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://travel-postcard/arrival.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3400000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "titles/0",
+      "trackId": "titles",
+      "itemIndex": 0,
+      "z": 1,
+      "startUs": 320000,
+      "endUs": 2920000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Lisbon",
+      "style": {
+        "font": "PlayfairDisplay-BoldItalic",
+        "sizePx": 132,
+        "color": "#FFFFFF",
+        "align": "left",
+        "shadow": {
+          "color": "#00000099",
+          "blurPx": 12,
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        }
+      },
+      "placement": {
+        "xPx": 86.4,
+        "yPx": 268.8,
+        "anchor": "top-left",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-right",
+        "out": "fade",
+        "inDurationUs": 400000,
+        "outDurationUs": 280000
+      }
+    },
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "itemIndex": 1,
+      "z": 0,
+      "startUs": 3000000,
+      "endUs": 5400000,
+      "opacity": 1,
+      "slotId": "map",
+      "fit": "contain",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "image",
+      "assetUri": "fake://travel-postcard/map.jpg",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1]
+    },
+    {
+      "id": "titles/1",
+      "trackId": "titles",
+      "itemIndex": 1,
+      "z": 1,
+      "startUs": 3200000,
+      "endUs": 4800000,
+      "opacity": 1,
+      "kind": "sticker",
+      "asset": "map-pin",
+      "widthPx": 129.6,
+      "placement": {
+        "xPx": 108,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-left",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "bounce",
+        "out": "fade",
+        "inDurationUs": 320000,
+        "outDurationUs": 280000
+      }
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "itemIndex": 2,
+      "z": 0,
+      "startUs": 5000000,
+      "endUs": 7920000,
+      "opacity": 1,
+      "slotId": "landmark",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://travel-postcard/landmark.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 2920000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "itemIndex": 3,
+      "z": 0,
+      "startUs": 7520000,
+      "endUs": 10600000,
+      "opacity": 1,
+      "slotId": "street",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://travel-postcard/street.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3080000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "itemIndex": 4,
+      "z": 0,
+      "startUs": 10000000,
+      "endUs": 15000000,
+      "opacity": 1,
+      "slotId": "sunset",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 800000,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://travel-postcard/sunset.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 5000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "titles/2",
+      "trackId": "titles",
+      "itemIndex": 2,
+      "z": 1,
+      "startUs": 10400000,
+      "endUs": 14400000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Day 1 · Portugal",
+      "style": {
+        "font": "Inter-Medium",
+        "sizePx": 44,
+        "color": "#FFFFFF",
+        "align": "left",
+        "background": {
+          "color": "#00000080",
+          "paddingPx": 18,
+          "cornerRadiusPx": 14
+        }
+      },
+      "placement": {
+        "xPx": 86.4,
+        "yPx": 1536,
+        "anchor": "bottom-left",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-up",
+        "out": "fade",
+        "inDurationUs": 320000,
+        "outDurationUs": 280000
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 3000000,
+      "endUs": 3400000,
+      "fromLayerId": "main/0",
+      "toLayerId": "main/1"
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "z": 0,
+      "type": "slide",
+      "direction": "right",
+      "startUs": 5000000,
+      "endUs": 5400000,
+      "fromLayerId": "main/1",
+      "toLayerId": "main/2"
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "z": 0,
+      "type": "slide",
+      "direction": "right",
+      "startUs": 7520000,
+      "endUs": 7920000,
+      "fromLayerId": "main/2",
+      "toLayerId": "main/3"
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 10000000,
+      "endUs": 10600000,
+      "fromLayerId": "main/3",
+      "toLayerId": "main/4"
+    }
+  ],
+  "audio": [
+    {
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "arrival",
+      "startUs": 0,
+      "endUs": 3400000,
+      "source": {
+        "assetUri": "fake://travel-postcard/arrival.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3400000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "startUs": 0,
+      "endUs": 15000000,
+      "source": {
+        "assetUri": "fake://travel-postcard/music.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 15000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -4,
+      "fadeInUs": 1000000,
+      "fadeOutUs": 1480000
+    },
+    {
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "landmark",
+      "startUs": 5000000,
+      "endUs": 7920000,
+      "source": {
+        "assetUri": "fake://travel-postcard/landmark.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 2920000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "street",
+      "startUs": 7520000,
+      "endUs": 10600000,
+      "source": {
+        "assetUri": "fake://travel-postcard/street.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3080000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/4",
+      "kind": "video",
+      "slotId": "sunset",
+      "startUs": 10000000,
+      "endUs": 15000000,
+      "source": {
+        "assetUri": "fake://travel-postcard/sunset.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 5000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 800000
+    }
+  ],
+  "warnings": []
+}

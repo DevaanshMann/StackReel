@@ -1,0 +1,760 @@
+{
+  "renderPlanVersion": 1,
+  "templateId": "hiit-circuit",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 60,
+    "background": "#000000"
+  },
+  "durationUs": 45000000,
+  "layers": [
+    {
+      "id": "main/0",
+      "trackId": "main",
+      "itemIndex": 0,
+      "z": 0,
+      "startUs": 0,
+      "endUs": 3150000,
+      "opacity": 1,
+      "slotId": "intro",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://hiit-circuit/intro.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3150000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "labels/0",
+      "trackId": "labels",
+      "itemIndex": 0,
+      "z": 1,
+      "startUs": 300000,
+      "endUs": 2800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "4 moves. 40 seconds.",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 104,
+        "color": "#FFFFFF",
+        "align": "center",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 6
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 768,
+        "anchor": "center",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "scale",
+        "out": "fade",
+        "inDurationUs": 250000,
+        "outDurationUs": 200000
+      }
+    },
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "itemIndex": 1,
+      "z": 0,
+      "startUs": 3000000,
+      "endUs": 13300000,
+      "opacity": 1,
+      "slotId": "ex1",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://hiit-circuit/ex1.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10300000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "labels/1",
+      "trackId": "labels",
+      "itemIndex": 1,
+      "z": 1,
+      "startUs": 3200000,
+      "endUs": 12700000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Squat jumps",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 84,
+        "color": "#FFFFFF",
+        "align": "center",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 192,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "bounce",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "counter/0",
+      "trackId": "counter",
+      "itemIndex": 0,
+      "z": 2,
+      "startUs": 3200000,
+      "endUs": 12700000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "1/4",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 48,
+        "color": "#0A0A0A",
+        "align": "center",
+        "background": {
+          "color": "#C6FF00",
+          "paddingPx": 14,
+          "cornerRadiusPx": 10
+        }
+      },
+      "placement": {
+        "xPx": 1004.4000000000001,
+        "yPx": 192,
+        "anchor": "top-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 150000,
+        "outDurationUs": 150000
+      }
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "itemIndex": 2,
+      "z": 0,
+      "startUs": 13000000,
+      "endUs": 23300000,
+      "opacity": 1,
+      "slotId": "ex2",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://hiit-circuit/ex2.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10300000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "labels/2",
+      "trackId": "labels",
+      "itemIndex": 2,
+      "z": 1,
+      "startUs": 13200000,
+      "endUs": 22700000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Push-ups",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 84,
+        "color": "#FFFFFF",
+        "align": "center",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 192,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "bounce",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "counter/1",
+      "trackId": "counter",
+      "itemIndex": 1,
+      "z": 2,
+      "startUs": 13200000,
+      "endUs": 22700000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "2/4",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 48,
+        "color": "#0A0A0A",
+        "align": "center",
+        "background": {
+          "color": "#C6FF00",
+          "paddingPx": 14,
+          "cornerRadiusPx": 10
+        }
+      },
+      "placement": {
+        "xPx": 1004.4000000000001,
+        "yPx": 192,
+        "anchor": "top-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 150000,
+        "outDurationUs": 150000
+      }
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "itemIndex": 3,
+      "z": 0,
+      "startUs": 23000000,
+      "endUs": 33150000,
+      "opacity": 1,
+      "slotId": "ex3",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://hiit-circuit/ex3.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10150000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "labels/3",
+      "trackId": "labels",
+      "itemIndex": 3,
+      "z": 1,
+      "startUs": 23200000,
+      "endUs": 32700000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Mountain climbers",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 84,
+        "color": "#FFFFFF",
+        "align": "center",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 192,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "bounce",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "counter/2",
+      "trackId": "counter",
+      "itemIndex": 2,
+      "z": 2,
+      "startUs": 23200000,
+      "endUs": 32700000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "3/4",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 48,
+        "color": "#0A0A0A",
+        "align": "center",
+        "background": {
+          "color": "#C6FF00",
+          "paddingPx": 14,
+          "cornerRadiusPx": 10
+        }
+      },
+      "placement": {
+        "xPx": 1004.4000000000001,
+        "yPx": 192,
+        "anchor": "top-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 150000,
+        "outDurationUs": 150000
+      }
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "itemIndex": 4,
+      "z": 0,
+      "startUs": 33000000,
+      "endUs": 43400000,
+      "opacity": 1,
+      "slotId": "ex4",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://hiit-circuit/ex4.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10400000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "labels/4",
+      "trackId": "labels",
+      "itemIndex": 4,
+      "z": 1,
+      "startUs": 33200000,
+      "endUs": 42700000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Burpees",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 84,
+        "color": "#FFFFFF",
+        "align": "center",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 192,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "bounce",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "counter/3",
+      "trackId": "counter",
+      "itemIndex": 3,
+      "z": 2,
+      "startUs": 33200000,
+      "endUs": 42700000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "4/4",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 48,
+        "color": "#0A0A0A",
+        "align": "center",
+        "background": {
+          "color": "#C6FF00",
+          "paddingPx": 14,
+          "cornerRadiusPx": 10
+        }
+      },
+      "placement": {
+        "xPx": 1004.4000000000001,
+        "yPx": 192,
+        "anchor": "top-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 150000,
+        "outDurationUs": 150000
+      }
+    },
+    {
+      "id": "labels/5",
+      "trackId": "labels",
+      "itemIndex": 5,
+      "z": 1,
+      "startUs": 33300000,
+      "endUs": 42700000,
+      "opacity": 1,
+      "kind": "sticker",
+      "asset": "fire",
+      "widthPx": 172.8,
+      "placement": {
+        "xPx": 540,
+        "yPx": 1305.6000000000001,
+        "anchor": "center",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/5",
+      "trackId": "main",
+      "itemIndex": 5,
+      "z": 0,
+      "startUs": 43000000,
+      "endUs": 45000000,
+      "opacity": 1,
+      "slotId": "outro",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 400000,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://hiit-circuit/outro.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1000000,
+        "rate": 0.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "labels/6",
+      "trackId": "labels",
+      "itemIndex": 6,
+      "z": 1,
+      "startUs": 43200000,
+      "endUs": 45000000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Save this for later",
+      "style": {
+        "font": "Inter-Bold",
+        "sizePx": 64,
+        "color": "#FFFFFF",
+        "align": "center",
+        "shadow": {
+          "color": "#00000099",
+          "blurPx": 12,
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 1459.2,
+        "anchor": "bottom",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-up",
+        "out": "none",
+        "inDurationUs": 300000,
+        "outDurationUs": 0
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "z": 0,
+      "type": "zoom-punch",
+      "startUs": 3000000,
+      "endUs": 3150000,
+      "fromLayerId": "main/0",
+      "toLayerId": "main/1"
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "z": 0,
+      "type": "slide",
+      "direction": "up",
+      "startUs": 13000000,
+      "endUs": 13300000,
+      "fromLayerId": "main/1",
+      "toLayerId": "main/2"
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "z": 0,
+      "type": "slide",
+      "direction": "down",
+      "startUs": 23000000,
+      "endUs": 23300000,
+      "fromLayerId": "main/2",
+      "toLayerId": "main/3"
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "z": 0,
+      "type": "zoom-punch",
+      "startUs": 33000000,
+      "endUs": 33150000,
+      "fromLayerId": "main/3",
+      "toLayerId": "main/4"
+    },
+    {
+      "id": "main/5",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 43000000,
+      "endUs": 43400000,
+      "fromLayerId": "main/4",
+      "toLayerId": "main/5"
+    }
+  ],
+  "audio": [
+    {
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "intro",
+      "startUs": 0,
+      "endUs": 3150000,
+      "source": {
+        "assetUri": "fake://hiit-circuit/intro.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3150000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "startUs": 0,
+      "endUs": 45000000,
+      "source": {
+        "assetUri": "fake://hiit-circuit/music.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 45000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -2,
+      "fadeInUs": 0,
+      "fadeOutUs": 1500000
+    },
+    {
+      "id": "main/1",
+      "kind": "video",
+      "slotId": "ex1",
+      "startUs": 3000000,
+      "endUs": 13300000,
+      "source": {
+        "assetUri": "fake://hiit-circuit/ex1.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10300000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "ex2",
+      "startUs": 13000000,
+      "endUs": 23300000,
+      "source": {
+        "assetUri": "fake://hiit-circuit/ex2.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10300000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "ex3",
+      "startUs": 23000000,
+      "endUs": 33150000,
+      "source": {
+        "assetUri": "fake://hiit-circuit/ex3.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10150000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/4",
+      "kind": "video",
+      "slotId": "ex4",
+      "startUs": 33000000,
+      "endUs": 43400000,
+      "source": {
+        "assetUri": "fake://hiit-circuit/ex4.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10400000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/5",
+      "kind": "video",
+      "slotId": "outro",
+      "startUs": 43000000,
+      "endUs": 45000000,
+      "source": {
+        "assetUri": "fake://hiit-circuit/outro.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1000000,
+        "rate": 0.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 400000
+    }
+  ],
+  "warnings": []
+}

@@ -1,0 +1,737 @@
+{
+  "renderPlanVersion": 1,
+  "templateId": "top-5-countdown",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "background": "#000000"
+  },
+  "durationUs": 25000000,
+  "layers": [
+    {
+      "id": "main/0",
+      "trackId": "main",
+      "itemIndex": 0,
+      "z": 0,
+      "startUs": 0,
+      "endUs": 5300000,
+      "opacity": 1,
+      "slotId": "item5",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://top-5-countdown/item5.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 5300000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "names/0",
+      "trackId": "names",
+      "itemIndex": 0,
+      "z": 2,
+      "startUs": 200000,
+      "endUs": 2400000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Top 5 places in Portugal",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 80,
+        "color": "#FFFFFF",
+        "align": "center",
+        "background": {
+          "color": "#000000B3",
+          "paddingPx": 24,
+          "cornerRadiusPx": 18
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 576,
+        "anchor": "center",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 1000000,
+        "outDurationUs": 200000
+      }
+    },
+    {
+      "id": "numbers/0",
+      "trackId": "numbers",
+      "itemIndex": 0,
+      "z": 1,
+      "startUs": 2400000,
+      "endUs": 4800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "5",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 280,
+        "color": "#FFFFFF",
+        "align": "left",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 10
+        }
+      },
+      "placement": {
+        "xPx": 64.8,
+        "yPx": 960,
+        "anchor": "left",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "scale",
+        "out": "slide-left",
+        "inDurationUs": 266667,
+        "outDurationUs": 200000
+      }
+    },
+    {
+      "id": "names/1",
+      "trackId": "names",
+      "itemIndex": 1,
+      "z": 2,
+      "startUs": 2500000,
+      "endUs": 4800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Sintra",
+      "style": {
+        "font": "Inter-ExtraBold",
+        "sizePx": 76,
+        "color": "#FFFFFF",
+        "align": "right",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 1015.1999999999999,
+        "yPx": 1190.4,
+        "anchor": "right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-left",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "itemIndex": 1,
+      "z": 0,
+      "startUs": 5000000,
+      "endUs": 9800000,
+      "opacity": 1,
+      "slotId": "item4",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://top-5-countdown/item4.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4800000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "numbers/1",
+      "trackId": "numbers",
+      "itemIndex": 1,
+      "z": 1,
+      "startUs": 5200000,
+      "endUs": 9300000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "4",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 280,
+        "color": "#FFFFFF",
+        "align": "left",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 10
+        }
+      },
+      "placement": {
+        "xPx": 64.8,
+        "yPx": 960,
+        "anchor": "left",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "scale",
+        "out": "slide-left",
+        "inDurationUs": 266667,
+        "outDurationUs": 200000
+      }
+    },
+    {
+      "id": "names/2",
+      "trackId": "names",
+      "itemIndex": 2,
+      "z": 2,
+      "startUs": 5300000,
+      "endUs": 9300000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Porto",
+      "style": {
+        "font": "Inter-ExtraBold",
+        "sizePx": 76,
+        "color": "#FFFFFF",
+        "align": "right",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 1015.1999999999999,
+        "yPx": 1190.4,
+        "anchor": "right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-left",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "itemIndex": 2,
+      "z": 0,
+      "startUs": 9500000,
+      "endUs": 14300000,
+      "opacity": 1,
+      "slotId": "item3",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://top-5-countdown/item3.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4800000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "numbers/2",
+      "trackId": "numbers",
+      "itemIndex": 2,
+      "z": 1,
+      "startUs": 9700000,
+      "endUs": 13800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "3",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 280,
+        "color": "#FFFFFF",
+        "align": "left",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 10
+        }
+      },
+      "placement": {
+        "xPx": 64.8,
+        "yPx": 960,
+        "anchor": "left",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "scale",
+        "out": "slide-left",
+        "inDurationUs": 266667,
+        "outDurationUs": 200000
+      }
+    },
+    {
+      "id": "names/3",
+      "trackId": "names",
+      "itemIndex": 3,
+      "z": 2,
+      "startUs": 9800000,
+      "endUs": 13800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Lagos",
+      "style": {
+        "font": "Inter-ExtraBold",
+        "sizePx": 76,
+        "color": "#FFFFFF",
+        "align": "right",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 1015.1999999999999,
+        "yPx": 1190.4,
+        "anchor": "right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-left",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "itemIndex": 3,
+      "z": 0,
+      "startUs": 14000000,
+      "endUs": 18766667,
+      "opacity": 1,
+      "slotId": "item2",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://top-5-countdown/item2.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4766667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "numbers/3",
+      "trackId": "numbers",
+      "itemIndex": 3,
+      "z": 1,
+      "startUs": 14200000,
+      "endUs": 18300000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "2",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 280,
+        "color": "#FFFFFF",
+        "align": "left",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 10
+        }
+      },
+      "placement": {
+        "xPx": 64.8,
+        "yPx": 960,
+        "anchor": "left",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "scale",
+        "out": "slide-left",
+        "inDurationUs": 266667,
+        "outDurationUs": 200000
+      }
+    },
+    {
+      "id": "names/4",
+      "trackId": "names",
+      "itemIndex": 4,
+      "z": 2,
+      "startUs": 14300000,
+      "endUs": 18300000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Évora",
+      "style": {
+        "font": "Inter-ExtraBold",
+        "sizePx": 76,
+        "color": "#FFFFFF",
+        "align": "right",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 1015.1999999999999,
+        "yPx": 1190.4,
+        "anchor": "right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-left",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "itemIndex": 4,
+      "z": 0,
+      "startUs": 18500000,
+      "endUs": 25000000,
+      "opacity": 1,
+      "slotId": "item1",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://top-5-countdown/item1.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6500000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "numbers/4",
+      "trackId": "numbers",
+      "itemIndex": 4,
+      "z": 1,
+      "startUs": 18700000,
+      "endUs": 24800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "1",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 280,
+        "color": "#FFFFFF",
+        "align": "left",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 10
+        }
+      },
+      "placement": {
+        "xPx": 64.8,
+        "yPx": 960,
+        "anchor": "left",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "scale",
+        "out": "slide-left",
+        "inDurationUs": 266667,
+        "outDurationUs": 200000
+      }
+    },
+    {
+      "id": "names/5",
+      "trackId": "names",
+      "itemIndex": 5,
+      "z": 2,
+      "startUs": 18800000,
+      "endUs": 24800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Madeira",
+      "style": {
+        "font": "Inter-ExtraBold",
+        "sizePx": 76,
+        "color": "#FFFFFF",
+        "align": "right",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 1015.1999999999999,
+        "yPx": 1190.4,
+        "anchor": "right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-left",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "names/6",
+      "trackId": "names",
+      "itemIndex": 6,
+      "z": 2,
+      "startUs": 19000000,
+      "endUs": 24800000,
+      "opacity": 1,
+      "kind": "sticker",
+      "asset": "trophy",
+      "widthPx": 216,
+      "placement": {
+        "xPx": 540,
+        "yPx": 230.39999999999998,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "bounce",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "z": 0,
+      "type": "slide",
+      "direction": "left",
+      "startUs": 5000000,
+      "endUs": 5300000,
+      "fromLayerId": "main/0",
+      "toLayerId": "main/1"
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "z": 0,
+      "type": "slide",
+      "direction": "left",
+      "startUs": 9500000,
+      "endUs": 9800000,
+      "fromLayerId": "main/1",
+      "toLayerId": "main/2"
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "z": 0,
+      "type": "slide",
+      "direction": "left",
+      "startUs": 14000000,
+      "endUs": 14300000,
+      "fromLayerId": "main/2",
+      "toLayerId": "main/3"
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "z": 0,
+      "type": "zoom-punch",
+      "startUs": 18500000,
+      "endUs": 18766667,
+      "fromLayerId": "main/3",
+      "toLayerId": "main/4"
+    }
+  ],
+  "audio": [
+    {
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "item5",
+      "startUs": 0,
+      "endUs": 5300000,
+      "source": {
+        "assetUri": "fake://top-5-countdown/item5.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 5300000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "startUs": 0,
+      "endUs": 25000000,
+      "source": {
+        "assetUri": "fake://top-5-countdown/music.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 25000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -6,
+      "fadeInUs": 0,
+      "fadeOutUs": 1000000,
+      "ducking": {
+        "gainDb": -12,
+        "rampUs": 200000,
+        "regions": [
+          {
+            "startUs": 0,
+            "endUs": 25000000
+          }
+        ]
+      }
+    },
+    {
+      "id": "main/1",
+      "kind": "video",
+      "slotId": "item4",
+      "startUs": 5000000,
+      "endUs": 9800000,
+      "source": {
+        "assetUri": "fake://top-5-countdown/item4.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4800000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "item3",
+      "startUs": 9500000,
+      "endUs": 14300000,
+      "source": {
+        "assetUri": "fake://top-5-countdown/item3.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4800000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "item2",
+      "startUs": 14000000,
+      "endUs": 18766667,
+      "source": {
+        "assetUri": "fake://top-5-countdown/item2.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4766667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/4",
+      "kind": "video",
+      "slotId": "item1",
+      "startUs": 18500000,
+      "endUs": 25000000,
+      "source": {
+        "assetUri": "fake://top-5-countdown/item1.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6500000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    }
+  ],
+  "warnings": []
+}
