@@ -1,0 +1,26 @@
+{
+  "name": "@stackreel/fixtures",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cross-platform test fixtures: templates, projects, asset facts and the RenderPlans core resolves them to.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "generate": "tsx scripts/generate.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint . --max-warnings=0"
+  },
+  "dependencies": {
+    "@stackreel/core": "workspace:*",
+    "@stackreel/template-schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@vitest/coverage-v8": "^5.0.5",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

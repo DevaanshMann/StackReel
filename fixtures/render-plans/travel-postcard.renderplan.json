@@ -1,0 +1,415 @@
+{
+  "audio": [
+    {
+      "endUs": 3400000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": 0,
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "arrival",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://arrival.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3400000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "endUs": 15000000,
+      "fadeInUs": 1000000,
+      "fadeOutUs": 1480000,
+      "gainDb": -4,
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://music.m4a",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 15000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "endUs": 7920000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": 0,
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "landmark",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://landmark.mp4",
+        "fitMode": "freeze",
+        "rate": 1,
+        "sourceEndUs": 400000,
+        "sourceStartUs": 0
+      },
+      "startUs": 5000000
+    },
+    {
+      "endUs": 10600000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": 0,
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "street",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://street.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3080000,
+        "sourceStartUs": 0
+      },
+      "startUs": 7520000
+    },
+    {
+      "endUs": 15000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 800000,
+      "gainDb": 0,
+      "id": "main/4",
+      "kind": "video",
+      "slotId": "sunset",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://sunset.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 5000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 10000000
+    }
+  ],
+  "canvas": {
+    "background": "#F4EDE1",
+    "fps": 25,
+    "height": 1920,
+    "width": 1080
+  },
+  "durationUs": 15000000,
+  "layers": [
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 3400000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/0",
+      "itemIndex": 0,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "arrival",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://arrival.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3400000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 0,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "slide-right",
+        "inDurationUs": 400000,
+        "out": "fade",
+        "outDurationUs": 280000
+      },
+      "endUs": 2920000,
+      "id": "titles/0",
+      "itemIndex": 0,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top-left",
+        "rotationDeg": 0,
+        "xPx": 86.4,
+        "yPx": 268.8
+      },
+      "startUs": 320000,
+      "style": {
+        "align": "left",
+        "color": "#FFFFFF",
+        "font": "PlayfairDisplay-BoldItalic",
+        "shadow": {
+          "blurPx": 12,
+          "color": "#00000099",
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        },
+        "sizePx": 132
+      },
+      "text": "Lisbon",
+      "trackId": "titles",
+      "z": 1
+    },
+    {
+      "assetUri": "fixture://map.jpg",
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 5400000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "contain",
+      "id": "main/1",
+      "itemIndex": 1,
+      "kind": "image",
+      "opacity": 1,
+      "slotId": "map",
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 3000000,
+      "trackId": "main",
+      "transform": [0.75, 0, 0, 0, 0.75, 555, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "bounce",
+        "inDurationUs": 320000,
+        "out": "fade",
+        "outDurationUs": 280000
+      },
+      "asset": "map-pin",
+      "endUs": 4800000,
+      "id": "titles/1",
+      "itemIndex": 1,
+      "kind": "sticker",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-left",
+        "rotationDeg": 0,
+        "xPx": 108,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 3200000,
+      "trackId": "titles",
+      "widthPx": 129.6,
+      "z": 1
+    },
+    {
+      "cropPx": {
+        "height": 1920,
+        "width": 1080,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 7920000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/2",
+      "itemIndex": 2,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "landmark",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://landmark.mp4",
+        "fitMode": "freeze",
+        "rate": 1,
+        "sourceEndUs": 400000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1920,
+        "width": 1080
+      },
+      "startUs": 5000000,
+      "trackId": "main",
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 10600000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/3",
+      "itemIndex": 3,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "street",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://street.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3080000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 7520000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 15000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 800000,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/4",
+      "itemIndex": 4,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "sunset",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://sunset.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 5000000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 10000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -740, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "slide-up",
+        "inDurationUs": 320000,
+        "out": "fade",
+        "outDurationUs": 280000
+      },
+      "endUs": 14400000,
+      "id": "titles/2",
+      "itemIndex": 2,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-left",
+        "rotationDeg": 0,
+        "xPx": 86.4,
+        "yPx": 1536
+      },
+      "startUs": 10400000,
+      "style": {
+        "align": "left",
+        "background": {
+          "color": "#00000080",
+          "cornerRadiusPx": 14,
+          "paddingPx": 18
+        },
+        "color": "#FFFFFF",
+        "font": "Inter-Medium",
+        "sizePx": 44
+      },
+      "text": "Day 1 · Portugal",
+      "trackId": "titles",
+      "z": 1
+    }
+  ],
+  "renderPlanVersion": 1,
+  "templateId": "travel-postcard",
+  "transitions": [
+    {
+      "endUs": 3400000,
+      "fromLayerId": "main/0",
+      "id": "main/1",
+      "startUs": 3000000,
+      "toLayerId": "main/1",
+      "trackId": "main",
+      "type": "crossfade",
+      "z": 0
+    },
+    {
+      "direction": "right",
+      "endUs": 5400000,
+      "fromLayerId": "main/1",
+      "id": "main/2",
+      "startUs": 5000000,
+      "toLayerId": "main/2",
+      "trackId": "main",
+      "type": "slide",
+      "z": 0
+    },
+    {
+      "direction": "right",
+      "endUs": 7920000,
+      "fromLayerId": "main/2",
+      "id": "main/3",
+      "startUs": 7520000,
+      "toLayerId": "main/3",
+      "trackId": "main",
+      "type": "slide",
+      "z": 0
+    },
+    {
+      "endUs": 10600000,
+      "fromLayerId": "main/3",
+      "id": "main/4",
+      "startUs": 10000000,
+      "toLayerId": "main/4",
+      "trackId": "main",
+      "type": "crossfade",
+      "z": 0
+    }
+  ],
+  "warnings": [
+    {
+      "availableUs": 400000,
+      "layerId": "main/2",
+      "message": "The media in \"A landmark\" is shorter than its slot (freeze)",
+      "neededUs": 2920000,
+      "policy": "freeze",
+      "slotId": "landmark",
+      "type": "clip-too-short"
+    }
+  ]
+}

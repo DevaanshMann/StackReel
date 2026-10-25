@@ -1,0 +1,289 @@
+{
+  "bindings": {
+    "backdrop": {
+      "assetUri": "fixture://backdrop.jpg",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "detail": {
+      "assetUri": "fixture://detail.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "hero": {
+      "assetUri": "fixture://hero.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "music": {
+      "assetUri": "fixture://music.m4a",
+      "trimInUs": 0,
+      "trimOutUs": 90000000
+    },
+    "photo1": {
+      "assetUri": "fixture://photo1.jpg",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "photo2": {
+      "assetUri": "fixture://photo2.jpg",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    }
+  },
+  "overrides": {
+    "style": {},
+    "text": {}
+  },
+  "schemaVersion": 1,
+  "template": {
+    "audio": {
+      "music": {
+        "fadeInUs": 300000,
+        "fadeOutUs": 800000,
+        "gainDb": -3,
+        "slot": "music",
+        "startUs": 0
+      }
+    },
+    "canvas": {
+      "background": "#EDEDED",
+      "fps": 30,
+      "height": 1920,
+      "width": 1080
+    },
+    "description": "An unboxing shot, two product photos on a stretched backdrop, a detail close-up, a price tag and a NEW badge.",
+    "durationUs": 12000000,
+    "id": "product-drop",
+    "name": "Product Drop",
+    "safeZones": {
+      "preset": "tiktok-reels-shorts"
+    },
+    "schemaVersion": 1,
+    "slots": [
+      {
+        "id": "backdrop",
+        "kind": "image",
+        "label": "Background texture or color",
+        "optional": true
+      },
+      {
+        "id": "hero",
+        "kind": "video",
+        "label": "Unboxing or hero shot",
+        "minDurationUs": 3000000
+      },
+      {
+        "id": "photo1",
+        "kind": "image",
+        "label": "Product photo 1"
+      },
+      {
+        "id": "photo2",
+        "kind": "image",
+        "label": "Product photo 2"
+      },
+      {
+        "id": "detail",
+        "kind": "video",
+        "label": "Detail close-up",
+        "minDurationUs": 3000000
+      },
+      {
+        "id": "product",
+        "kind": "text",
+        "label": "Product name",
+        "maxChars": 28
+      },
+      {
+        "id": "price",
+        "kind": "text",
+        "label": "Price",
+        "maxChars": 12
+      },
+      {
+        "id": "music",
+        "kind": "audio",
+        "label": "Background music",
+        "optional": true
+      }
+    ],
+    "tracks": [
+      {
+        "id": "backdrop",
+        "items": [
+          {
+            "durationUs": 12000000,
+            "fit": "fill",
+            "slot": "backdrop",
+            "startUs": 0
+          }
+        ],
+        "type": "video"
+      },
+      {
+        "id": "main",
+        "items": [
+          {
+            "durationUs": 3000000,
+            "fit": "cover",
+            "gainDb": -60,
+            "slot": "hero",
+            "startUs": 0
+          },
+          {
+            "durationUs": 2500000,
+            "fit": "contain",
+            "slot": "photo1",
+            "startUs": 3000000,
+            "transitionIn": {
+              "durationUs": 400000,
+              "type": "spin"
+            }
+          },
+          {
+            "durationUs": 2500000,
+            "fit": "contain",
+            "slot": "photo2",
+            "startUs": 5500000,
+            "transitionIn": {
+              "direction": "left",
+              "durationUs": 300000,
+              "type": "slide"
+            }
+          },
+          {
+            "durationUs": 4000000,
+            "fit": "cover",
+            "gainDb": -60,
+            "slot": "detail",
+            "speed": 0.75,
+            "startUs": 8000000,
+            "transitionIn": {
+              "durationUs": 200000,
+              "type": "zoom-punch"
+            }
+          }
+        ],
+        "type": "video"
+      },
+      {
+        "id": "labels",
+        "items": [
+          {
+            "animation": {
+              "in": "pop",
+              "out": "fade"
+            },
+            "durationUs": 2500000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.12
+            },
+            "slot": "product",
+            "startUs": 300000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-Black",
+              "shadow": {
+                "blurPx": 12,
+                "color": "#00000099",
+                "offsetXPx": 0,
+                "offsetYPx": 4
+              },
+              "sizePx": 96
+            },
+            "text": {
+              "default": "AirFlow Bottle",
+              "editable": true,
+              "maxChars": 28
+            }
+          },
+          {
+            "animation": {
+              "in": "pop",
+              "out": "scale"
+            },
+            "asset": "badge-new",
+            "durationUs": 4800000,
+            "kind": "sticker",
+            "position": {
+              "anchor": "top-right",
+              "rotationDeg": 12,
+              "x": 0.92,
+              "y": 0.08
+            },
+            "startUs": 3200000,
+            "widthNorm": 0.22
+          },
+          {
+            "animation": {
+              "in": "slide-up",
+              "out": "fade"
+            },
+            "durationUs": 3400000,
+            "kind": "text",
+            "position": {
+              "anchor": "bottom",
+              "x": 0.5,
+              "y": 0.74
+            },
+            "slot": "price",
+            "startUs": 8400000,
+            "style": {
+              "align": "center",
+              "background": {
+                "color": "#FF3B30",
+                "cornerRadiusPx": 36,
+                "paddingPx": 28
+              },
+              "color": "#FFFFFF",
+              "font": "Inter-Black",
+              "sizePx": 110
+            },
+            "text": {
+              "default": "$29",
+              "editable": true,
+              "maxChars": 12
+            }
+          },
+          {
+            "animation": {
+              "in": "fade",
+              "out": "none"
+            },
+            "durationUs": 2000000,
+            "kind": "text",
+            "position": {
+              "anchor": "bottom",
+              "x": 0.5,
+              "y": 0.8
+            },
+            "startUs": 10000000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-SemiBold",
+              "shadow": {
+                "blurPx": 12,
+                "color": "#00000099",
+                "offsetXPx": 0,
+                "offsetYPx": 4
+              },
+              "sizePx": 46
+            },
+            "text": {
+              "default": "Link in bio",
+              "editable": true,
+              "maxChars": 24
+            }
+          }
+        ],
+        "type": "overlay"
+      }
+    ]
+  }
+}

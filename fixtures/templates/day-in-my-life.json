@@ -1,0 +1,602 @@
+{
+  "audio": {
+    "duckMusicUnderVoice": true,
+    "music": {
+      "fadeInUs": 2000000,
+      "fadeOutUs": 2000000,
+      "gainDb": -8,
+      "slot": "music",
+      "startUs": 0
+    }
+  },
+  "canvas": {
+    "background": "#000000",
+    "fps": 24,
+    "height": 1920,
+    "width": 1080
+  },
+  "description": "Ten moments from morning to night at 24 fps, each stamped with an editable time, under a voice-over with ducked music.",
+  "durationUs": 60000000,
+  "id": "day-in-my-life",
+  "name": "Day in My Life",
+  "safeZones": {
+    "insets": {
+      "bottom": 0.2,
+      "left": 0.04,
+      "right": 0.14,
+      "top": 0.1
+    },
+    "preset": "tiktok-reels-shorts"
+  },
+  "schemaVersion": 1,
+  "slots": [
+    {
+      "id": "wake",
+      "kind": "video",
+      "label": "Waking up",
+      "minDurationUs": 5000000
+    },
+    {
+      "id": "coffee",
+      "kind": "video",
+      "label": "Morning coffee",
+      "minDurationUs": 5000000
+    },
+    {
+      "id": "commute",
+      "kind": "video",
+      "label": "Commute",
+      "minDurationUs": 10000000
+    },
+    {
+      "id": "work",
+      "kind": "video",
+      "label": "Work",
+      "minDurationUs": 10500000
+    },
+    {
+      "id": "lunch",
+      "kind": "video",
+      "label": "Lunch",
+      "minDurationUs": 6000000
+    },
+    {
+      "id": "gym",
+      "kind": "video",
+      "label": "Workout",
+      "minDurationUs": 6000000
+    },
+    {
+      "id": "errands",
+      "kind": "video",
+      "label": "Errands",
+      "minDurationUs": 7500000
+    },
+    {
+      "id": "dinner",
+      "kind": "video",
+      "label": "Making dinner",
+      "minDurationUs": 7000000
+    },
+    {
+      "id": "unwind",
+      "kind": "video",
+      "label": "Winding down",
+      "minDurationUs": 7000000
+    },
+    {
+      "id": "night",
+      "kind": "video",
+      "label": "Lights out",
+      "minDurationUs": 6000000
+    },
+    {
+      "id": "intro",
+      "kind": "text",
+      "label": "Intro line",
+      "maxChars": 40
+    },
+    {
+      "id": "voiceover",
+      "kind": "audio",
+      "label": "Voice-over",
+      "minDurationUs": 50000000,
+      "optional": true
+    },
+    {
+      "id": "music",
+      "kind": "audio",
+      "label": "Background music",
+      "optional": true
+    }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "items": [
+        {
+          "durationUs": 5000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "wake",
+          "startUs": 0
+        },
+        {
+          "durationUs": 5000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "coffee",
+          "startUs": 5000000
+        },
+        {
+          "durationUs": 5000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "commute",
+          "speed": 2,
+          "startUs": 10000000,
+          "transitionIn": {
+            "durationUs": 0,
+            "type": "cut"
+          }
+        },
+        {
+          "durationUs": 7000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "work",
+          "speed": 1.5,
+          "startUs": 15000000,
+          "transitionIn": {
+            "durationUs": 400000,
+            "type": "crossfade"
+          }
+        },
+        {
+          "durationUs": 6000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "lunch",
+          "startUs": 22000000,
+          "transitionIn": {
+            "durationUs": 400000,
+            "type": "crossfade"
+          }
+        },
+        {
+          "durationUs": 6000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "gym",
+          "startUs": 28000000,
+          "transitionIn": {
+            "durationUs": 200000,
+            "type": "zoom-punch"
+          }
+        },
+        {
+          "durationUs": 6000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "errands",
+          "speed": 1.25,
+          "startUs": 34000000,
+          "transitionIn": {
+            "direction": "left",
+            "durationUs": 350000,
+            "type": "slide"
+          }
+        },
+        {
+          "durationUs": 7000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "dinner",
+          "startUs": 40000000,
+          "transitionIn": {
+            "durationUs": 400000,
+            "type": "crossfade"
+          }
+        },
+        {
+          "durationUs": 7000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "unwind",
+          "startUs": 47000000,
+          "transitionIn": {
+            "durationUs": 500000,
+            "type": "crossfade"
+          }
+        },
+        {
+          "durationUs": 6000000,
+          "fadeOutUs": 1000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "slot": "night",
+          "startUs": 54000000,
+          "transitionIn": {
+            "durationUs": 600000,
+            "type": "crossfade"
+          }
+        }
+      ],
+      "type": "video"
+    },
+    {
+      "id": "voice",
+      "items": [
+        {
+          "durationUs": 58000000,
+          "fadeInUs": 100000,
+          "fadeOutUs": 500000,
+          "gainDb": 0,
+          "slot": "voiceover",
+          "startUs": 1000000
+        }
+      ],
+      "type": "audio"
+    },
+    {
+      "id": "text",
+      "items": [
+        {
+          "animation": {
+            "in": "fade",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 300000
+          },
+          "durationUs": 4300000,
+          "kind": "text",
+          "position": {
+            "anchor": "top",
+            "x": 0.5,
+            "y": 0.14
+          },
+          "slot": "intro",
+          "startUs": 300000,
+          "style": {
+            "align": "center",
+            "color": "#FFFFFF",
+            "font": "Inter-Bold",
+            "shadow": {
+              "blurPx": 12,
+              "color": "#00000099",
+              "offsetXPx": 0,
+              "offsetYPx": 4
+            },
+            "sizePx": 70
+          },
+          "text": {
+            "default": "A day in my life as a nurse",
+            "editable": true,
+            "maxChars": 40
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 4400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "7:00 AM",
+            "editable": true,
+            "maxChars": 8
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 4400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 5300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "7:30 AM",
+            "editable": true,
+            "maxChars": 8
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 4400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 10300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "8:15 AM",
+            "editable": true,
+            "maxChars": 8
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 6400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 15300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "9:00 AM",
+            "editable": true,
+            "maxChars": 8
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 5400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 22300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "12:30 PM",
+            "editable": true,
+            "maxChars": 8
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 5400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 28300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "5:30 PM",
+            "editable": true,
+            "maxChars": 8
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 5400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 34300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "6:45 PM",
+            "editable": true,
+            "maxChars": 8
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 6400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 40300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "7:30 PM",
+            "editable": true,
+            "maxChars": 8
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 6400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 47300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "9:30 PM",
+            "editable": true,
+            "maxChars": 8
+          }
+        },
+        {
+          "animation": {
+            "in": "typewriter",
+            "inDurationUs": 500000,
+            "out": "fade",
+            "outDurationUs": 250000
+          },
+          "durationUs": 5400000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-right",
+            "x": 0.84,
+            "y": 0.78
+          },
+          "startUs": 54300000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000066",
+              "cornerRadiusPx": 8,
+              "paddingPx": 12
+            },
+            "color": "#FFFFFFE6",
+            "font": "SpaceMono-Bold",
+            "sizePx": 50
+          },
+          "text": {
+            "default": "11:00 PM",
+            "editable": true,
+            "maxChars": 8
+          }
+        }
+      ],
+      "type": "overlay"
+    }
+  ]
+}

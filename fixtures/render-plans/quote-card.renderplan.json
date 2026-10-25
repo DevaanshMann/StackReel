@@ -1,0 +1,153 @@
+{
+  "audio": [
+    {
+      "endUs": 6000000,
+      "fadeInUs": 500000,
+      "fadeOutUs": 1000000,
+      "gainDb": -8,
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://music.m4a",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 6000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    }
+  ],
+  "canvas": {
+    "background": "#111111",
+    "fps": 30,
+    "height": 1920,
+    "width": 1080
+  },
+  "durationUs": 6000000,
+  "layers": [
+    {
+      "assetUri": "fixture://background.jpg",
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 6000000,
+      "fadeInUs": 500000,
+      "fadeOutUs": 500000,
+      "fit": "cover",
+      "id": "background/0",
+      "itemIndex": 0,
+      "kind": "image",
+      "opacity": 1,
+      "slotId": "background",
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 0,
+      "trackId": "background",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "none",
+        "inDurationUs": 0,
+        "out": "fade",
+        "outDurationUs": 400000
+      },
+      "endUs": 6000000,
+      "id": "quote/0",
+      "itemIndex": 0,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 384
+      },
+      "startUs": 0,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF66",
+        "font": "PlayfairDisplay-Black",
+        "sizePx": 280
+      },
+      "text": "“",
+      "trackId": "quote",
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 1500000,
+        "out": "fade",
+        "outDurationUs": 400000
+      },
+      "endUs": 5600000,
+      "id": "quote/1",
+      "itemIndex": 1,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "center",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 864
+      },
+      "startUs": 400000,
+      "style": {
+        "align": "center",
+        "background": {
+          "color": "#00000099",
+          "cornerRadiusPx": 24,
+          "paddingPx": 32
+        },
+        "color": "#FFFFFF",
+        "font": "PlayfairDisplay-Regular",
+        "sizePx": 76
+      },
+      "text": "Small steps, every single day.",
+      "trackId": "quote",
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "fade",
+        "inDurationUs": 600000,
+        "out": "none",
+        "outDurationUs": 0
+      },
+      "endUs": 6000000,
+      "id": "quote/2",
+      "itemIndex": 2,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "center",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 1152
+      },
+      "startUs": 2200000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFFCC",
+        "font": "Inter-Medium",
+        "sizePx": 44
+      },
+      "text": "— Your name",
+      "trackId": "quote",
+      "z": 1
+    }
+  ],
+  "renderPlanVersion": 1,
+  "templateId": "quote-card",
+  "transitions": [],
+  "warnings": []
+}

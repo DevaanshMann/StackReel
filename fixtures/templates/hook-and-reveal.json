@@ -1,0 +1,119 @@
+{
+  "audio": {
+    "duckMusicUnderVoice": true,
+    "music": {
+      "fadeOutUs": 500000,
+      "gainDb": -6,
+      "slot": "music",
+      "startUs": 0
+    }
+  },
+  "canvas": {
+    "background": "#000000",
+    "fps": 30,
+    "height": 1920,
+    "width": 1080
+  },
+  "description": "A 3-clip template: hook text over clip 1, quick cut, reveal on clip 3.",
+  "durationUs": 9000000,
+  "id": "hook-and-reveal",
+  "name": "Hook & Reveal",
+  "safeZones": {
+    "preset": "tiktok-reels-shorts"
+  },
+  "schemaVersion": 1,
+  "slots": [
+    {
+      "id": "clip1",
+      "kind": "video",
+      "label": "Your hook shot",
+      "minDurationUs": 3000000
+    },
+    {
+      "id": "clip2",
+      "kind": "video",
+      "label": "B-roll",
+      "minDurationUs": 2000000
+    },
+    {
+      "id": "clip3",
+      "kind": "video",
+      "label": "The reveal",
+      "minDurationUs": 4000000
+    },
+    {
+      "id": "music",
+      "kind": "audio",
+      "label": "Background music",
+      "optional": true
+    }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "items": [
+        {
+          "durationUs": 3000000,
+          "fit": "cover",
+          "slot": "clip1",
+          "startUs": 0
+        },
+        {
+          "durationUs": 2000000,
+          "fit": "cover",
+          "slot": "clip2",
+          "startUs": 3000000,
+          "transitionIn": {
+            "durationUs": 250000,
+            "type": "whip-pan"
+          }
+        },
+        {
+          "durationUs": 4000000,
+          "fit": "cover",
+          "slot": "clip3",
+          "startUs": 5000000,
+          "transitionIn": {
+            "durationUs": 200000,
+            "type": "zoom-punch"
+          }
+        }
+      ],
+      "type": "video"
+    },
+    {
+      "id": "text",
+      "items": [
+        {
+          "animation": {
+            "in": "pop",
+            "out": "fade"
+          },
+          "durationUs": 2600000,
+          "kind": "text",
+          "position": {
+            "anchor": "center",
+            "x": 0.5,
+            "y": 0.22
+          },
+          "startUs": 200000,
+          "style": {
+            "color": "#FFFFFF",
+            "font": "Inter-Black",
+            "sizePx": 96,
+            "stroke": {
+              "color": "#000000",
+              "widthPx": 6
+            }
+          },
+          "text": {
+            "default": "Wait for it…",
+            "editable": true,
+            "maxChars": 40
+          }
+        }
+      ],
+      "type": "overlay"
+    }
+  ]
+}
