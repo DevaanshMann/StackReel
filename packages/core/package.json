@@ -2,7 +2,7 @@
   "name": "@stackreel/core",
   "version": "0.0.0",
   "private": true,
-  "description": "Platform-independent StackReel logic: time math, the Project model, and the undo/redo command stack.",
+  "description": "Platform-independent StackReel logic: time math, the Project model, undo/redo, slot fitting and the RenderPlan resolver.",
   "license": "MIT",
   "type": "module",
   "exports": {
