@@ -72,6 +72,15 @@ describe("fitMatrix at 1080×1920", () => {
   it("uses the whole frame without a crop", () => {
     expect(cropRect({ width: 10, height: 20 })).toEqual({ x: 0, y: 0, width: 10, height: 20 });
   });
+
+  it("grows a crop to at least one pixel a side, inside the source, so the transform stays finite", () => {
+    const source = { width: 1920, height: 1080 };
+    const tiny = cropRect(source, { x: 0, y: 0, width: 5e-324, height: 0.01 });
+    expect(tiny).toEqual({ x: 0, y: 0, width: 1, height: 10.8 });
+    expect(fitMatrix(source, canvas, "cover", tiny).every(Number.isFinite)).toBe(true);
+    const corner = { x: 1, y: 1, width: 5e-324, height: 5e-324 };
+    expect(cropRect(source, corner)).toEqual({ x: 1919, y: 1079, width: 1, height: 1 });
+  });
 });
 
 describe("matrix helpers", () => {

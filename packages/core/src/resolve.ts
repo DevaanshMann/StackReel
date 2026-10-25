@@ -13,7 +13,7 @@ import {
   type SourceTiming,
   type TransitionPlan,
 } from "./render-plan.js";
-import { frameToUs, snapToFrame, type TimeRange } from "./time.js";
+import { frameToUs, maxTimeUs, snapToFrame, usToFrame, type TimeRange } from "./time.js";
 import { cropRect, fitMatrix, type Placement, type Size } from "./transform.js";
 
 /** What the app knows about a media file. Engines read it from the file before resolving. */
@@ -86,7 +86,9 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
   const fps = canvas.fps;
   const canvasSize: Size = { width: canvas.width, height: canvas.height };
   const policy = options.shortClipPolicy ?? DEFAULT_SHORT_CLIP_POLICY;
-  const snap = (us: number) => snapToFrame(us, fps);
+  // Valid template times can be later than the frame math handles; they end up at its limit instead.
+  const maxUs = maxTimeUs(fps);
+  const snap = (us: number) => snapToFrame(Math.min(us, maxUs), fps);
   const durationUs = Math.max(snap(template.durationUs), frameToUs(1, fps));
 
   const warnings: PlanWarning[] = [];
@@ -394,7 +396,8 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
   const musicBinding = music ? own(bindings, music.slot) : undefined;
   if (music && musicBinding) {
     const slot = slots.get(music.slot)!;
-    const startUs = Math.min(snap(music.startUs ?? PLAN_DEFAULTS.musicStartUs), durationUs - frameToUs(1, fps));
+    const lastFrameUs = frameToUs(usToFrame(durationUs, fps) - 1, fps);
+    const startUs = Math.min(snap(music.startUs ?? PLAN_DEFAULTS.musicStartUs), lastFrameUs);
     const placed: PlacedItem = {
       item: { slot: music.slot, startUs, durationUs: durationUs - startUs },
       itemIndex: 0,

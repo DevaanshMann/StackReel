@@ -81,6 +81,12 @@ export function snapToFrame(us: number, fps: number, rounding: FrameRounding = "
   return frameToUs(usToFrame(us, fps, rounding), fps);
 }
 
+/** A frame start that these helpers handle at `fps`, as they do every earlier time (about 217 days at 240 fps). */
+export function maxTimeUs(fps: number): number {
+  assertFps(fps);
+  return frameToUs(divFloor(Number.MAX_SAFE_INTEGER - fps, 2 * US_PER_SECOND) - 1, fps);
+}
+
 /** True if `us` is exactly a frame start at `fps`. */
 export function isOnFrame(us: number, fps: number): boolean {
   return snapToFrame(us, fps) === us;

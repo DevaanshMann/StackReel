@@ -4,6 +4,7 @@ import {
   IDENTITY,
   checkPlanInvariants,
   createProject,
+  maxTimeUs,
   resolve,
   validateProject,
   type AssetInfo,
@@ -320,6 +321,25 @@ describe("resolve: slot fitting", () => {
     });
   });
 
+  it("plays at least one frame of source for a one-frame item below half speed", () => {
+    const t = clips([{ durationUs: 33_333, speed: 0.25 }]);
+    t.tracks.push({ id: "vo", type: "audio", items: [{ slot: "voice", startUs: 0, durationUs: 33_333, speed: 0.25 }] });
+    const oneFrame = bound(t, ["c0", "voice"]);
+    const p = plan(oneFrame, { assets: assetsFor(oneFrame, { width: 1080, height: 1920, durationUs: 10_000_000 }) });
+    expect(p.audio.map((a) => a.id)).toEqual(["main/0", "vo/0"]);
+    for (const source of [layer(p, "main/0", "video").source, ...p.audio.map((a) => a.source)]) {
+      expect(source).toMatchObject({ sourceStartUs: 0, sourceEndUs: 33_333, rate: 0.25, fitMode: "trim" });
+    }
+  });
+
+  it("keeps the transform finite for a crop smaller than a pixel", () => {
+    const cropped = bound(clips([{}]));
+    cropped.bindings["c0"] = { ...bind("c0.mp4"), crop: { x: 0, y: 0, width: 5e-324, height: 0.01 } };
+    const clip = layer(plan(cropped, { assets: assetsFor(cropped) }), "main/0", "video");
+    expect(clip.cropPx).toEqual({ x: 0, y: 0, width: 1, height: 10.8 });
+    expect(clip.transform.every(Number.isFinite)).toBe(true);
+  });
+
   it("assumes the canvas size when asset details are missing, and warns once per slot", () => {
     const t = clips([{ slot: "c0" }, { slot: "c0" }]);
     t.slots = t.slots.filter((s) => s.id !== "c1");
@@ -378,6 +398,20 @@ describe("resolve: timing", () => {
     const t = clips([{ fadeInUs: 150_000, fadeOutUs: 5_000_000 }]);
     const clip = layer(plan(bound(t)), "main/0", "video");
     expect([clip.fadeInUs, clip.fadeOutUs]).toEqual([166_667, 1_000_000]);
+  });
+
+  it("clamps valid times that are later than the frame math handles", () => {
+    const maxUs = maxTimeUs(240);
+    const t = clips([{}], { canvas: { width: 1080, height: 1920, fps: 240 }, durationUs: 31_536_000_000_000 });
+    expect(plan(createProject(t)).durationUs).toBe(maxUs);
+    const project = bound(t);
+    project.bindings["c0"] = bind("c0.mp4", Number.MAX_SAFE_INTEGER);
+    const assets = { "c0.mp4": HD };
+    const trimmed = layer(plan(project, { assets }), "main/0", "video").source;
+    expect([trimmed.sourceStartUs, trimmed.sourceEndUs]).toEqual([0, 1_000_000]);
+    const options = { assets, pickTrimWindow: () => Number.MAX_SAFE_INTEGER };
+    const picked = layer(plan(project, options), "main/0", "video").source;
+    expect([picked.sourceStartUs, picked.sourceEndUs]).toEqual([maxUs - 1_000_000, maxUs]);
   });
 });
 
@@ -508,6 +542,17 @@ describe("resolve: audio", () => {
     expect(plan(broken, { assets }).audio.some((a) => a.kind === "music")).toBe(false);
   });
 
+  it("starts music on the last frame start when its start is inside the last frame", () => {
+    const t = clips([{ durationUs: 66_667 }], {
+      durationUs: 66_667,
+      audio: { music: { slot: "music", startUs: 66_666 } },
+    });
+    const late = bound(t);
+    late.bindings["music"] = bind("music.m4a");
+    const music = plan(late).audio.find((a) => a.id === "music")!;
+    expect([music.startUs, music.endUs, music.fadeInUs]).toEqual([33_333, 66_667, 0]);
+  });
+
   it("leaves out audio items whose trim has no frames", () => {
     const broken = structuredClone(project);
     broken.bindings["voice"] = bind("voice.m4a", 10);
@@ -530,6 +575,7 @@ describe("checkPlanInvariants", () => {
     ["an off-frame time", (p) => (p.layers[0]!.startUs = 1), "not on frame starts"],
     ["an empty source", (p) => ((p.layers[0] as VideoLayer).source.sourceEndUs = 0), "empty source range"],
     ["a zero rate", (p) => (p.audio[0]!.source.rate = 0), "rate is not positive"],
+    ["a non-finite transform", (p) => ((p.layers[0] as VideoLayer).transform[0] = Number.NaN), "not finite"],
     ["unsorted layers", (p) => p.layers.reverse(), "not sorted"],
     ["unsorted transitions", (p) => p.transitions.push({ ...p.transitions[0]!, startUs: 0, id: "x" }), "not sorted"],
     ["unsorted audio", (p) => p.audio.reverse(), "not sorted"],

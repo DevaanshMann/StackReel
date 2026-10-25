@@ -6,6 +6,7 @@ import {
   intersectRanges,
   isEmptyRange,
   isOnFrame,
+  maxTimeUs,
   rangeContains,
   rangeContainsRange,
   rangeDuration,
@@ -139,6 +140,27 @@ describe("snapToFrame", () => {
     expect(isOnFrame(0, 24)).toBe(true);
     expect(isOnFrame(41_667, 24)).toBe(true);
     expect(isOnFrame(41_666, 24)).toBe(false);
+  });
+});
+
+describe("maxTimeUs", () => {
+  it.each([1, ...COMMON_FPS, 240])("is a frame start every helper handles at %i fps", (fps) => {
+    const maxUs = maxTimeUs(fps);
+    for (const rounding of ["floor", "ceil", "round"] as const) {
+      expect(snapToFrame(maxUs, fps, rounding)).toBe(maxUs);
+      expect(snapToFrame(maxUs - 1, fps, rounding)).toBeLessThanOrEqual(maxUs);
+    }
+    expect(frameToUs(usToFrame(maxUs, fps) + 1, fps)).toBeGreaterThan(maxUs);
+    expect(() => snapToFrame(maxUs + frameToUs(2, fps), fps)).toThrow(/too large/);
+  });
+
+  it("is about 217 days at 240 fps, short of a valid year-long template", () => {
+    expect(maxTimeUs(240)).toBe(18_764_998_441_667);
+    expect(() => snapToFrame(31_536_000_000_000, 240)).toThrow(RangeError);
+  });
+
+  it("rejects bad frame rates", () => {
+    expect(() => maxTimeUs(0)).toThrow(/fps/);
   });
 });
 
