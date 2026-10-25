@@ -3,8 +3,8 @@
 Shared design tokens for the StackReel apps: color, type, spacing, radii, elevation, z-index, motion, layout and
 safe zones. Every platform reads from this one source.
 
-For now the package is tokens only: plain typed TypeScript constants (`as const`) and a generated CSS file. It has no
-React dependency. Cross-platform UI primitives come later.
+For now the package is tokens only: plain typed TypeScript constants (`as const`), a generated CSS file and
+safe-zone overlay SVGs. It has no React dependency. Cross-platform UI primitives come later.
 
 ## Usage
 
@@ -154,8 +154,31 @@ Keys match the template schema's `safeZones.preset` enum, and a test fails if th
 `tiktok-reels-shorts` is the largest inset on each side, so it's safe on all three. The values are approximate,
 taken from public creator guidance, and need checking on real devices. Platforms change their UI often.
 
+### Safe-zone overlays
+
+[`overlays/`](overlays/) has a 1080×1920 SVG for every preset except `none`: `tiktok.svg`, `instagram-reels.svg`,
+`youtube-shorts.svg` and `tiktok-reels-shorts.svg`. The top and bottom bands and the left and right strips (the right
+one is the button column) are shaded, and a dashed line runs just outside the safe area. Import one as
+`@stackreel/ui/overlays/tiktok.svg`. `pnpm build` regenerates them with `renderSafeZoneOverlaySvg(preset)`, so change
+`safeZones` rather than the files. A test fails if a committed file is out of date.
+
+In the editor, draw the overlay over the preview, between the video and the editing handles (`zIndex.canvasOverlay`).
+`safeZoneRegions(insets, width, height)` gives the shaded bands and the safe area as pixel rects for any size, so it
+also works with a template's `safeZones.insets` override. `safeZoneOverlayStyle` has the colors, or render the SVG
+with `renderSafeZoneOverlaySvg(preset, width, height)`.
+
+```ts
+import { safeZoneRegions, safeZones } from "@stackreel/ui";
+
+const { top, bottom, left, right, safe } = safeZoneRegions(safeZones.tiktok, previewWidth, previewHeight);
+```
+
+When designing a template, put the SVG on top of a 1080×1920 frame in Figma (or similar) and lock it. Keep text,
+faces and anything else important out of the shaded areas. Use `tiktok-reels-shorts.svg` unless the template is for
+one platform only. The overlays use the same approximate values as the table above, so check on real devices too.
+
 ## Scripts
 
-- `pnpm build`: compiles `dist/` and writes `dist/tokens.css`
+- `pnpm build`: compiles `dist/`, writes `dist/tokens.css` and regenerates `overlays/*.svg`
 - `pnpm test`: runs the tests with coverage
 - `pnpm typecheck`, `pnpm lint`

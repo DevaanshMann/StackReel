@@ -296,7 +296,7 @@ A phase is done only when every exit criterion is met.
    - [ ] Figma file with user flows: _Home → Template gallery → Fill slots → Preview/Tweak → Export → Share_
    - [x] Design tokens (color, type scale, spacing, radii, motion durations) in `packages/ui`
    - [ ] App icon and wordmark v0
-   - [ ] Safe-zone overlays for TikTok, Reels, and Shorts (top and bottom UI, right-side buttons)
+   - [x] Safe-zone overlays for TikTok, Reels, and Shorts (top and bottom UI, right-side buttons)
 
 **Deliverables:** working monorepo, green CI, project board, name reserved.
 

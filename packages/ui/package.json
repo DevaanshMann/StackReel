@@ -10,15 +10,17 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./tokens.css": "./dist/tokens.css"
+    "./tokens.css": "./dist/tokens.css",
+    "./overlays/*.svg": "./overlays/*.svg"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "overlays"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsx scripts/build-css.ts",
+    "build": "tsc -p tsconfig.build.json && tsx scripts/build-css.ts && tsx scripts/generate-overlays.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint . --max-warnings=0"
