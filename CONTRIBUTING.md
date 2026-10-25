@@ -34,9 +34,34 @@ This rule keeps two people from building the same thing, and stops merge conflic
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat(schema): add caption track type`
 - Squash-merge PRs into `main`. Keep `main` releasable.
 
+## Changesets
+
+We use [Changesets](https://changesets.dev) to version the packages in `packages/*` and write their changelogs. A changeset is a small Markdown file in `.changeset/` that names the packages a PR changes, the size of the bump, and a summary for the changelog.
+
+**When a PR needs one.** Any change to a package's behavior or API: a new feature, a bug fix, a changed or removed export, a schema change, a dependency change that affects users of the package.
+
+**When it doesn't.** Changes that don't touch what a package does: docs, CI and workflows, tests only, repo config (lint, format, editor settings), and refactors with no visible effect. Tick the "doesn't need one" box in the PR template.
+
+**How to add one.** From the repo root:
+
+```bash
+corepack pnpm changeset
+```
+
+Pick the changed packages, choose the bump for each, and write a one-line summary in the past or present tense, written for someone using the package (for example, `Add caption track type to the template schema`). Commit the generated `.changeset/*.md` file with your PR. You can edit it by hand later, and a PR can have more than one. Run `corepack pnpm changeset:status` to see what would be released.
+
+**Picking patch, minor or major while we're on `0.x`.** Every package starts at `0.0.0`, and before `1.0.0` the API isn't stable yet:
+
+- **patch**: bug fixes and internal changes that don't change the API.
+- **minor**: new features, and breaking changes. On `0.x`, a minor bump (`0.1.0` → `0.2.0`) is how we signal a break. Say what breaks and how to migrate in the summary.
+- **major**: don't use it yet. Going to `1.0.0` is a deliberate release decision made by maintainers (see the roadmap).
+
+**How versions and changelogs are produced.** Contributors only add changesets; they don't edit versions or `CHANGELOG.md` by hand. When a maintainer cuts a release, they run `corepack pnpm version-packages` on `main`. It consumes the pending changesets, bumps each package's `version` (plus a patch bump for workspace packages that depend on it), writes each package's `CHANGELOG.md` with links to the PR and author, and formats the result with Prettier. That goes in through a normal release PR. Our packages are `private: true`, so nothing is published to npm and no git tags are created yet.
+
 ## Pull requests
 
 - Fill in the PR template.
+- Add a changeset if your PR changes a package's behavior or API (see [Changesets](#changesets)).
 - Add screenshots or a screen recording for any UI or render change.
 - CI must pass (lint, typecheck, tests).
 
