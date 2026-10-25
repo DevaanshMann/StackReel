@@ -327,12 +327,12 @@ This phase has no video code. It is pure, fully tested TypeScript.
    - [x] `validate(json)`: returns typed errors with JSON paths for the UI
    - [x] `migrate(json)`: no-op for v1, but the pipeline and tests exist from day one
 3. **Implement `@stackreel/core`**
-   - [ ] `Project` model: `template` + `bindings` (slot → asset URI, trim in and out, crop) + `overrides` (text edits, style tweaks)
+   - [x] `Project` model: `template` + `bindings` (slot → asset URI, trim in and out, crop) + `overrides` (text edits, style tweaks)
    - [ ] **Slot fitting:** when a user clip is longer than the slot, pick the best trim window (default: start, later "smart" via motion and faces). If it's shorter, freeze the last frame or slow it down, as the template's `shortClipPolicy` says.
    - [ ] **Resolver:** `resolve(project) → RenderPlan`, a flat, time-sorted list of layers with absolute `startUs`/`endUs`, source time ranges, transform matrices, opacity, effects, and transition pairs
-   - [ ] **Time utilities:** frame-snapping (`usToFrame`, `frameToUs` for 24/25/30/60 fps), range math
-   - [ ] **Command stack:** undo/redo with Immer patches. Every edit is a command (`ReplaceSlotAsset`, `EditText`, `SetTrim`, …).
-   - [ ] **Serialization:** save and load projects as JSON with `schemaVersion`
+   - [x] **Time utilities:** frame-snapping (`usToFrame`, `frameToUs` for 24/25/30/60 fps), range math
+   - [x] **Command stack:** undo/redo with Immer patches. Every edit is a command (`ReplaceSlotAsset`, `EditText`, `SetTrim`, …).
+   - [x] **Serialization:** save and load projects as JSON with `schemaVersion`
 4. **Sample templates**
    - [x] Create 10 built-in templates in `templates/examples/` covering every v1 feature
    - [ ] Each template ships with a `.thumb.jpg` and a short `.preview.mp4` (generated in Phase 4)

@@ -1,0 +1,36 @@
+{
+  "name": "@stackreel/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Platform-independent StackReel logic: time math, the Project model, and the undo/redo command stack.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint . --max-warnings=0"
+  },
+  "dependencies": {
+    "@stackreel/template-schema": "workspace:*",
+    "immer": "^11.2.9",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@vitest/coverage-v8": "^5.0.5",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}
