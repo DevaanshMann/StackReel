@@ -294,7 +294,7 @@ A phase is done only when every exit criterion is met.
    - [ ] Draft a privacy policy: "no data collected" plus the opt-in crash reporting clause
 6. **Design basics**
    - [ ] Figma file with user flows: _Home → Template gallery → Fill slots → Preview/Tweak → Export → Share_
-   - [ ] Design tokens (color, type scale, spacing, radii, motion durations) in `packages/ui`
+   - [x] Design tokens (color, type scale, spacing, radii, motion durations) in `packages/ui`
    - [ ] App icon and wordmark v0
    - [ ] Safe-zone overlays for TikTok, Reels, and Shorts (top and bottom UI, right-side buttons)
 
