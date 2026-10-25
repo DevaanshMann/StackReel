@@ -285,7 +285,7 @@ A phase is done only when every exit criterion is met.
    - [ ] macOS runner job for iOS build and test (added in Phase 2)
    - [ ] Ubuntu job for Android build and test (added in Phase 3)
 4. **Release tooling**
-   - [ ] Changesets for versioning packages and the changelog
+   - [x] Changesets for versioning packages and the changelog
    - [ ] Expo EAS account (free tier) for mobile builds
 5. **Legal & identity**
    - [ ] Reserve the **StackReel** name in App Store Connect (create the app record) and the Google Play Console

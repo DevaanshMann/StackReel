@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+  "baseBranch": "main",
+  "access": "restricted",
+  "format": "prettier",
+  "changelog": ["@changesets/changelog-github", { "repo": "DevaanshMann/StackReel" }],
+  "commit": false,
+  "privatePackages": { "version": true, "tag": false },
+  "ignore": [],
+  "fixed": [],
+  "linked": [],
+  "updateInternalDependencies": "patch"
+}
