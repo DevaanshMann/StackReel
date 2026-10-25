@@ -8,3 +8,5 @@ export * from "./tokens/layout.js";
 export * from "./tokens/safe-zones.js";
 export { contrastRatio, relativeLuminance, parseHex, WCAG_AA } from "./color.js";
 export { renderTokensCss, cssVar } from "./css.js";
+export { renderSafeZoneOverlaySvg, safeZoneOverlayStyle, safeZoneRegions } from "./overlays.js";
+export type { Rect, SafeZoneRegions } from "./overlays.js";
