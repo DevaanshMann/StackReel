@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "quote-card",
+  "name": "Quote Card",
+  "description": "A quote typed out over a background photo or a plain dark canvas, with the author fading in below.",
+  "canvas": { "width": 1080, "height": 1920, "fps": 30, "background": "#111111" },
+  "durationUs": 6000000,
+  "audio": { "music": { "slot": "music", "startUs": 0, "gainDb": -8, "fadeInUs": 500000, "fadeOutUs": 1000000 } },
+  "slots": [
+    { "id": "background", "kind": "image", "label": "Background photo", "optional": true },
+    { "id": "quote", "kind": "text", "label": "Quote", "maxChars": 120 },
+    { "id": "author", "kind": "text", "label": "Author", "maxChars": 40 },
+    { "id": "music", "kind": "audio", "label": "Background music", "optional": true }
+  ],
+  "tracks": [
+    {
+      "id": "background",
+      "type": "video",
+      "items": [
+        {
+          "slot": "background",
+          "startUs": 0,
+          "durationUs": 6000000,
+          "fit": "cover",
+          "fadeInUs": 500000,
+          "fadeOutUs": 500000
+        }
+      ]
+    },
+    {
+      "id": "quote",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "startUs": 0,
+          "durationUs": 6000000,
+          "text": { "default": "“", "editable": false },
+          "style": { "font": "PlayfairDisplay-Black", "sizePx": 280, "color": "#FFFFFF66", "align": "center" },
+          "position": { "anchor": "top", "x": 0.5, "y": 0.2 },
+          "animation": { "in": "none", "out": "fade", "outDurationUs": 400000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 400000,
+          "durationUs": 5200000,
+          "slot": "quote",
+          "text": { "default": "Small steps, every single day.", "editable": true, "maxChars": 120 },
+          "style": {
+            "font": "PlayfairDisplay-Regular",
+            "sizePx": 76,
+            "color": "#FFFFFF",
+            "align": "center",
+            "background": { "color": "#00000099", "paddingPx": 32, "cornerRadiusPx": 24 }
+          },
+          "position": { "anchor": "center", "x": 0.5, "y": 0.45 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 1500000, "outDurationUs": 400000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 2200000,
+          "durationUs": 3800000,
+          "slot": "author",
+          "text": { "default": "— Your name", "editable": true, "maxChars": 40 },
+          "style": { "font": "Inter-Medium", "sizePx": 44, "color": "#FFFFFFCC", "align": "center" },
+          "position": { "anchor": "center", "x": 0.5, "y": 0.6 },
+          "animation": { "in": "fade", "out": "none", "inDurationUs": 600000 }
+        }
+      ]
+    }
+  ],
+  "safeZones": { "preset": "none" }
+}

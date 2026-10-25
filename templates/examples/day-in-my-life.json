@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "id": "day-in-my-life",
+  "name": "Day in My Life",
+  "description": "Ten moments from morning to night at 24 fps, each stamped with an editable time, under a voice-over with ducked music.",
+  "canvas": { "width": 1080, "height": 1920, "fps": 24, "background": "#000000" },
+  "durationUs": 60000000,
+  "audio": {
+    "music": { "slot": "music", "startUs": 0, "gainDb": -8, "fadeInUs": 2000000, "fadeOutUs": 2000000 },
+    "duckMusicUnderVoice": true
+  },
+  "slots": [
+    { "id": "wake", "kind": "video", "label": "Waking up", "minDurationUs": 5000000 },
+    { "id": "coffee", "kind": "video", "label": "Morning coffee", "minDurationUs": 5000000 },
+    { "id": "commute", "kind": "video", "label": "Commute", "minDurationUs": 10000000 },
+    { "id": "work", "kind": "video", "label": "Work", "minDurationUs": 10500000 },
+    { "id": "lunch", "kind": "video", "label": "Lunch", "minDurationUs": 6000000 },
+    { "id": "gym", "kind": "video", "label": "Workout", "minDurationUs": 6000000 },
+    { "id": "errands", "kind": "video", "label": "Errands", "minDurationUs": 7500000 },
+    { "id": "dinner", "kind": "video", "label": "Making dinner", "minDurationUs": 7000000 },
+    { "id": "unwind", "kind": "video", "label": "Winding down", "minDurationUs": 7000000 },
+    { "id": "night", "kind": "video", "label": "Lights out", "minDurationUs": 6000000 },
+    { "id": "intro", "kind": "text", "label": "Intro line", "maxChars": 40 },
+    { "id": "voiceover", "kind": "audio", "label": "Voice-over", "optional": true, "minDurationUs": 50000000 },
+    { "id": "music", "kind": "audio", "label": "Background music", "optional": true }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        { "slot": "wake", "startUs": 0, "durationUs": 5000000, "fit": "cover", "gainDb": -20 },
+        { "slot": "coffee", "startUs": 5000000, "durationUs": 5000000, "fit": "cover", "gainDb": -20 },
+        {
+          "slot": "commute",
+          "startUs": 10000000,
+          "durationUs": 5000000,
+          "fit": "cover",
+          "speed": 2,
+          "gainDb": -20,
+          "transitionIn": { "type": "cut", "durationUs": 0 }
+        },
+        {
+          "slot": "work",
+          "startUs": 15000000,
+          "durationUs": 7000000,
+          "fit": "cover",
+          "speed": 1.5,
+          "gainDb": -20,
+          "transitionIn": { "type": "crossfade", "durationUs": 400000 }
+        },
+        {
+          "slot": "lunch",
+          "startUs": 22000000,
+          "durationUs": 6000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "transitionIn": { "type": "crossfade", "durationUs": 400000 }
+        },
+        {
+          "slot": "gym",
+          "startUs": 28000000,
+          "durationUs": 6000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "transitionIn": { "type": "zoom-punch", "durationUs": 200000 }
+        },
+        {
+          "slot": "errands",
+          "startUs": 34000000,
+          "durationUs": 6000000,
+          "fit": "cover",
+          "speed": 1.25,
+          "gainDb": -20,
+          "transitionIn": { "type": "slide", "durationUs": 350000, "direction": "left" }
+        },
+        {
+          "slot": "dinner",
+          "startUs": 40000000,
+          "durationUs": 7000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "transitionIn": { "type": "crossfade", "durationUs": 400000 }
+        },
+        {
+          "slot": "unwind",
+          "startUs": 47000000,
+          "durationUs": 7000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "transitionIn": { "type": "crossfade", "durationUs": 500000 }
+        },
+        {
+          "slot": "night",
+          "startUs": 54000000,
+          "durationUs": 6000000,
+          "fit": "cover",
+          "gainDb": -20,
+          "fadeOutUs": 1000000,
+          "transitionIn": { "type": "crossfade", "durationUs": 600000 }
+        }
+      ]
+    },
+    {
+      "id": "voice",
+      "type": "audio",
+      "items": [
+        {
+          "slot": "voiceover",
+          "startUs": 1000000,
+          "durationUs": 58000000,
+          "gainDb": 0,
+          "fadeInUs": 100000,
+          "fadeOutUs": 500000
+        }
+      ]
+    },
+    {
+      "id": "text",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "startUs": 300000,
+          "durationUs": 4300000,
+          "slot": "intro",
+          "text": { "default": "A day in my life as a nurse", "editable": true, "maxChars": 40 },
+          "style": {
+            "font": "Inter-Bold",
+            "sizePx": 70,
+            "color": "#FFFFFF",
+            "align": "center",
+            "shadow": { "color": "#00000099", "blurPx": 12, "offsetXPx": 0, "offsetYPx": 4 }
+          },
+          "position": { "anchor": "top", "x": 0.5, "y": 0.14 },
+          "animation": { "in": "fade", "out": "fade", "inDurationUs": 500000, "outDurationUs": 300000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 300000,
+          "durationUs": 4400000,
+          "text": { "default": "7:00 AM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 5300000,
+          "durationUs": 4400000,
+          "text": { "default": "7:30 AM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 10300000,
+          "durationUs": 4400000,
+          "text": { "default": "8:15 AM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 15300000,
+          "durationUs": 6400000,
+          "text": { "default": "9:00 AM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 22300000,
+          "durationUs": 5400000,
+          "text": { "default": "12:30 PM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 28300000,
+          "durationUs": 5400000,
+          "text": { "default": "5:30 PM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 34300000,
+          "durationUs": 5400000,
+          "text": { "default": "6:45 PM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 40300000,
+          "durationUs": 6400000,
+          "text": { "default": "7:30 PM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 47300000,
+          "durationUs": 6400000,
+          "text": { "default": "9:30 PM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        },
+        {
+          "kind": "text",
+          "startUs": 54300000,
+          "durationUs": 5400000,
+          "text": { "default": "11:00 PM", "editable": true, "maxChars": 8 },
+          "style": {
+            "font": "SpaceMono-Bold",
+            "sizePx": 50,
+            "color": "#FFFFFFE6",
+            "align": "right",
+            "background": { "color": "#00000066", "paddingPx": 12, "cornerRadiusPx": 8 }
+          },
+          "position": { "anchor": "bottom-right", "x": 0.84, "y": 0.78 },
+          "animation": { "in": "typewriter", "out": "fade", "inDurationUs": 500000, "outDurationUs": 250000 }
+        }
+      ]
+    }
+  ],
+  "safeZones": { "preset": "tiktok-reels-shorts", "insets": { "top": 0.1, "bottom": 0.2, "left": 0.04, "right": 0.14 } }
+}

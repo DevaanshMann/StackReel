@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "id": "beat-cut-montage",
+  "name": "Beat-Cut Montage",
+  "description": "A slow-motion intro, a drop at 2 s, then ten one-second cuts on the beat at 120 BPM and a slow-motion ending.",
+  "canvas": { "width": 1080, "height": 1920, "fps": 30, "background": "#000000" },
+  "durationUs": 15000000,
+  "audio": {
+    "music": { "slot": "music", "startUs": 0, "gainDb": 0, "fadeOutUs": 1000000 },
+    "duckMusicUnderVoice": false
+  },
+  "slots": [
+    { "id": "clip1", "kind": "video", "label": "Intro shot (plays in slow motion)", "minDurationUs": 1000000 },
+    { "id": "clip2", "kind": "video", "label": "Beat clip 1", "minDurationUs": 1000000 },
+    { "id": "clip3", "kind": "video", "label": "Beat clip 2", "minDurationUs": 1000000 },
+    { "id": "clip4", "kind": "video", "label": "Beat clip 3", "minDurationUs": 1000000 },
+    { "id": "clip5", "kind": "video", "label": "Beat clip 4", "minDurationUs": 1000000 },
+    { "id": "clip6", "kind": "video", "label": "Beat clip 5", "minDurationUs": 4000000 },
+    { "id": "clip7", "kind": "video", "label": "Beat clip 6", "minDurationUs": 1000000 },
+    { "id": "clip8", "kind": "video", "label": "Beat clip 7", "minDurationUs": 1000000 },
+    { "id": "clip9", "kind": "video", "label": "Beat clip 8", "minDurationUs": 1000000 },
+    { "id": "clip10", "kind": "video", "label": "Beat clip 9", "minDurationUs": 1000000 },
+    { "id": "clip11", "kind": "video", "label": "Beat clip 10", "minDurationUs": 2000000 },
+    { "id": "clip12", "kind": "video", "label": "Closing shot (plays in slow motion)", "minDurationUs": 750000 },
+    { "id": "title", "kind": "text", "label": "Title", "optional": true, "maxChars": 20 },
+    { "id": "music", "kind": "audio", "label": "Track with a clear beat (120 BPM)", "minDurationUs": 15000000 }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        { "slot": "clip1", "startUs": 0, "durationUs": 2000000, "fit": "cover", "speed": 0.5, "gainDb": -60 },
+        {
+          "slot": "clip2",
+          "startUs": 2000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "gainDb": -60,
+          "transitionIn": { "type": "cut", "durationUs": 0 }
+        },
+        {
+          "slot": "clip3",
+          "startUs": 3000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "gainDb": -60,
+          "transitionIn": { "type": "zoom-punch", "durationUs": 120000 }
+        },
+        {
+          "slot": "clip4",
+          "startUs": 4000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "gainDb": -60,
+          "transitionIn": { "type": "whip-pan", "durationUs": 150000, "direction": "left" }
+        },
+        {
+          "slot": "clip5",
+          "startUs": 5000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "gainDb": -60,
+          "transitionIn": { "type": "whip-pan", "durationUs": 150000, "direction": "right" }
+        },
+        {
+          "slot": "clip6",
+          "startUs": 6000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "speed": 4,
+          "gainDb": -60,
+          "transitionIn": { "type": "spin", "durationUs": 200000 }
+        },
+        {
+          "slot": "clip7",
+          "startUs": 7000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "gainDb": -60,
+          "transitionIn": { "type": "whip-pan", "durationUs": 150000, "direction": "up" }
+        },
+        {
+          "slot": "clip8",
+          "startUs": 8000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "gainDb": -60,
+          "transitionIn": { "type": "whip-pan", "durationUs": 150000, "direction": "down" }
+        },
+        {
+          "slot": "clip9",
+          "startUs": 9000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "gainDb": -60,
+          "transitionIn": { "type": "zoom-punch", "durationUs": 120000 }
+        },
+        {
+          "slot": "clip10",
+          "startUs": 10000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "gainDb": -60,
+          "transitionIn": { "type": "spin", "durationUs": 200000 }
+        },
+        {
+          "slot": "clip11",
+          "startUs": 11000000,
+          "durationUs": 1000000,
+          "fit": "cover",
+          "speed": 2,
+          "gainDb": -60,
+          "transitionIn": { "type": "cut", "durationUs": 0 }
+        },
+        {
+          "slot": "clip12",
+          "startUs": 12000000,
+          "durationUs": 3000000,
+          "fit": "cover",
+          "speed": 0.25,
+          "gainDb": -60,
+          "fadeOutUs": 1000000,
+          "transitionIn": { "type": "crossfade", "durationUs": 300000 }
+        }
+      ]
+    },
+    {
+      "id": "fx",
+      "type": "overlay",
+      "items": [
+        {
+          "kind": "text",
+          "startUs": 200000,
+          "durationUs": 1700000,
+          "slot": "title",
+          "text": { "default": "Summer ’26", "editable": true, "maxChars": 20 },
+          "style": {
+            "font": "Inter-Black",
+            "sizePx": 120,
+            "color": "#FFFFFF",
+            "align": "center",
+            "stroke": { "color": "#000000", "widthPx": 6 }
+          },
+          "position": { "anchor": "center", "x": 0.5, "y": 0.42 },
+          "animation": { "in": "bounce", "out": "scale", "inDurationUs": 400000, "outDurationUs": 150000 }
+        },
+        {
+          "kind": "sticker",
+          "startUs": 2000000,
+          "durationUs": 500000,
+          "asset": "flash",
+          "widthNorm": 0.5,
+          "position": { "anchor": "center", "x": 0.5, "y": 0.5 },
+          "animation": { "in": "scale", "out": "fade", "inDurationUs": 100000, "outDurationUs": 200000 }
+        }
+      ]
+    }
+  ],
+  "safeZones": { "preset": "tiktok-reels-shorts" }
+}
