@@ -1,0 +1,538 @@
+{
+  "bindings": {
+    "ex1": {
+      "assetUri": "fixture://ex1.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "ex2": {
+      "assetUri": "fixture://ex2.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 400000
+    },
+    "ex3": {
+      "assetUri": "fixture://ex3.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "ex4": {
+      "assetUri": "fixture://ex4.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "intro": {
+      "assetUri": "fixture://intro.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "music": {
+      "assetUri": "fixture://music.m4a",
+      "trimInUs": 0,
+      "trimOutUs": 90000000
+    },
+    "outro": {
+      "assetUri": "fixture://outro.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 400000
+    }
+  },
+  "overrides": {
+    "style": {},
+    "text": {}
+  },
+  "schemaVersion": 1,
+  "template": {
+    "audio": {
+      "duckMusicUnderVoice": false,
+      "music": {
+        "fadeOutUs": 1500000,
+        "gainDb": -2,
+        "slot": "music",
+        "startUs": 0
+      }
+    },
+    "canvas": {
+      "background": "#000000",
+      "fps": 60,
+      "height": 1920,
+      "width": 1080
+    },
+    "description": "Four exercises of ten seconds each at 60 fps, with move names, a round counter and a closing save prompt.",
+    "durationUs": 45000000,
+    "id": "hiit-circuit",
+    "name": "HIIT Circuit",
+    "safeZones": {
+      "preset": "youtube-shorts"
+    },
+    "schemaVersion": 1,
+    "slots": [
+      {
+        "id": "intro",
+        "kind": "video",
+        "label": "Intro or warm-up",
+        "minDurationUs": 3000000
+      },
+      {
+        "id": "ex1",
+        "kind": "video",
+        "label": "Exercise 1",
+        "minDurationUs": 10000000
+      },
+      {
+        "id": "ex2",
+        "kind": "video",
+        "label": "Exercise 2",
+        "minDurationUs": 10000000
+      },
+      {
+        "id": "ex3",
+        "kind": "video",
+        "label": "Exercise 3",
+        "minDurationUs": 10000000
+      },
+      {
+        "id": "ex4",
+        "kind": "video",
+        "label": "Exercise 4",
+        "minDurationUs": 10000000
+      },
+      {
+        "id": "outro",
+        "kind": "video",
+        "label": "Cool-down",
+        "minDurationUs": 1000000
+      },
+      {
+        "id": "ex1Name",
+        "kind": "text",
+        "label": "Exercise 1 name",
+        "maxChars": 20
+      },
+      {
+        "id": "ex2Name",
+        "kind": "text",
+        "label": "Exercise 2 name",
+        "maxChars": 20
+      },
+      {
+        "id": "ex3Name",
+        "kind": "text",
+        "label": "Exercise 3 name",
+        "maxChars": 20
+      },
+      {
+        "id": "ex4Name",
+        "kind": "text",
+        "label": "Exercise 4 name",
+        "maxChars": 20
+      },
+      {
+        "id": "music",
+        "kind": "audio",
+        "label": "Workout track"
+      }
+    ],
+    "tracks": [
+      {
+        "id": "main",
+        "items": [
+          {
+            "durationUs": 3000000,
+            "fit": "cover",
+            "slot": "intro",
+            "startUs": 0
+          },
+          {
+            "durationUs": 10000000,
+            "fit": "cover",
+            "slot": "ex1",
+            "startUs": 3000000,
+            "transitionIn": {
+              "durationUs": 150000,
+              "type": "zoom-punch"
+            }
+          },
+          {
+            "durationUs": 10000000,
+            "fit": "cover",
+            "slot": "ex2",
+            "startUs": 13000000,
+            "transitionIn": {
+              "direction": "up",
+              "durationUs": 300000,
+              "type": "slide"
+            }
+          },
+          {
+            "durationUs": 10000000,
+            "fit": "cover",
+            "slot": "ex3",
+            "startUs": 23000000,
+            "transitionIn": {
+              "direction": "down",
+              "durationUs": 300000,
+              "type": "slide"
+            }
+          },
+          {
+            "durationUs": 10000000,
+            "fit": "cover",
+            "slot": "ex4",
+            "startUs": 33000000,
+            "transitionIn": {
+              "durationUs": 150000,
+              "type": "zoom-punch"
+            }
+          },
+          {
+            "durationUs": 2000000,
+            "fadeOutUs": 400000,
+            "fit": "cover",
+            "slot": "outro",
+            "speed": 0.5,
+            "startUs": 43000000,
+            "transitionIn": {
+              "durationUs": 400000,
+              "type": "crossfade"
+            }
+          }
+        ],
+        "type": "video"
+      },
+      {
+        "id": "labels",
+        "items": [
+          {
+            "animation": {
+              "in": "scale",
+              "inDurationUs": 250000,
+              "out": "fade",
+              "outDurationUs": 200000
+            },
+            "durationUs": 2500000,
+            "kind": "text",
+            "position": {
+              "anchor": "center",
+              "x": 0.5,
+              "y": 0.4
+            },
+            "startUs": 300000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-Black",
+              "sizePx": 104,
+              "stroke": {
+                "color": "#000000",
+                "widthPx": 6
+              }
+            },
+            "text": {
+              "default": "4 moves. 40 seconds.",
+              "editable": true,
+              "maxChars": 28
+            }
+          },
+          {
+            "animation": {
+              "in": "bounce",
+              "out": "fade"
+            },
+            "durationUs": 9500000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.1
+            },
+            "slot": "ex1Name",
+            "startUs": 3200000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-Black",
+              "sizePx": 84,
+              "stroke": {
+                "color": "#000000",
+                "widthPx": 5
+              }
+            },
+            "text": {
+              "default": "Squat jumps",
+              "editable": true,
+              "maxChars": 20
+            }
+          },
+          {
+            "animation": {
+              "in": "bounce",
+              "out": "fade"
+            },
+            "durationUs": 9500000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.1
+            },
+            "slot": "ex2Name",
+            "startUs": 13200000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-Black",
+              "sizePx": 84,
+              "stroke": {
+                "color": "#000000",
+                "widthPx": 5
+              }
+            },
+            "text": {
+              "default": "Push-ups",
+              "editable": true,
+              "maxChars": 20
+            }
+          },
+          {
+            "animation": {
+              "in": "bounce",
+              "out": "fade"
+            },
+            "durationUs": 9500000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.1
+            },
+            "slot": "ex3Name",
+            "startUs": 23200000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-Black",
+              "sizePx": 84,
+              "stroke": {
+                "color": "#000000",
+                "widthPx": 5
+              }
+            },
+            "text": {
+              "default": "Mountain climbers",
+              "editable": true,
+              "maxChars": 20
+            }
+          },
+          {
+            "animation": {
+              "in": "bounce",
+              "out": "fade"
+            },
+            "durationUs": 9500000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.1
+            },
+            "slot": "ex4Name",
+            "startUs": 33200000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-Black",
+              "sizePx": 84,
+              "stroke": {
+                "color": "#000000",
+                "widthPx": 5
+              }
+            },
+            "text": {
+              "default": "Burpees",
+              "editable": true,
+              "maxChars": 20
+            }
+          },
+          {
+            "animation": {
+              "in": "pop",
+              "out": "fade"
+            },
+            "asset": "fire",
+            "durationUs": 9400000,
+            "kind": "sticker",
+            "position": {
+              "anchor": "center",
+              "x": 0.5,
+              "y": 0.68
+            },
+            "startUs": 33300000,
+            "widthNorm": 0.16
+          },
+          {
+            "animation": {
+              "in": "slide-up",
+              "out": "none"
+            },
+            "durationUs": 1800000,
+            "kind": "text",
+            "position": {
+              "anchor": "bottom",
+              "x": 0.5,
+              "y": 0.76
+            },
+            "startUs": 43200000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-Bold",
+              "shadow": {
+                "blurPx": 12,
+                "color": "#00000099",
+                "offsetXPx": 0,
+                "offsetYPx": 4
+              },
+              "sizePx": 64
+            },
+            "text": {
+              "default": "Save this for later",
+              "editable": true,
+              "maxChars": 28
+            }
+          }
+        ],
+        "type": "overlay"
+      },
+      {
+        "id": "counter",
+        "items": [
+          {
+            "animation": {
+              "in": "pop",
+              "inDurationUs": 150000,
+              "out": "fade",
+              "outDurationUs": 150000
+            },
+            "durationUs": 9500000,
+            "kind": "text",
+            "position": {
+              "anchor": "top-right",
+              "x": 0.93,
+              "y": 0.1
+            },
+            "startUs": 3200000,
+            "style": {
+              "align": "center",
+              "background": {
+                "color": "#C6FF00",
+                "cornerRadiusPx": 10,
+                "paddingPx": 14
+              },
+              "color": "#0A0A0A",
+              "font": "SpaceMono-Bold",
+              "sizePx": 48
+            },
+            "text": {
+              "default": "1/4",
+              "editable": false
+            }
+          },
+          {
+            "animation": {
+              "in": "pop",
+              "inDurationUs": 150000,
+              "out": "fade",
+              "outDurationUs": 150000
+            },
+            "durationUs": 9500000,
+            "kind": "text",
+            "position": {
+              "anchor": "top-right",
+              "x": 0.93,
+              "y": 0.1
+            },
+            "startUs": 13200000,
+            "style": {
+              "align": "center",
+              "background": {
+                "color": "#C6FF00",
+                "cornerRadiusPx": 10,
+                "paddingPx": 14
+              },
+              "color": "#0A0A0A",
+              "font": "SpaceMono-Bold",
+              "sizePx": 48
+            },
+            "text": {
+              "default": "2/4",
+              "editable": false
+            }
+          },
+          {
+            "animation": {
+              "in": "pop",
+              "inDurationUs": 150000,
+              "out": "fade",
+              "outDurationUs": 150000
+            },
+            "durationUs": 9500000,
+            "kind": "text",
+            "position": {
+              "anchor": "top-right",
+              "x": 0.93,
+              "y": 0.1
+            },
+            "startUs": 23200000,
+            "style": {
+              "align": "center",
+              "background": {
+                "color": "#C6FF00",
+                "cornerRadiusPx": 10,
+                "paddingPx": 14
+              },
+              "color": "#0A0A0A",
+              "font": "SpaceMono-Bold",
+              "sizePx": 48
+            },
+            "text": {
+              "default": "3/4",
+              "editable": false
+            }
+          },
+          {
+            "animation": {
+              "in": "pop",
+              "inDurationUs": 150000,
+              "out": "fade",
+              "outDurationUs": 150000
+            },
+            "durationUs": 9500000,
+            "kind": "text",
+            "position": {
+              "anchor": "top-right",
+              "x": 0.93,
+              "y": 0.1
+            },
+            "startUs": 33200000,
+            "style": {
+              "align": "center",
+              "background": {
+                "color": "#C6FF00",
+                "cornerRadiusPx": 10,
+                "paddingPx": 14
+              },
+              "color": "#0A0A0A",
+              "font": "SpaceMono-Bold",
+              "sizePx": 48
+            },
+            "text": {
+              "default": "4/4",
+              "editable": false
+            }
+          }
+        ],
+        "type": "overlay"
+      }
+    ]
+  }
+}

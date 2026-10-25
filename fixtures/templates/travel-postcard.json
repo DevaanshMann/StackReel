@@ -1,0 +1,213 @@
+{
+  "audio": {
+    "duckMusicUnderVoice": false,
+    "music": {
+      "fadeInUs": 1000000,
+      "fadeOutUs": 1500000,
+      "gainDb": -4,
+      "slot": "music",
+      "startUs": 0
+    }
+  },
+  "canvas": {
+    "background": "#F4EDE1",
+    "fps": 25,
+    "height": 1920,
+    "width": 1080
+  },
+  "description": "A destination title over your arrival shot, a map or ticket photo, then three spots with soft slides and crossfades.",
+  "durationUs": 15000000,
+  "id": "travel-postcard",
+  "name": "Travel Postcard",
+  "safeZones": {
+    "preset": "instagram-reels"
+  },
+  "schemaVersion": 1,
+  "slots": [
+    {
+      "id": "arrival",
+      "kind": "video",
+      "label": "Arrival shot",
+      "minDurationUs": 3000000
+    },
+    {
+      "id": "map",
+      "kind": "image",
+      "label": "Map, ticket or boarding pass photo",
+      "optional": true
+    },
+    {
+      "id": "landmark",
+      "kind": "video",
+      "label": "A landmark",
+      "minDurationUs": 2500000
+    },
+    {
+      "id": "street",
+      "kind": "video",
+      "label": "Street life",
+      "minDurationUs": 2500000
+    },
+    {
+      "id": "sunset",
+      "kind": "video",
+      "label": "Golden hour",
+      "minDurationUs": 5000000
+    },
+    {
+      "id": "destination",
+      "kind": "text",
+      "label": "Destination",
+      "maxChars": 24
+    },
+    {
+      "id": "music",
+      "kind": "audio",
+      "label": "Background music",
+      "optional": true
+    }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "items": [
+        {
+          "durationUs": 3000000,
+          "fit": "cover",
+          "slot": "arrival",
+          "startUs": 0
+        },
+        {
+          "durationUs": 2000000,
+          "fit": "contain",
+          "slot": "map",
+          "startUs": 3000000,
+          "transitionIn": {
+            "durationUs": 400000,
+            "type": "crossfade"
+          }
+        },
+        {
+          "durationUs": 2500000,
+          "fit": "cover",
+          "slot": "landmark",
+          "startUs": 5000000,
+          "transitionIn": {
+            "direction": "right",
+            "durationUs": 400000,
+            "type": "slide"
+          }
+        },
+        {
+          "durationUs": 2500000,
+          "fit": "cover",
+          "slot": "street",
+          "startUs": 7500000,
+          "transitionIn": {
+            "direction": "right",
+            "durationUs": 400000,
+            "type": "slide"
+          }
+        },
+        {
+          "durationUs": 5000000,
+          "fadeOutUs": 800000,
+          "fit": "cover",
+          "slot": "sunset",
+          "startUs": 10000000,
+          "transitionIn": {
+            "durationUs": 600000,
+            "type": "crossfade"
+          }
+        }
+      ],
+      "type": "video"
+    },
+    {
+      "id": "titles",
+      "items": [
+        {
+          "animation": {
+            "in": "slide-right",
+            "inDurationUs": 400000,
+            "out": "fade",
+            "outDurationUs": 300000
+          },
+          "durationUs": 2600000,
+          "kind": "text",
+          "position": {
+            "anchor": "top-left",
+            "x": 0.08,
+            "y": 0.14
+          },
+          "slot": "destination",
+          "startUs": 300000,
+          "style": {
+            "align": "left",
+            "color": "#FFFFFF",
+            "font": "PlayfairDisplay-BoldItalic",
+            "shadow": {
+              "blurPx": 12,
+              "color": "#00000099",
+              "offsetXPx": 0,
+              "offsetYPx": 4
+            },
+            "sizePx": 132
+          },
+          "text": {
+            "default": "Lisbon",
+            "editable": true,
+            "maxChars": 24
+          }
+        },
+        {
+          "animation": {
+            "in": "bounce",
+            "out": "fade"
+          },
+          "asset": "map-pin",
+          "durationUs": 1600000,
+          "kind": "sticker",
+          "position": {
+            "anchor": "bottom-left",
+            "x": 0.1,
+            "y": 0.78
+          },
+          "startUs": 3200000,
+          "widthNorm": 0.12
+        },
+        {
+          "animation": {
+            "in": "slide-up",
+            "out": "fade"
+          },
+          "durationUs": 4000000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom-left",
+            "x": 0.08,
+            "y": 0.8
+          },
+          "startUs": 10400000,
+          "style": {
+            "align": "left",
+            "background": {
+              "color": "#00000080",
+              "cornerRadiusPx": 14,
+              "paddingPx": 18
+            },
+            "color": "#FFFFFF",
+            "font": "Inter-Medium",
+            "sizePx": 44
+          },
+          "text": {
+            "default": "Day 1 · Portugal",
+            "editable": true,
+            "maxChars": 32
+          }
+        }
+      ],
+      "type": "overlay"
+    }
+  ]
+}

@@ -1,0 +1,276 @@
+{
+  "audio": [
+    {
+      "endUs": 3800000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": 0,
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "before",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://before.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3800000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "endUs": 8000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 500000,
+      "gainDb": -5,
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://music.m4a",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 8000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "endUs": 8000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 300000,
+      "gainDb": 0,
+      "id": "main/1",
+      "kind": "video",
+      "slotId": "after",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://after.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 4500000,
+        "sourceStartUs": 0
+      },
+      "startUs": 3500000
+    }
+  ],
+  "canvas": {
+    "background": "#000000",
+    "fps": 30,
+    "height": 1920,
+    "width": 1080
+  },
+  "durationUs": 8000000,
+  "layers": [
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 3800000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/0",
+      "itemIndex": 0,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "before",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://before.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3800000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 0,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "slide-down",
+        "inDurationUs": 300000,
+        "out": "none",
+        "outDurationUs": 0
+      },
+      "endUs": 3400000,
+      "id": "labels/0",
+      "itemIndex": 0,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top-left",
+        "rotationDeg": 0,
+        "xPx": 64.8,
+        "yPx": 172.79999999999998
+      },
+      "startUs": 200000,
+      "style": {
+        "align": "left",
+        "background": {
+          "color": "#00000099",
+          "cornerRadiusPx": 12,
+          "paddingPx": 16
+        },
+        "color": "#FFFFFF",
+        "font": "Inter-Black",
+        "sizePx": 72
+      },
+      "text": "BEFORE",
+      "trackId": "labels",
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "scale",
+        "inDurationUs": 300000,
+        "out": "fade",
+        "outDurationUs": 300000
+      },
+      "asset": "arrow-curved",
+      "endUs": 4100000,
+      "id": "labels/1",
+      "itemIndex": 1,
+      "kind": "sticker",
+      "opacity": 1,
+      "placement": {
+        "anchor": "center",
+        "rotationDeg": -20,
+        "xPx": 540,
+        "yPx": 960
+      },
+      "startUs": 2900000,
+      "trackId": "labels",
+      "widthPx": 259.2,
+      "z": 1
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 8000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 300000,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/1",
+      "itemIndex": 1,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "after",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://after.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 4500000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 3500000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -740, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "slide-down",
+        "inDurationUs": 300000,
+        "out": "none",
+        "outDurationUs": 0
+      },
+      "endUs": 8000000,
+      "id": "labels/2",
+      "itemIndex": 2,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top-right",
+        "rotationDeg": 0,
+        "xPx": 1015.1999999999999,
+        "yPx": 172.79999999999998
+      },
+      "startUs": 3700000,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000099",
+          "cornerRadiusPx": 12,
+          "paddingPx": 16
+        },
+        "color": "#FFFFFF",
+        "font": "Inter-Black",
+        "sizePx": 72
+      },
+      "text": "AFTER",
+      "trackId": "labels",
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "fade",
+        "inDurationUs": 400000,
+        "out": "fade",
+        "outDurationUs": 200000
+      },
+      "endUs": 7800000,
+      "id": "labels/3",
+      "itemIndex": 3,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 4000000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-Bold",
+        "sizePx": 60,
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 4
+        }
+      },
+      "text": "3 months of consistency",
+      "trackId": "labels",
+      "z": 1
+    }
+  ],
+  "renderPlanVersion": 1,
+  "templateId": "before-after",
+  "transitions": [
+    {
+      "direction": "right",
+      "endUs": 3800000,
+      "fromLayerId": "main/0",
+      "id": "main/1",
+      "startUs": 3500000,
+      "toLayerId": "main/1",
+      "trackId": "main",
+      "type": "whip-pan",
+      "z": 0
+    }
+  ],
+  "warnings": []
+}

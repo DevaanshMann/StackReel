@@ -1,0 +1,323 @@
+{
+  "beat-cut-montage": {
+    "fixture://clip1.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://clip10.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://clip11.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://clip12.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://clip2.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://clip3.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://clip4.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://clip5.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://clip6.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://clip7.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://clip8.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://clip9.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    }
+  },
+  "before-after": {
+    "fixture://after.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://before.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    }
+  },
+  "day-in-my-life": {
+    "fixture://coffee.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://commute.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://dinner.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://errands.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://gym.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://lunch.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    },
+    "fixture://night.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://unwind.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://voiceover.m4a": {
+      "durationUs": 90000000
+    },
+    "fixture://wake.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://work.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    }
+  },
+  "hiit-circuit": {
+    "fixture://ex1.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://ex2.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://ex3.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://ex4.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://intro.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    },
+    "fixture://outro.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    }
+  },
+  "hook-and-reveal": {
+    "fixture://clip1.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://clip2.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://clip3.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    }
+  },
+  "product-drop": {
+    "fixture://backdrop.jpg": {
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://detail.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://hero.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    },
+    "fixture://photo1.jpg": {
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://photo2.jpg": {
+      "height": 1080,
+      "width": 1920
+    }
+  },
+  "quote-card": {
+    "fixture://background.jpg": {
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    }
+  },
+  "recipe-in-30": {
+    "fixture://cook.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://hero.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://ingredients.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    },
+    "fixture://plate.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://prep.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://voiceover.m4a": {
+      "durationUs": 90000000
+    }
+  },
+  "top-5-countdown": {
+    "fixture://item1.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://item2.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://item3.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://item4.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://item5.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    }
+  },
+  "travel-postcard": {
+    "fixture://arrival.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://landmark.mp4": {
+      "durationUs": 400000,
+      "height": 1920,
+      "width": 1080
+    },
+    "fixture://map.jpg": {
+      "height": 1080,
+      "width": 1440
+    },
+    "fixture://music.m4a": {
+      "durationUs": 90000000
+    },
+    "fixture://street.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1920
+    },
+    "fixture://sunset.mp4": {
+      "durationUs": 120000000,
+      "height": 1080,
+      "width": 1440
+    }
+  }
+}

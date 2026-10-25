@@ -1,0 +1,377 @@
+{
+  "audio": [
+    {
+      "endUs": 3400000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -60,
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "hero",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://hero.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3400000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "endUs": 12000000,
+      "fadeInUs": 300000,
+      "fadeOutUs": 800000,
+      "gainDb": -3,
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://music.m4a",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 12000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "endUs": 12000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -60,
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "detail",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://detail.mp4",
+        "fitMode": "trim",
+        "rate": 0.75,
+        "sourceEndUs": 3000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 8000000
+    }
+  ],
+  "canvas": {
+    "background": "#EDEDED",
+    "fps": 30,
+    "height": 1920,
+    "width": 1080
+  },
+  "durationUs": 12000000,
+  "layers": [
+    {
+      "assetUri": "fixture://backdrop.jpg",
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 12000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "fill",
+      "id": "backdrop/0",
+      "itemIndex": 0,
+      "kind": "image",
+      "opacity": 1,
+      "slotId": "backdrop",
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 0,
+      "trackId": "backdrop",
+      "transform": [0.5625, 0, 0, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 3400000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -60,
+      "id": "main/0",
+      "itemIndex": 0,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "hero",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://hero.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3400000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 0,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -740, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "pop",
+        "inDurationUs": 300000,
+        "out": "fade",
+        "outDurationUs": 300000
+      },
+      "endUs": 2800000,
+      "id": "labels/0",
+      "itemIndex": 0,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 230.39999999999998
+      },
+      "startUs": 300000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-Black",
+        "shadow": {
+          "blurPx": 12,
+          "color": "#00000099",
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        },
+        "sizePx": 96
+      },
+      "text": "AirFlow Bottle",
+      "trackId": "labels",
+      "z": 2
+    },
+    {
+      "assetUri": "fixture://photo1.jpg",
+      "cropPx": {
+        "height": 1920,
+        "width": 1080,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 5800000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "contain",
+      "id": "main/1",
+      "itemIndex": 1,
+      "kind": "image",
+      "opacity": 1,
+      "slotId": "photo1",
+      "sourceSize": {
+        "height": 1920,
+        "width": 1080
+      },
+      "startUs": 3000000,
+      "trackId": "main",
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "pop",
+        "inDurationUs": 300000,
+        "out": "scale",
+        "outDurationUs": 300000
+      },
+      "asset": "badge-new",
+      "endUs": 8000000,
+      "id": "labels/1",
+      "itemIndex": 1,
+      "kind": "sticker",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top-right",
+        "rotationDeg": 12,
+        "xPx": 993.6,
+        "yPx": 153.6
+      },
+      "startUs": 3200000,
+      "trackId": "labels",
+      "widthPx": 237.6,
+      "z": 2
+    },
+    {
+      "assetUri": "fixture://photo2.jpg",
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 8200000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "contain",
+      "id": "main/2",
+      "itemIndex": 2,
+      "kind": "image",
+      "opacity": 1,
+      "slotId": "photo2",
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 5500000,
+      "trackId": "main",
+      "transform": [0.5625, 0, 0, 0, 0.5625, 656.25, 0, 0, 1],
+      "z": 1
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 12000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -60,
+      "id": "main/3",
+      "itemIndex": 3,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "detail",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://detail.mp4",
+        "fitMode": "trim",
+        "rate": 0.75,
+        "sourceEndUs": 3000000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 8000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -740, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "slide-up",
+        "inDurationUs": 300000,
+        "out": "fade",
+        "outDurationUs": 300000
+      },
+      "endUs": 11800000,
+      "id": "labels/2",
+      "itemIndex": 2,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 1420.8
+      },
+      "startUs": 8400000,
+      "style": {
+        "align": "center",
+        "background": {
+          "color": "#FF3B30",
+          "cornerRadiusPx": 36,
+          "paddingPx": 28
+        },
+        "color": "#FFFFFF",
+        "font": "Inter-Black",
+        "sizePx": 110
+      },
+      "text": "$29",
+      "trackId": "labels",
+      "z": 2
+    },
+    {
+      "animation": {
+        "in": "fade",
+        "inDurationUs": 300000,
+        "out": "none",
+        "outDurationUs": 0
+      },
+      "endUs": 12000000,
+      "id": "labels/3",
+      "itemIndex": 3,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 1536
+      },
+      "startUs": 10000000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-SemiBold",
+        "shadow": {
+          "blurPx": 12,
+          "color": "#00000099",
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        },
+        "sizePx": 46
+      },
+      "text": "Link in bio",
+      "trackId": "labels",
+      "z": 2
+    }
+  ],
+  "renderPlanVersion": 1,
+  "templateId": "product-drop",
+  "transitions": [
+    {
+      "endUs": 3400000,
+      "fromLayerId": "main/0",
+      "id": "main/1",
+      "startUs": 3000000,
+      "toLayerId": "main/1",
+      "trackId": "main",
+      "type": "spin",
+      "z": 1
+    },
+    {
+      "direction": "left",
+      "endUs": 5800000,
+      "fromLayerId": "main/1",
+      "id": "main/2",
+      "startUs": 5500000,
+      "toLayerId": "main/2",
+      "trackId": "main",
+      "type": "slide",
+      "z": 1
+    },
+    {
+      "endUs": 8200000,
+      "fromLayerId": "main/2",
+      "id": "main/3",
+      "startUs": 8000000,
+      "toLayerId": "main/3",
+      "trackId": "main",
+      "type": "zoom-punch",
+      "z": 1
+    }
+  ],
+  "warnings": []
+}

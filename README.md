@@ -340,7 +340,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
    - [x] Unit tests for every schema rule (valid and invalid fixtures)
    - [ ] Property-based tests (fast-check) for the resolver: no negative durations, layers stay in bounds, transitions never overlap more than two clips
    - [x] Snapshot tests: the render plan for each sample template
-   - [ ] Export `fixtures/` so Swift and Kotlin tests use **the exact same JSON**
+   - [x] Export `fixtures/` so Swift and Kotlin tests use **the exact same JSON**
 
 **Deliverables:** `@stackreel/template-schema@0.1.0`, `@stackreel/core@0.1.0`, 10 templates, spec doc.
 
@@ -697,8 +697,9 @@ Premiere and CapCut use.
 | E2E web          | Playwright                                              | Full flows in browsers                           |
 | Performance      | Custom benchmark harness                                | Preview fps, export time, memory per tier        |
 
-**Shared fixtures:** `packages/template-schema/fixtures/` holds the plans and small CC0 media clips. Every engine consumes the
-same files, so a new feature is "done" only when its fixture passes on every engine.
+**Shared fixtures:** [`fixtures/`](fixtures/README.md) holds the templates, projects and expected render plans (later also
+small CC0 media clips), generated from `@stackreel/core`. Every engine consumes the same files, so a new feature is
+"done" only when its fixture passes on every engine.
 
 ## Performance budgets
 

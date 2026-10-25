@@ -1,0 +1,177 @@
+{
+  "bindings": {
+    "background": {
+      "assetUri": "fixture://background.jpg",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "music": {
+      "assetUri": "fixture://music.m4a",
+      "trimInUs": 0,
+      "trimOutUs": 90000000
+    }
+  },
+  "overrides": {
+    "style": {},
+    "text": {}
+  },
+  "schemaVersion": 1,
+  "template": {
+    "audio": {
+      "music": {
+        "fadeInUs": 500000,
+        "fadeOutUs": 1000000,
+        "gainDb": -8,
+        "slot": "music",
+        "startUs": 0
+      }
+    },
+    "canvas": {
+      "background": "#111111",
+      "fps": 30,
+      "height": 1920,
+      "width": 1080
+    },
+    "description": "A quote typed out over a background photo or a plain dark canvas, with the author fading in below.",
+    "durationUs": 6000000,
+    "id": "quote-card",
+    "name": "Quote Card",
+    "safeZones": {
+      "preset": "none"
+    },
+    "schemaVersion": 1,
+    "slots": [
+      {
+        "id": "background",
+        "kind": "image",
+        "label": "Background photo",
+        "optional": true
+      },
+      {
+        "id": "quote",
+        "kind": "text",
+        "label": "Quote",
+        "maxChars": 120
+      },
+      {
+        "id": "author",
+        "kind": "text",
+        "label": "Author",
+        "maxChars": 40
+      },
+      {
+        "id": "music",
+        "kind": "audio",
+        "label": "Background music",
+        "optional": true
+      }
+    ],
+    "tracks": [
+      {
+        "id": "background",
+        "items": [
+          {
+            "durationUs": 6000000,
+            "fadeInUs": 500000,
+            "fadeOutUs": 500000,
+            "fit": "cover",
+            "slot": "background",
+            "startUs": 0
+          }
+        ],
+        "type": "video"
+      },
+      {
+        "id": "quote",
+        "items": [
+          {
+            "animation": {
+              "in": "none",
+              "out": "fade",
+              "outDurationUs": 400000
+            },
+            "durationUs": 6000000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.2
+            },
+            "startUs": 0,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF66",
+              "font": "PlayfairDisplay-Black",
+              "sizePx": 280
+            },
+            "text": {
+              "default": "“",
+              "editable": false
+            }
+          },
+          {
+            "animation": {
+              "in": "typewriter",
+              "inDurationUs": 1500000,
+              "out": "fade",
+              "outDurationUs": 400000
+            },
+            "durationUs": 5200000,
+            "kind": "text",
+            "position": {
+              "anchor": "center",
+              "x": 0.5,
+              "y": 0.45
+            },
+            "slot": "quote",
+            "startUs": 400000,
+            "style": {
+              "align": "center",
+              "background": {
+                "color": "#00000099",
+                "cornerRadiusPx": 24,
+                "paddingPx": 32
+              },
+              "color": "#FFFFFF",
+              "font": "PlayfairDisplay-Regular",
+              "sizePx": 76
+            },
+            "text": {
+              "default": "Small steps, every single day.",
+              "editable": true,
+              "maxChars": 120
+            }
+          },
+          {
+            "animation": {
+              "in": "fade",
+              "inDurationUs": 600000,
+              "out": "none"
+            },
+            "durationUs": 3800000,
+            "kind": "text",
+            "position": {
+              "anchor": "center",
+              "x": 0.5,
+              "y": 0.6
+            },
+            "slot": "author",
+            "startUs": 2200000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFFCC",
+              "font": "Inter-Medium",
+              "sizePx": 44
+            },
+            "text": {
+              "default": "— Your name",
+              "editable": true,
+              "maxChars": 40
+            }
+          }
+        ],
+        "type": "overlay"
+      }
+    ]
+  }
+}

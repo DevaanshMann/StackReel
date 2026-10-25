@@ -1,0 +1,403 @@
+{
+  "bindings": {
+    "cook": {
+      "assetUri": "fixture://cook.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 400000
+    },
+    "hero": {
+      "assetUri": "fixture://hero.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "ingredients": {
+      "assetUri": "fixture://ingredients.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "music": {
+      "assetUri": "fixture://music.m4a",
+      "trimInUs": 0,
+      "trimOutUs": 90000000
+    },
+    "plate": {
+      "assetUri": "fixture://plate.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "prep": {
+      "assetUri": "fixture://prep.mp4",
+      "trimInUs": 0,
+      "trimOutUs": 120000000
+    },
+    "voiceover": {
+      "assetUri": "fixture://voiceover.m4a",
+      "trimInUs": 0,
+      "trimOutUs": 90000000
+    }
+  },
+  "overrides": {
+    "style": {},
+    "text": {}
+  },
+  "schemaVersion": 1,
+  "template": {
+    "audio": {
+      "duckMusicUnderVoice": true,
+      "music": {
+        "fadeOutUs": 1000000,
+        "gainDb": -10,
+        "slot": "music",
+        "startUs": 0
+      }
+    },
+    "canvas": {
+      "background": "#000000",
+      "fps": 30,
+      "height": 1920,
+      "width": 1080
+    },
+    "description": "Ingredients, three sped-up steps and a slow-motion hero shot, with step labels, an optional voice-over and quiet music.",
+    "durationUs": 30000000,
+    "id": "recipe-in-30",
+    "name": "30-Second Recipe",
+    "safeZones": {
+      "preset": "tiktok"
+    },
+    "schemaVersion": 1,
+    "slots": [
+      {
+        "id": "ingredients",
+        "kind": "video",
+        "label": "Ingredients laid out",
+        "minDurationUs": 4000000
+      },
+      {
+        "id": "prep",
+        "kind": "video",
+        "label": "Step 1: prep",
+        "minDurationUs": 9000000
+      },
+      {
+        "id": "cook",
+        "kind": "video",
+        "label": "Step 2: cooking",
+        "minDurationUs": 16000000
+      },
+      {
+        "id": "plate",
+        "kind": "video",
+        "label": "Step 3: plating",
+        "minDurationUs": 6000000
+      },
+      {
+        "id": "hero",
+        "kind": "video",
+        "label": "Hero shot or first bite",
+        "minDurationUs": 3000000
+      },
+      {
+        "id": "dish",
+        "kind": "text",
+        "label": "Dish name",
+        "maxChars": 30
+      },
+      {
+        "id": "voiceover",
+        "kind": "audio",
+        "label": "Voice-over",
+        "minDurationUs": 25000000,
+        "optional": true
+      },
+      {
+        "id": "music",
+        "kind": "audio",
+        "label": "Background music",
+        "optional": true
+      }
+    ],
+    "tracks": [
+      {
+        "id": "main",
+        "items": [
+          {
+            "durationUs": 4000000,
+            "fit": "cover",
+            "gainDb": -60,
+            "slot": "ingredients",
+            "startUs": 0
+          },
+          {
+            "durationUs": 6000000,
+            "fit": "cover",
+            "gainDb": -18,
+            "slot": "prep",
+            "speed": 1.5,
+            "startUs": 4000000,
+            "transitionIn": {
+              "durationUs": 0,
+              "type": "cut"
+            }
+          },
+          {
+            "durationUs": 8000000,
+            "fit": "cover",
+            "gainDb": -12,
+            "slot": "cook",
+            "speed": 2,
+            "startUs": 10000000,
+            "transitionIn": {
+              "durationUs": 300000,
+              "type": "crossfade"
+            }
+          },
+          {
+            "durationUs": 6000000,
+            "fit": "cover",
+            "gainDb": -18,
+            "slot": "plate",
+            "startUs": 18000000,
+            "transitionIn": {
+              "direction": "left",
+              "durationUs": 250000,
+              "type": "whip-pan"
+            }
+          },
+          {
+            "durationUs": 6000000,
+            "fadeOutUs": 500000,
+            "fit": "cover",
+            "gainDb": -6,
+            "slot": "hero",
+            "speed": 0.5,
+            "startUs": 24000000,
+            "transitionIn": {
+              "durationUs": 200000,
+              "type": "zoom-punch"
+            }
+          }
+        ],
+        "type": "video"
+      },
+      {
+        "id": "voice",
+        "items": [
+          {
+            "durationUs": 29000000,
+            "fadeInUs": 200000,
+            "fadeOutUs": 300000,
+            "gainDb": 2,
+            "slot": "voiceover",
+            "startUs": 500000
+          }
+        ],
+        "type": "audio"
+      },
+      {
+        "id": "labels",
+        "items": [
+          {
+            "animation": {
+              "in": "typewriter",
+              "inDurationUs": 1000000,
+              "out": "fade",
+              "outDurationUs": 300000
+            },
+            "durationUs": 3600000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.1
+            },
+            "slot": "dish",
+            "startUs": 200000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-Black",
+              "sizePx": 88,
+              "stroke": {
+                "color": "#000000",
+                "widthPx": 5
+              }
+            },
+            "text": {
+              "default": "Creamy garlic pasta",
+              "editable": true,
+              "maxChars": 30
+            }
+          },
+          {
+            "animation": {
+              "in": "slide-left",
+              "inDurationUs": 350000,
+              "out": "slide-right",
+              "outDurationUs": 300000
+            },
+            "durationUs": 3000000,
+            "kind": "text",
+            "position": {
+              "anchor": "left",
+              "x": 0.07,
+              "y": 0.52
+            },
+            "startUs": 800000,
+            "style": {
+              "align": "left",
+              "background": {
+                "color": "#000000A6",
+                "cornerRadiusPx": 20,
+                "paddingPx": 24
+              },
+              "color": "#FFFFFF",
+              "font": "Inter-SemiBold",
+              "sizePx": 52
+            },
+            "text": {
+              "default": "200 g spaghetti\n4 cloves garlic\n150 ml cream\nParmesan, to taste",
+              "editable": true,
+              "maxChars": 120
+            }
+          },
+          {
+            "animation": {
+              "in": "pop",
+              "out": "fade"
+            },
+            "durationUs": 5600000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.1
+            },
+            "startUs": 4200000,
+            "style": {
+              "align": "center",
+              "background": {
+                "color": "#FFD60A",
+                "cornerRadiusPx": 12,
+                "paddingPx": 16
+              },
+              "color": "#1A1A1A",
+              "font": "Inter-Bold",
+              "sizePx": 56
+            },
+            "text": {
+              "default": "Step 1",
+              "editable": false
+            }
+          },
+          {
+            "animation": {
+              "in": "pop",
+              "out": "fade"
+            },
+            "durationUs": 7600000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.1
+            },
+            "startUs": 10200000,
+            "style": {
+              "align": "center",
+              "background": {
+                "color": "#FFD60A",
+                "cornerRadiusPx": 12,
+                "paddingPx": 16
+              },
+              "color": "#1A1A1A",
+              "font": "Inter-Bold",
+              "sizePx": 56
+            },
+            "text": {
+              "default": "Step 2",
+              "editable": false
+            }
+          },
+          {
+            "animation": {
+              "in": "pop",
+              "out": "fade"
+            },
+            "durationUs": 5600000,
+            "kind": "text",
+            "position": {
+              "anchor": "top",
+              "x": 0.5,
+              "y": 0.1
+            },
+            "startUs": 18200000,
+            "style": {
+              "align": "center",
+              "background": {
+                "color": "#FFD60A",
+                "cornerRadiusPx": 12,
+                "paddingPx": 16
+              },
+              "color": "#1A1A1A",
+              "font": "Inter-Bold",
+              "sizePx": 56
+            },
+            "text": {
+              "default": "Step 3",
+              "editable": false
+            }
+          },
+          {
+            "animation": {
+              "in": "scale",
+              "inDurationUs": 300000,
+              "out": "fade"
+            },
+            "asset": "sparkle",
+            "durationUs": 4000000,
+            "kind": "sticker",
+            "position": {
+              "anchor": "center",
+              "x": 0.72,
+              "y": 0.36
+            },
+            "startUs": 25000000,
+            "widthNorm": 0.2
+          },
+          {
+            "animation": {
+              "in": "slide-up",
+              "out": "fade"
+            },
+            "durationUs": 3800000,
+            "kind": "text",
+            "position": {
+              "anchor": "bottom",
+              "x": 0.5,
+              "y": 0.78
+            },
+            "startUs": 26000000,
+            "style": {
+              "align": "center",
+              "color": "#FFFFFF",
+              "font": "Inter-Bold",
+              "shadow": {
+                "blurPx": 12,
+                "color": "#00000099",
+                "offsetXPx": 0,
+                "offsetYPx": 4
+              },
+              "sizePx": 54
+            },
+            "text": {
+              "default": "Full recipe in bio",
+              "editable": true,
+              "maxChars": 32
+            }
+          }
+        ],
+        "type": "overlay"
+      }
+    ]
+  }
+}

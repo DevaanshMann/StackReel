@@ -1,0 +1,779 @@
+{
+  "audio": [
+    {
+      "endUs": 3150000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": 0,
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "intro",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://intro.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3150000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "endUs": 45000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 1500000,
+      "gainDb": -2,
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://music.m4a",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 45000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "endUs": 13300000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": 0,
+      "id": "main/1",
+      "kind": "video",
+      "slotId": "ex1",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://ex1.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 10300000,
+        "sourceStartUs": 0
+      },
+      "startUs": 3000000
+    },
+    {
+      "endUs": 23300000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": 0,
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "ex2",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://ex2.mp4",
+        "fitMode": "freeze",
+        "rate": 1,
+        "sourceEndUs": 400000,
+        "sourceStartUs": 0
+      },
+      "startUs": 13000000
+    },
+    {
+      "endUs": 33150000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": 0,
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "ex3",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://ex3.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 10150000,
+        "sourceStartUs": 0
+      },
+      "startUs": 23000000
+    },
+    {
+      "endUs": 43400000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": 0,
+      "id": "main/4",
+      "kind": "video",
+      "slotId": "ex4",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://ex4.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 10400000,
+        "sourceStartUs": 0
+      },
+      "startUs": 33000000
+    },
+    {
+      "endUs": 45000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 400000,
+      "gainDb": 0,
+      "id": "main/5",
+      "kind": "video",
+      "slotId": "outro",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://outro.mp4",
+        "fitMode": "freeze",
+        "rate": 0.5,
+        "sourceEndUs": 400000,
+        "sourceStartUs": 0
+      },
+      "startUs": 43000000
+    }
+  ],
+  "canvas": {
+    "background": "#000000",
+    "fps": 60,
+    "height": 1920,
+    "width": 1080
+  },
+  "durationUs": 45000000,
+  "layers": [
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 3150000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/0",
+      "itemIndex": 0,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "intro",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://intro.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 3150000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 0,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "scale",
+        "inDurationUs": 250000,
+        "out": "fade",
+        "outDurationUs": 200000
+      },
+      "endUs": 2800000,
+      "id": "labels/0",
+      "itemIndex": 0,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "center",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 768
+      },
+      "startUs": 300000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-Black",
+        "sizePx": 104,
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 6
+        }
+      },
+      "text": "4 moves. 40 seconds.",
+      "trackId": "labels",
+      "z": 1
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 13300000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/1",
+      "itemIndex": 1,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "ex1",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://ex1.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 10300000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 3000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -740, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "bounce",
+        "inDurationUs": 300000,
+        "out": "fade",
+        "outDurationUs": 300000
+      },
+      "endUs": 12700000,
+      "id": "labels/1",
+      "itemIndex": 1,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 192
+      },
+      "startUs": 3200000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-Black",
+        "sizePx": 84,
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "text": "Squat jumps",
+      "trackId": "labels",
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "pop",
+        "inDurationUs": 150000,
+        "out": "fade",
+        "outDurationUs": 150000
+      },
+      "endUs": 12700000,
+      "id": "counter/0",
+      "itemIndex": 0,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top-right",
+        "rotationDeg": 0,
+        "xPx": 1004.4000000000001,
+        "yPx": 192
+      },
+      "startUs": 3200000,
+      "style": {
+        "align": "center",
+        "background": {
+          "color": "#C6FF00",
+          "cornerRadiusPx": 10,
+          "paddingPx": 14
+        },
+        "color": "#0A0A0A",
+        "font": "SpaceMono-Bold",
+        "sizePx": 48
+      },
+      "text": "1/4",
+      "trackId": "counter",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1920,
+        "width": 1080,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 23300000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/2",
+      "itemIndex": 2,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "ex2",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://ex2.mp4",
+        "fitMode": "freeze",
+        "rate": 1,
+        "sourceEndUs": 400000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1920,
+        "width": 1080
+      },
+      "startUs": 13000000,
+      "trackId": "main",
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "bounce",
+        "inDurationUs": 300000,
+        "out": "fade",
+        "outDurationUs": 300000
+      },
+      "endUs": 22700000,
+      "id": "labels/2",
+      "itemIndex": 2,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 192
+      },
+      "startUs": 13200000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-Black",
+        "sizePx": 84,
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "text": "Push-ups",
+      "trackId": "labels",
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "pop",
+        "inDurationUs": 150000,
+        "out": "fade",
+        "outDurationUs": 150000
+      },
+      "endUs": 22700000,
+      "id": "counter/1",
+      "itemIndex": 1,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top-right",
+        "rotationDeg": 0,
+        "xPx": 1004.4000000000001,
+        "yPx": 192
+      },
+      "startUs": 13200000,
+      "style": {
+        "align": "center",
+        "background": {
+          "color": "#C6FF00",
+          "cornerRadiusPx": 10,
+          "paddingPx": 14
+        },
+        "color": "#0A0A0A",
+        "font": "SpaceMono-Bold",
+        "sizePx": 48
+      },
+      "text": "2/4",
+      "trackId": "counter",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 33150000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/3",
+      "itemIndex": 3,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "ex3",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://ex3.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 10150000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 23000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "bounce",
+        "inDurationUs": 300000,
+        "out": "fade",
+        "outDurationUs": 300000
+      },
+      "endUs": 32700000,
+      "id": "labels/3",
+      "itemIndex": 3,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 192
+      },
+      "startUs": 23200000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-Black",
+        "sizePx": 84,
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "text": "Mountain climbers",
+      "trackId": "labels",
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "pop",
+        "inDurationUs": 150000,
+        "out": "fade",
+        "outDurationUs": 150000
+      },
+      "endUs": 32700000,
+      "id": "counter/2",
+      "itemIndex": 2,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top-right",
+        "rotationDeg": 0,
+        "xPx": 1004.4000000000001,
+        "yPx": 192
+      },
+      "startUs": 23200000,
+      "style": {
+        "align": "center",
+        "background": {
+          "color": "#C6FF00",
+          "cornerRadiusPx": 10,
+          "paddingPx": 14
+        },
+        "color": "#0A0A0A",
+        "font": "SpaceMono-Bold",
+        "sizePx": 48
+      },
+      "text": "3/4",
+      "trackId": "counter",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 43400000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/4",
+      "itemIndex": 4,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "ex4",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://ex4.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 10400000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 33000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -740, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "bounce",
+        "inDurationUs": 300000,
+        "out": "fade",
+        "outDurationUs": 300000
+      },
+      "endUs": 42700000,
+      "id": "labels/4",
+      "itemIndex": 4,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 192
+      },
+      "startUs": 33200000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-Black",
+        "sizePx": 84,
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "text": "Burpees",
+      "trackId": "labels",
+      "z": 1
+    },
+    {
+      "animation": {
+        "in": "pop",
+        "inDurationUs": 150000,
+        "out": "fade",
+        "outDurationUs": 150000
+      },
+      "endUs": 42700000,
+      "id": "counter/3",
+      "itemIndex": 3,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top-right",
+        "rotationDeg": 0,
+        "xPx": 1004.4000000000001,
+        "yPx": 192
+      },
+      "startUs": 33200000,
+      "style": {
+        "align": "center",
+        "background": {
+          "color": "#C6FF00",
+          "cornerRadiusPx": 10,
+          "paddingPx": 14
+        },
+        "color": "#0A0A0A",
+        "font": "SpaceMono-Bold",
+        "sizePx": 48
+      },
+      "text": "4/4",
+      "trackId": "counter",
+      "z": 2
+    },
+    {
+      "animation": {
+        "in": "pop",
+        "inDurationUs": 300000,
+        "out": "fade",
+        "outDurationUs": 300000
+      },
+      "asset": "fire",
+      "endUs": 42700000,
+      "id": "labels/5",
+      "itemIndex": 5,
+      "kind": "sticker",
+      "opacity": 1,
+      "placement": {
+        "anchor": "center",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 1305.6000000000001
+      },
+      "startUs": 33300000,
+      "trackId": "labels",
+      "widthPx": 172.8,
+      "z": 1
+    },
+    {
+      "cropPx": {
+        "height": 1920,
+        "width": 1080,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 45000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 400000,
+      "fit": "cover",
+      "gainDb": 0,
+      "id": "main/5",
+      "itemIndex": 5,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "outro",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://outro.mp4",
+        "fitMode": "freeze",
+        "rate": 0.5,
+        "sourceEndUs": 400000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1920,
+        "width": 1080
+      },
+      "startUs": 43000000,
+      "trackId": "main",
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "slide-up",
+        "inDurationUs": 300000,
+        "out": "none",
+        "outDurationUs": 0
+      },
+      "endUs": 45000000,
+      "id": "labels/6",
+      "itemIndex": 6,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 1459.2
+      },
+      "startUs": 43200000,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-Bold",
+        "shadow": {
+          "blurPx": 12,
+          "color": "#00000099",
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        },
+        "sizePx": 64
+      },
+      "text": "Save this for later",
+      "trackId": "labels",
+      "z": 1
+    }
+  ],
+  "renderPlanVersion": 1,
+  "templateId": "hiit-circuit",
+  "transitions": [
+    {
+      "endUs": 3150000,
+      "fromLayerId": "main/0",
+      "id": "main/1",
+      "startUs": 3000000,
+      "toLayerId": "main/1",
+      "trackId": "main",
+      "type": "zoom-punch",
+      "z": 0
+    },
+    {
+      "direction": "up",
+      "endUs": 13300000,
+      "fromLayerId": "main/1",
+      "id": "main/2",
+      "startUs": 13000000,
+      "toLayerId": "main/2",
+      "trackId": "main",
+      "type": "slide",
+      "z": 0
+    },
+    {
+      "direction": "down",
+      "endUs": 23300000,
+      "fromLayerId": "main/2",
+      "id": "main/3",
+      "startUs": 23000000,
+      "toLayerId": "main/3",
+      "trackId": "main",
+      "type": "slide",
+      "z": 0
+    },
+    {
+      "endUs": 33150000,
+      "fromLayerId": "main/3",
+      "id": "main/4",
+      "startUs": 33000000,
+      "toLayerId": "main/4",
+      "trackId": "main",
+      "type": "zoom-punch",
+      "z": 0
+    },
+    {
+      "endUs": 43400000,
+      "fromLayerId": "main/4",
+      "id": "main/5",
+      "startUs": 43000000,
+      "toLayerId": "main/5",
+      "trackId": "main",
+      "type": "crossfade",
+      "z": 0
+    }
+  ],
+  "warnings": [
+    {
+      "availableUs": 400000,
+      "layerId": "main/2",
+      "message": "The media in \"Exercise 2\" is shorter than its slot (freeze)",
+      "neededUs": 10300000,
+      "policy": "freeze",
+      "slotId": "ex2",
+      "type": "clip-too-short"
+    },
+    {
+      "availableUs": 400000,
+      "layerId": "main/5",
+      "message": "The media in \"Cool-down\" is shorter than its slot (freeze)",
+      "neededUs": 1000000,
+      "policy": "freeze",
+      "slotId": "outro",
+      "type": "clip-too-short"
+    }
+  ]
+}

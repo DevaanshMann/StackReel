@@ -1,0 +1,194 @@
+{
+  "audio": {
+    "music": {
+      "fadeOutUs": 500000,
+      "gainDb": -5,
+      "slot": "music",
+      "startUs": 0
+    }
+  },
+  "canvas": {
+    "background": "#000000",
+    "fps": 30,
+    "height": 1920,
+    "width": 1080
+  },
+  "description": "The before clip, a whip-pan to the after clip, corner labels and an optional caption.",
+  "durationUs": 8000000,
+  "id": "before-after",
+  "name": "Before / After",
+  "safeZones": {
+    "preset": "tiktok-reels-shorts"
+  },
+  "schemaVersion": 1,
+  "slots": [
+    {
+      "id": "before",
+      "kind": "video",
+      "label": "Before",
+      "minDurationUs": 3500000
+    },
+    {
+      "id": "after",
+      "kind": "video",
+      "label": "After",
+      "minDurationUs": 4500000
+    },
+    {
+      "id": "caption",
+      "kind": "text",
+      "label": "Caption",
+      "maxChars": 40,
+      "optional": true
+    },
+    {
+      "id": "music",
+      "kind": "audio",
+      "label": "Background music",
+      "optional": true
+    }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "items": [
+        {
+          "durationUs": 3500000,
+          "fit": "cover",
+          "slot": "before",
+          "startUs": 0
+        },
+        {
+          "durationUs": 4500000,
+          "fadeOutUs": 300000,
+          "fit": "cover",
+          "slot": "after",
+          "startUs": 3500000,
+          "transitionIn": {
+            "direction": "right",
+            "durationUs": 300000,
+            "type": "whip-pan"
+          }
+        }
+      ],
+      "type": "video"
+    },
+    {
+      "id": "labels",
+      "items": [
+        {
+          "animation": {
+            "in": "slide-down",
+            "inDurationUs": 300000,
+            "out": "none"
+          },
+          "durationUs": 3200000,
+          "kind": "text",
+          "position": {
+            "anchor": "top-left",
+            "x": 0.06,
+            "y": 0.09
+          },
+          "startUs": 200000,
+          "style": {
+            "align": "left",
+            "background": {
+              "color": "#00000099",
+              "cornerRadiusPx": 12,
+              "paddingPx": 16
+            },
+            "color": "#FFFFFF",
+            "font": "Inter-Black",
+            "sizePx": 72
+          },
+          "text": {
+            "default": "BEFORE",
+            "editable": true,
+            "maxChars": 12
+          }
+        },
+        {
+          "animation": {
+            "in": "scale",
+            "out": "fade"
+          },
+          "asset": "arrow-curved",
+          "durationUs": 1200000,
+          "kind": "sticker",
+          "position": {
+            "anchor": "center",
+            "rotationDeg": -20,
+            "x": 0.5,
+            "y": 0.5
+          },
+          "startUs": 2900000,
+          "widthNorm": 0.24
+        },
+        {
+          "animation": {
+            "in": "slide-down",
+            "inDurationUs": 300000,
+            "out": "none"
+          },
+          "durationUs": 4300000,
+          "kind": "text",
+          "position": {
+            "anchor": "top-right",
+            "x": 0.94,
+            "y": 0.09
+          },
+          "startUs": 3700000,
+          "style": {
+            "align": "right",
+            "background": {
+              "color": "#00000099",
+              "cornerRadiusPx": 12,
+              "paddingPx": 16
+            },
+            "color": "#FFFFFF",
+            "font": "Inter-Black",
+            "sizePx": 72
+          },
+          "text": {
+            "default": "AFTER",
+            "editable": true,
+            "maxChars": 12
+          }
+        },
+        {
+          "animation": {
+            "in": "fade",
+            "inDurationUs": 400000,
+            "out": "fade",
+            "outDurationUs": 200000
+          },
+          "durationUs": 3800000,
+          "kind": "text",
+          "position": {
+            "anchor": "bottom",
+            "x": 0.5,
+            "y": 0.78
+          },
+          "slot": "caption",
+          "startUs": 4000000,
+          "style": {
+            "align": "center",
+            "color": "#FFFFFF",
+            "font": "Inter-Bold",
+            "sizePx": 60,
+            "stroke": {
+              "color": "#000000",
+              "widthPx": 4
+            }
+          },
+          "text": {
+            "default": "3 months of consistency",
+            "editable": true,
+            "maxChars": 40
+          }
+        }
+      ],
+      "type": "overlay"
+    }
+  ]
+}

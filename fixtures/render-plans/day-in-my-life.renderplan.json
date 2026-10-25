@@ -1,0 +1,1058 @@
+{
+  "audio": [
+    {
+      "endUs": 5000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -20,
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "wake",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://wake.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 5000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "ducking": {
+        "gainDb": -12,
+        "rampUs": 200000,
+        "regions": [
+          {
+            "endUs": 60000000,
+            "startUs": 0
+          }
+        ]
+      },
+      "endUs": 60000000,
+      "fadeInUs": 2000000,
+      "fadeOutUs": 2000000,
+      "gainDb": -8,
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://music.m4a",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 60000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 0
+    },
+    {
+      "endUs": 59000000,
+      "fadeInUs": 83333,
+      "fadeOutUs": 500000,
+      "gainDb": 0,
+      "id": "voice/0",
+      "kind": "audio",
+      "slotId": "voiceover",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://voiceover.m4a",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 58000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 1000000
+    },
+    {
+      "endUs": 10000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -20,
+      "id": "main/1",
+      "kind": "video",
+      "slotId": "coffee",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://coffee.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 5000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 5000000
+    },
+    {
+      "endUs": 15416667,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -20,
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "commute",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://commute.mp4",
+        "fitMode": "freeze",
+        "rate": 2,
+        "sourceEndUs": 375000,
+        "sourceStartUs": 0
+      },
+      "startUs": 10000000
+    },
+    {
+      "endUs": 22416667,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -20,
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "work",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://work.mp4",
+        "fitMode": "trim",
+        "rate": 1.5,
+        "sourceEndUs": 11125000,
+        "sourceStartUs": 0
+      },
+      "startUs": 15000000
+    },
+    {
+      "endUs": 28208333,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -20,
+      "id": "main/4",
+      "kind": "video",
+      "slotId": "lunch",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://lunch.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 6208333,
+        "sourceStartUs": 0
+      },
+      "startUs": 22000000
+    },
+    {
+      "endUs": 34333333,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -20,
+      "id": "main/5",
+      "kind": "video",
+      "slotId": "gym",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://gym.mp4",
+        "fitMode": "freeze",
+        "rate": 1,
+        "sourceEndUs": 375000,
+        "sourceStartUs": 0
+      },
+      "startUs": 28000000
+    },
+    {
+      "endUs": 40416667,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -20,
+      "id": "main/6",
+      "kind": "video",
+      "slotId": "errands",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://errands.mp4",
+        "fitMode": "trim",
+        "rate": 1.25,
+        "sourceEndUs": 8041667,
+        "sourceStartUs": 0
+      },
+      "startUs": 34000000
+    },
+    {
+      "endUs": 47500000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -20,
+      "id": "main/7",
+      "kind": "video",
+      "slotId": "dinner",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://dinner.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 7500000,
+        "sourceStartUs": 0
+      },
+      "startUs": 40000000
+    },
+    {
+      "endUs": 54583333,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "gainDb": -20,
+      "id": "main/8",
+      "kind": "video",
+      "slotId": "unwind",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://unwind.mp4",
+        "fitMode": "freeze",
+        "rate": 1,
+        "sourceEndUs": 375000,
+        "sourceStartUs": 0
+      },
+      "startUs": 47000000
+    },
+    {
+      "endUs": 60000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 1000000,
+      "gainDb": -20,
+      "id": "main/9",
+      "kind": "video",
+      "slotId": "night",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://night.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 6000000,
+        "sourceStartUs": 0
+      },
+      "startUs": 54000000
+    }
+  ],
+  "canvas": {
+    "background": "#000000",
+    "fps": 24,
+    "height": 1920,
+    "width": 1080
+  },
+  "durationUs": 60000000,
+  "layers": [
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 5000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/0",
+      "itemIndex": 0,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "wake",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://wake.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 5000000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 0,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "fade",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 291666
+      },
+      "endUs": 4583333,
+      "id": "text/0",
+      "itemIndex": 0,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "top",
+        "rotationDeg": 0,
+        "xPx": 540,
+        "yPx": 268.8
+      },
+      "startUs": 291667,
+      "style": {
+        "align": "center",
+        "color": "#FFFFFF",
+        "font": "Inter-Bold",
+        "shadow": {
+          "blurPx": 12,
+          "color": "#00000099",
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        },
+        "sizePx": 70
+      },
+      "text": "A day in my life as a nurse",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 4708333,
+      "id": "text/1",
+      "itemIndex": 1,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "7:00 AM",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 10000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/1",
+      "itemIndex": 1,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "coffee",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://coffee.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 5000000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 5000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -740, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 9708333,
+      "id": "text/2",
+      "itemIndex": 2,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 5291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "7:30 AM",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1920,
+        "width": 1080,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 15416667,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/2",
+      "itemIndex": 2,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "commute",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://commute.mp4",
+        "fitMode": "freeze",
+        "rate": 2,
+        "sourceEndUs": 375000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1920,
+        "width": 1080
+      },
+      "startUs": 10000000,
+      "trackId": "main",
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 14708333,
+      "id": "text/3",
+      "itemIndex": 3,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 10291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "8:15 AM",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 22416667,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/3",
+      "itemIndex": 3,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "work",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://work.mp4",
+        "fitMode": "trim",
+        "rate": 1.5,
+        "sourceEndUs": 11125000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 15000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 21708333,
+      "id": "text/4",
+      "itemIndex": 4,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 15291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "9:00 AM",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 28208333,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/4",
+      "itemIndex": 4,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "lunch",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://lunch.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 6208333,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 22000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -740, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 27708333,
+      "id": "text/5",
+      "itemIndex": 5,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 22291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "12:30 PM",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1920,
+        "width": 1080,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 34333333,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/5",
+      "itemIndex": 5,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "gym",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://gym.mp4",
+        "fitMode": "freeze",
+        "rate": 1,
+        "sourceEndUs": 375000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1920,
+        "width": 1080
+      },
+      "startUs": 28000000,
+      "trackId": "main",
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 33708333,
+      "id": "text/6",
+      "itemIndex": 6,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 28291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "5:30 PM",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 40416667,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/6",
+      "itemIndex": 6,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "errands",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://errands.mp4",
+        "fitMode": "trim",
+        "rate": 1.25,
+        "sourceEndUs": 8041667,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 34000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 39708333,
+      "id": "text/7",
+      "itemIndex": 7,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 34291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "6:45 PM",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1440,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 47500000,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/7",
+      "itemIndex": 7,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "dinner",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://dinner.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 7500000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1440
+      },
+      "startUs": 40000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -740, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 46708333,
+      "id": "text/8",
+      "itemIndex": 8,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 40291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "7:30 PM",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1920,
+        "width": 1080,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 54583333,
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/8",
+      "itemIndex": 8,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "unwind",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://unwind.mp4",
+        "fitMode": "freeze",
+        "rate": 1,
+        "sourceEndUs": 375000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1920,
+        "width": 1080
+      },
+      "startUs": 47000000,
+      "trackId": "main",
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 53708333,
+      "id": "text/9",
+      "itemIndex": 9,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 47291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "9:30 PM",
+      "trackId": "text",
+      "z": 2
+    },
+    {
+      "cropPx": {
+        "height": 1080,
+        "width": 1920,
+        "x": 0,
+        "y": 0
+      },
+      "endUs": 60000000,
+      "fadeInUs": 0,
+      "fadeOutUs": 1000000,
+      "fit": "cover",
+      "gainDb": -20,
+      "id": "main/9",
+      "itemIndex": 9,
+      "kind": "video",
+      "opacity": 1,
+      "slotId": "night",
+      "source": {
+        "afterEnd": "hold",
+        "assetUri": "fixture://night.mp4",
+        "fitMode": "trim",
+        "rate": 1,
+        "sourceEndUs": 6000000,
+        "sourceStartUs": 0
+      },
+      "sourceSize": {
+        "height": 1080,
+        "width": 1920
+      },
+      "startUs": 54000000,
+      "trackId": "main",
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "z": 0
+    },
+    {
+      "animation": {
+        "in": "typewriter",
+        "inDurationUs": 500000,
+        "out": "fade",
+        "outDurationUs": 250000
+      },
+      "endUs": 59708333,
+      "id": "text/10",
+      "itemIndex": 10,
+      "kind": "text",
+      "opacity": 1,
+      "placement": {
+        "anchor": "bottom-right",
+        "rotationDeg": 0,
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001
+      },
+      "startUs": 54291667,
+      "style": {
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "cornerRadiusPx": 8,
+          "paddingPx": 12
+        },
+        "color": "#FFFFFFE6",
+        "font": "SpaceMono-Bold",
+        "sizePx": 50
+      },
+      "text": "11:00 PM",
+      "trackId": "text",
+      "z": 2
+    }
+  ],
+  "renderPlanVersion": 1,
+  "templateId": "day-in-my-life",
+  "transitions": [
+    {
+      "endUs": 15416667,
+      "fromLayerId": "main/2",
+      "id": "main/3",
+      "startUs": 15000000,
+      "toLayerId": "main/3",
+      "trackId": "main",
+      "type": "crossfade",
+      "z": 0
+    },
+    {
+      "endUs": 22416667,
+      "fromLayerId": "main/3",
+      "id": "main/4",
+      "startUs": 22000000,
+      "toLayerId": "main/4",
+      "trackId": "main",
+      "type": "crossfade",
+      "z": 0
+    },
+    {
+      "endUs": 28208333,
+      "fromLayerId": "main/4",
+      "id": "main/5",
+      "startUs": 28000000,
+      "toLayerId": "main/5",
+      "trackId": "main",
+      "type": "zoom-punch",
+      "z": 0
+    },
+    {
+      "direction": "left",
+      "endUs": 34333333,
+      "fromLayerId": "main/5",
+      "id": "main/6",
+      "startUs": 34000000,
+      "toLayerId": "main/6",
+      "trackId": "main",
+      "type": "slide",
+      "z": 0
+    },
+    {
+      "endUs": 40416667,
+      "fromLayerId": "main/6",
+      "id": "main/7",
+      "startUs": 40000000,
+      "toLayerId": "main/7",
+      "trackId": "main",
+      "type": "crossfade",
+      "z": 0
+    },
+    {
+      "endUs": 47500000,
+      "fromLayerId": "main/7",
+      "id": "main/8",
+      "startUs": 47000000,
+      "toLayerId": "main/8",
+      "trackId": "main",
+      "type": "crossfade",
+      "z": 0
+    },
+    {
+      "endUs": 54583333,
+      "fromLayerId": "main/8",
+      "id": "main/9",
+      "startUs": 54000000,
+      "toLayerId": "main/9",
+      "trackId": "main",
+      "type": "crossfade",
+      "z": 0
+    }
+  ],
+  "warnings": [
+    {
+      "availableUs": 375000,
+      "layerId": "main/2",
+      "message": "The media in \"Commute\" is shorter than its slot (freeze)",
+      "neededUs": 10833334,
+      "policy": "freeze",
+      "slotId": "commute",
+      "type": "clip-too-short"
+    },
+    {
+      "availableUs": 375000,
+      "layerId": "main/5",
+      "message": "The media in \"Workout\" is shorter than its slot (freeze)",
+      "neededUs": 6333333,
+      "policy": "freeze",
+      "slotId": "gym",
+      "type": "clip-too-short"
+    },
+    {
+      "availableUs": 375000,
+      "layerId": "main/8",
+      "message": "The media in \"Winding down\" is shorter than its slot (freeze)",
+      "neededUs": 7583333,
+      "policy": "freeze",
+      "slotId": "unwind",
+      "type": "clip-too-short"
+    }
+  ]
+}
