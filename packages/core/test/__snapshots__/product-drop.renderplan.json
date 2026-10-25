@@ -1,0 +1,377 @@
+{
+  "renderPlanVersion": 1,
+  "templateId": "product-drop",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "background": "#EDEDED"
+  },
+  "durationUs": 12000000,
+  "layers": [
+    {
+      "id": "backdrop/0",
+      "trackId": "backdrop",
+      "itemIndex": 0,
+      "z": 0,
+      "startUs": 0,
+      "endUs": 12000000,
+      "opacity": 1,
+      "slotId": "backdrop",
+      "fit": "fill",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "image",
+      "assetUri": "fake://product-drop/backdrop.jpg",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [0.5625, 0, 0, 0, 1.7777777777777777, 0, 0, 0, 1]
+    },
+    {
+      "id": "main/0",
+      "trackId": "main",
+      "itemIndex": 0,
+      "z": 1,
+      "startUs": 0,
+      "endUs": 3400000,
+      "opacity": 1,
+      "slotId": "hero",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://product-drop/hero.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3400000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "labels/0",
+      "trackId": "labels",
+      "itemIndex": 0,
+      "z": 2,
+      "startUs": 300000,
+      "endUs": 2800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "AirFlow Bottle",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 96,
+        "color": "#FFFFFF",
+        "align": "center",
+        "shadow": {
+          "color": "#00000099",
+          "blurPx": 12,
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 230.39999999999998,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "itemIndex": 1,
+      "z": 1,
+      "startUs": 3000000,
+      "endUs": 5800000,
+      "opacity": 1,
+      "slotId": "photo1",
+      "fit": "contain",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "image",
+      "assetUri": "fake://product-drop/photo1.jpg",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1, 0, 0, 0, 1, 285, 0, 0, 1]
+    },
+    {
+      "id": "labels/1",
+      "trackId": "labels",
+      "itemIndex": 1,
+      "z": 2,
+      "startUs": 3200000,
+      "endUs": 8000000,
+      "opacity": 1,
+      "kind": "sticker",
+      "asset": "badge-new",
+      "widthPx": 237.6,
+      "placement": {
+        "xPx": 993.6,
+        "yPx": 153.6,
+        "anchor": "top-right",
+        "rotationDeg": 12
+      },
+      "animation": {
+        "in": "pop",
+        "out": "scale",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "itemIndex": 2,
+      "z": 1,
+      "startUs": 5500000,
+      "endUs": 8200000,
+      "opacity": 1,
+      "slotId": "photo2",
+      "fit": "contain",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "image",
+      "assetUri": "fake://product-drop/photo2.jpg",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [0.5625, 0, 0, 0, 0.5625, 656.25, 0, 0, 1]
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "itemIndex": 3,
+      "z": 1,
+      "startUs": 8000000,
+      "endUs": 12000000,
+      "opacity": 1,
+      "slotId": "detail",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://product-drop/detail.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3000000,
+        "rate": 0.75,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "labels/2",
+      "trackId": "labels",
+      "itemIndex": 2,
+      "z": 2,
+      "startUs": 8400000,
+      "endUs": 11800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "$29",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 110,
+        "color": "#FFFFFF",
+        "align": "center",
+        "background": {
+          "color": "#FF3B30",
+          "paddingPx": 28,
+          "cornerRadiusPx": 36
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 1420.8,
+        "anchor": "bottom",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-up",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "labels/3",
+      "trackId": "labels",
+      "itemIndex": 3,
+      "z": 2,
+      "startUs": 10000000,
+      "endUs": 12000000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Link in bio",
+      "style": {
+        "font": "Inter-SemiBold",
+        "sizePx": 46,
+        "color": "#FFFFFF",
+        "align": "center",
+        "shadow": {
+          "color": "#00000099",
+          "blurPx": 12,
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 1536,
+        "anchor": "bottom",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "fade",
+        "out": "none",
+        "inDurationUs": 300000,
+        "outDurationUs": 0
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "z": 1,
+      "type": "spin",
+      "startUs": 3000000,
+      "endUs": 3400000,
+      "fromLayerId": "main/0",
+      "toLayerId": "main/1"
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "z": 1,
+      "type": "slide",
+      "direction": "left",
+      "startUs": 5500000,
+      "endUs": 5800000,
+      "fromLayerId": "main/1",
+      "toLayerId": "main/2"
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "z": 1,
+      "type": "zoom-punch",
+      "startUs": 8000000,
+      "endUs": 8200000,
+      "fromLayerId": "main/2",
+      "toLayerId": "main/3"
+    }
+  ],
+  "audio": [
+    {
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "hero",
+      "startUs": 0,
+      "endUs": 3400000,
+      "source": {
+        "assetUri": "fake://product-drop/hero.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3400000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "startUs": 0,
+      "endUs": 12000000,
+      "source": {
+        "assetUri": "fake://product-drop/music.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 12000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -3,
+      "fadeInUs": 300000,
+      "fadeOutUs": 800000
+    },
+    {
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "detail",
+      "startUs": 8000000,
+      "endUs": 12000000,
+      "source": {
+        "assetUri": "fake://product-drop/detail.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3000000,
+        "rate": 0.75,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    }
+  ],
+  "warnings": []
+}

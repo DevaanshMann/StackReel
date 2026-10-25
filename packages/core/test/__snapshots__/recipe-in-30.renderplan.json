@@ -1,0 +1,583 @@
+{
+  "renderPlanVersion": 1,
+  "templateId": "recipe-in-30",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "background": "#000000"
+  },
+  "durationUs": 30000000,
+  "layers": [
+    {
+      "id": "main/0",
+      "trackId": "main",
+      "itemIndex": 0,
+      "z": 0,
+      "startUs": 0,
+      "endUs": 4000000,
+      "opacity": 1,
+      "slotId": "ingredients",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://recipe-in-30/ingredients.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "labels/0",
+      "trackId": "labels",
+      "itemIndex": 0,
+      "z": 2,
+      "startUs": 200000,
+      "endUs": 3800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Creamy garlic pasta",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 88,
+        "color": "#FFFFFF",
+        "align": "center",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 5
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 192,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 1000000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "labels/1",
+      "trackId": "labels",
+      "itemIndex": 1,
+      "z": 2,
+      "startUs": 800000,
+      "endUs": 3800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "200 g spaghetti\n4 cloves garlic\n150 ml cream\nParmesan, to taste",
+      "style": {
+        "font": "Inter-SemiBold",
+        "sizePx": 52,
+        "color": "#FFFFFF",
+        "align": "left",
+        "background": {
+          "color": "#000000A6",
+          "paddingPx": 24,
+          "cornerRadiusPx": 20
+        }
+      },
+      "placement": {
+        "xPx": 75.60000000000001,
+        "yPx": 998.4000000000001,
+        "anchor": "left",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-left",
+        "out": "slide-right",
+        "inDurationUs": 366667,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "itemIndex": 1,
+      "z": 0,
+      "startUs": 4000000,
+      "endUs": 10300000,
+      "opacity": 1,
+      "slotId": "prep",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://recipe-in-30/prep.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 9466667,
+        "rate": 1.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -18
+    },
+    {
+      "id": "labels/2",
+      "trackId": "labels",
+      "itemIndex": 2,
+      "z": 2,
+      "startUs": 4200000,
+      "endUs": 9800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Step 1",
+      "style": {
+        "font": "Inter-Bold",
+        "sizePx": 56,
+        "color": "#1A1A1A",
+        "align": "center",
+        "background": {
+          "color": "#FFD60A",
+          "paddingPx": 16,
+          "cornerRadiusPx": 12
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 192,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "itemIndex": 2,
+      "z": 0,
+      "startUs": 10000000,
+      "endUs": 18266667,
+      "opacity": 1,
+      "slotId": "cook",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://recipe-in-30/cook.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 16533333,
+        "rate": 2,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -12
+    },
+    {
+      "id": "labels/3",
+      "trackId": "labels",
+      "itemIndex": 3,
+      "z": 2,
+      "startUs": 10200000,
+      "endUs": 17800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Step 2",
+      "style": {
+        "font": "Inter-Bold",
+        "sizePx": 56,
+        "color": "#1A1A1A",
+        "align": "center",
+        "background": {
+          "color": "#FFD60A",
+          "paddingPx": 16,
+          "cornerRadiusPx": 12
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 192,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "itemIndex": 3,
+      "z": 0,
+      "startUs": 18000000,
+      "endUs": 24200000,
+      "opacity": 1,
+      "slotId": "plate",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://recipe-in-30/plate.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6200000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -18
+    },
+    {
+      "id": "labels/4",
+      "trackId": "labels",
+      "itemIndex": 4,
+      "z": 2,
+      "startUs": 18200000,
+      "endUs": 23800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Step 3",
+      "style": {
+        "font": "Inter-Bold",
+        "sizePx": 56,
+        "color": "#1A1A1A",
+        "align": "center",
+        "background": {
+          "color": "#FFD60A",
+          "paddingPx": 16,
+          "cornerRadiusPx": 12
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 192,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "itemIndex": 4,
+      "z": 0,
+      "startUs": 24000000,
+      "endUs": 30000000,
+      "opacity": 1,
+      "slotId": "hero",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 500000,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://recipe-in-30/hero.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3000000,
+        "rate": 0.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -6
+    },
+    {
+      "id": "labels/5",
+      "trackId": "labels",
+      "itemIndex": 5,
+      "z": 2,
+      "startUs": 25000000,
+      "endUs": 29000000,
+      "opacity": 1,
+      "kind": "sticker",
+      "asset": "sparkle",
+      "widthPx": 216,
+      "placement": {
+        "xPx": 777.6,
+        "yPx": 691.1999999999999,
+        "anchor": "center",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "scale",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "labels/6",
+      "trackId": "labels",
+      "itemIndex": 6,
+      "z": 2,
+      "startUs": 26000000,
+      "endUs": 29800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Full recipe in bio",
+      "style": {
+        "font": "Inter-Bold",
+        "sizePx": 54,
+        "color": "#FFFFFF",
+        "align": "center",
+        "shadow": {
+          "color": "#00000099",
+          "blurPx": 12,
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "slide-up",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 10000000,
+      "endUs": 10300000,
+      "fromLayerId": "main/1",
+      "toLayerId": "main/2"
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "z": 0,
+      "type": "whip-pan",
+      "direction": "left",
+      "startUs": 18000000,
+      "endUs": 18266667,
+      "fromLayerId": "main/2",
+      "toLayerId": "main/3"
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "z": 0,
+      "type": "zoom-punch",
+      "startUs": 24000000,
+      "endUs": 24200000,
+      "fromLayerId": "main/3",
+      "toLayerId": "main/4"
+    }
+  ],
+  "audio": [
+    {
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "ingredients",
+      "startUs": 0,
+      "endUs": 4000000,
+      "source": {
+        "assetUri": "fake://recipe-in-30/ingredients.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "startUs": 0,
+      "endUs": 30000000,
+      "source": {
+        "assetUri": "fake://recipe-in-30/music.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 30000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -10,
+      "fadeInUs": 0,
+      "fadeOutUs": 1000000,
+      "ducking": {
+        "gainDb": -12,
+        "rampUs": 200000,
+        "regions": [
+          {
+            "startUs": 500000,
+            "endUs": 30000000
+          }
+        ]
+      }
+    },
+    {
+      "id": "voice/0",
+      "kind": "audio",
+      "slotId": "voiceover",
+      "startUs": 500000,
+      "endUs": 29500000,
+      "source": {
+        "assetUri": "fake://recipe-in-30/voiceover.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 29000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 2,
+      "fadeInUs": 200000,
+      "fadeOutUs": 300000
+    },
+    {
+      "id": "main/1",
+      "kind": "video",
+      "slotId": "prep",
+      "startUs": 4000000,
+      "endUs": 10300000,
+      "source": {
+        "assetUri": "fake://recipe-in-30/prep.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 9466667,
+        "rate": 1.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -18,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "cook",
+      "startUs": 10000000,
+      "endUs": 18266667,
+      "source": {
+        "assetUri": "fake://recipe-in-30/cook.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 16533333,
+        "rate": 2,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -12,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "plate",
+      "startUs": 18000000,
+      "endUs": 24200000,
+      "source": {
+        "assetUri": "fake://recipe-in-30/plate.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6200000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -18,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/4",
+      "kind": "video",
+      "slotId": "hero",
+      "startUs": 24000000,
+      "endUs": 30000000,
+      "source": {
+        "assetUri": "fake://recipe-in-30/hero.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3000000,
+        "rate": 0.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -6,
+      "fadeInUs": 0,
+      "fadeOutUs": 500000
+    }
+  ],
+  "warnings": []
+}

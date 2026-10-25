@@ -1,0 +1,256 @@
+{
+  "renderPlanVersion": 1,
+  "templateId": "hook-and-reveal",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "background": "#000000"
+  },
+  "durationUs": 9000000,
+  "layers": [
+    {
+      "id": "main/0",
+      "trackId": "main",
+      "itemIndex": 0,
+      "z": 0,
+      "startUs": 0,
+      "endUs": 3266667,
+      "opacity": 1,
+      "slotId": "clip1",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://hook-and-reveal/clip1.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3266667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "text/0",
+      "trackId": "text",
+      "itemIndex": 0,
+      "z": 1,
+      "startUs": 200000,
+      "endUs": 2800000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Wait for it…",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 96,
+        "color": "#FFFFFF",
+        "align": "center",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 6
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 422.4,
+        "anchor": "center",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "pop",
+        "out": "fade",
+        "inDurationUs": 300000,
+        "outDurationUs": 300000
+      }
+    },
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "itemIndex": 1,
+      "z": 0,
+      "startUs": 3000000,
+      "endUs": 5200000,
+      "opacity": 1,
+      "slotId": "clip2",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://hook-and-reveal/clip2.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 2200000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "itemIndex": 2,
+      "z": 0,
+      "startUs": 5000000,
+      "endUs": 9000000,
+      "opacity": 1,
+      "slotId": "clip3",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://hook-and-reveal/clip3.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0
+    }
+  ],
+  "transitions": [
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "z": 0,
+      "type": "whip-pan",
+      "direction": "left",
+      "startUs": 3000000,
+      "endUs": 3266667,
+      "fromLayerId": "main/0",
+      "toLayerId": "main/1"
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "z": 0,
+      "type": "zoom-punch",
+      "startUs": 5000000,
+      "endUs": 5200000,
+      "fromLayerId": "main/1",
+      "toLayerId": "main/2"
+    }
+  ],
+  "audio": [
+    {
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "clip1",
+      "startUs": 0,
+      "endUs": 3266667,
+      "source": {
+        "assetUri": "fake://hook-and-reveal/clip1.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 3266667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "startUs": 0,
+      "endUs": 9000000,
+      "source": {
+        "assetUri": "fake://hook-and-reveal/music.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 9000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -6,
+      "fadeInUs": 0,
+      "fadeOutUs": 500000,
+      "ducking": {
+        "gainDb": -12,
+        "rampUs": 200000,
+        "regions": [
+          {
+            "startUs": 0,
+            "endUs": 9000000
+          }
+        ]
+      }
+    },
+    {
+      "id": "main/1",
+      "kind": "video",
+      "slotId": "clip2",
+      "startUs": 3000000,
+      "endUs": 5200000,
+      "source": {
+        "assetUri": "fake://hook-and-reveal/clip2.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 2200000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "clip3",
+      "startUs": 5000000,
+      "endUs": 9000000,
+      "source": {
+        "assetUri": "fake://hook-and-reveal/clip3.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    }
+  ],
+  "warnings": []
+}

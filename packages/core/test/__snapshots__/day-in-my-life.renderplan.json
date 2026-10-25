@@ -1,0 +1,1030 @@
+{
+  "renderPlanVersion": 1,
+  "templateId": "day-in-my-life",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 24,
+    "background": "#000000"
+  },
+  "durationUs": 60000000,
+  "layers": [
+    {
+      "id": "main/0",
+      "trackId": "main",
+      "itemIndex": 0,
+      "z": 0,
+      "startUs": 0,
+      "endUs": 5000000,
+      "opacity": 1,
+      "slotId": "wake",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/wake.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 5000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/0",
+      "trackId": "text",
+      "itemIndex": 0,
+      "z": 2,
+      "startUs": 291667,
+      "endUs": 4583333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "A day in my life as a nurse",
+      "style": {
+        "font": "Inter-Bold",
+        "sizePx": 70,
+        "color": "#FFFFFF",
+        "align": "center",
+        "shadow": {
+          "color": "#00000099",
+          "blurPx": 12,
+          "offsetXPx": 0,
+          "offsetYPx": 4
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 268.8,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "fade",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 291666
+      }
+    },
+    {
+      "id": "text/1",
+      "trackId": "text",
+      "itemIndex": 1,
+      "z": 2,
+      "startUs": 291667,
+      "endUs": 4708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "7:00 AM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    },
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "itemIndex": 1,
+      "z": 0,
+      "startUs": 5000000,
+      "endUs": 10000000,
+      "opacity": 1,
+      "slotId": "coffee",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/coffee.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 5000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/2",
+      "trackId": "text",
+      "itemIndex": 2,
+      "z": 2,
+      "startUs": 5291667,
+      "endUs": 9708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "7:30 AM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "itemIndex": 2,
+      "z": 0,
+      "startUs": 10000000,
+      "endUs": 15416667,
+      "opacity": 1,
+      "slotId": "commute",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/commute.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10833333,
+        "rate": 2,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/3",
+      "trackId": "text",
+      "itemIndex": 3,
+      "z": 2,
+      "startUs": 10291667,
+      "endUs": 14708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "8:15 AM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "itemIndex": 3,
+      "z": 0,
+      "startUs": 15000000,
+      "endUs": 22416667,
+      "opacity": 1,
+      "slotId": "work",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/work.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 11125000,
+        "rate": 1.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/4",
+      "trackId": "text",
+      "itemIndex": 4,
+      "z": 2,
+      "startUs": 15291667,
+      "endUs": 21708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "9:00 AM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "itemIndex": 4,
+      "z": 0,
+      "startUs": 22000000,
+      "endUs": 28208333,
+      "opacity": 1,
+      "slotId": "lunch",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/lunch.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6208333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/5",
+      "trackId": "text",
+      "itemIndex": 5,
+      "z": 2,
+      "startUs": 22291667,
+      "endUs": 27708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "12:30 PM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    },
+    {
+      "id": "main/5",
+      "trackId": "main",
+      "itemIndex": 5,
+      "z": 0,
+      "startUs": 28000000,
+      "endUs": 34333333,
+      "opacity": 1,
+      "slotId": "gym",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/gym.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6333333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/6",
+      "trackId": "text",
+      "itemIndex": 6,
+      "z": 2,
+      "startUs": 28291667,
+      "endUs": 33708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "5:30 PM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    },
+    {
+      "id": "main/6",
+      "trackId": "main",
+      "itemIndex": 6,
+      "z": 0,
+      "startUs": 34000000,
+      "endUs": 40416667,
+      "opacity": 1,
+      "slotId": "errands",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/errands.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 8041667,
+        "rate": 1.25,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/7",
+      "trackId": "text",
+      "itemIndex": 7,
+      "z": 2,
+      "startUs": 34291667,
+      "endUs": 39708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "6:45 PM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    },
+    {
+      "id": "main/7",
+      "trackId": "main",
+      "itemIndex": 7,
+      "z": 0,
+      "startUs": 40000000,
+      "endUs": 47500000,
+      "opacity": 1,
+      "slotId": "dinner",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/dinner.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 7500000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/8",
+      "trackId": "text",
+      "itemIndex": 8,
+      "z": 2,
+      "startUs": 40291667,
+      "endUs": 46708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "7:30 PM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    },
+    {
+      "id": "main/8",
+      "trackId": "main",
+      "itemIndex": 8,
+      "z": 0,
+      "startUs": 47000000,
+      "endUs": 54583333,
+      "opacity": 1,
+      "slotId": "unwind",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/unwind.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 7583333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/9",
+      "trackId": "text",
+      "itemIndex": 9,
+      "z": 2,
+      "startUs": 47291667,
+      "endUs": 53708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "9:30 PM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    },
+    {
+      "id": "main/9",
+      "trackId": "main",
+      "itemIndex": 9,
+      "z": 0,
+      "startUs": 54000000,
+      "endUs": 60000000,
+      "opacity": 1,
+      "slotId": "night",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 1000000,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://day-in-my-life/night.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20
+    },
+    {
+      "id": "text/10",
+      "trackId": "text",
+      "itemIndex": 10,
+      "z": 2,
+      "startUs": 54291667,
+      "endUs": 59708333,
+      "opacity": 1,
+      "kind": "text",
+      "text": "11:00 PM",
+      "style": {
+        "font": "SpaceMono-Bold",
+        "sizePx": 50,
+        "color": "#FFFFFFE6",
+        "align": "right",
+        "background": {
+          "color": "#00000066",
+          "paddingPx": 12,
+          "cornerRadiusPx": 8
+        }
+      },
+      "placement": {
+        "xPx": 907.1999999999999,
+        "yPx": 1497.6000000000001,
+        "anchor": "bottom-right",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 500000,
+        "outDurationUs": 250000
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 15000000,
+      "endUs": 15416667,
+      "fromLayerId": "main/2",
+      "toLayerId": "main/3"
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 22000000,
+      "endUs": 22416667,
+      "fromLayerId": "main/3",
+      "toLayerId": "main/4"
+    },
+    {
+      "id": "main/5",
+      "trackId": "main",
+      "z": 0,
+      "type": "zoom-punch",
+      "startUs": 28000000,
+      "endUs": 28208333,
+      "fromLayerId": "main/4",
+      "toLayerId": "main/5"
+    },
+    {
+      "id": "main/6",
+      "trackId": "main",
+      "z": 0,
+      "type": "slide",
+      "direction": "left",
+      "startUs": 34000000,
+      "endUs": 34333333,
+      "fromLayerId": "main/5",
+      "toLayerId": "main/6"
+    },
+    {
+      "id": "main/7",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 40000000,
+      "endUs": 40416667,
+      "fromLayerId": "main/6",
+      "toLayerId": "main/7"
+    },
+    {
+      "id": "main/8",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 47000000,
+      "endUs": 47500000,
+      "fromLayerId": "main/7",
+      "toLayerId": "main/8"
+    },
+    {
+      "id": "main/9",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 54000000,
+      "endUs": 54583333,
+      "fromLayerId": "main/8",
+      "toLayerId": "main/9"
+    }
+  ],
+  "audio": [
+    {
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "wake",
+      "startUs": 0,
+      "endUs": 5000000,
+      "source": {
+        "assetUri": "fake://day-in-my-life/wake.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 5000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "startUs": 0,
+      "endUs": 60000000,
+      "source": {
+        "assetUri": "fake://day-in-my-life/music.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 60000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -8,
+      "fadeInUs": 2000000,
+      "fadeOutUs": 2000000,
+      "ducking": {
+        "gainDb": -12,
+        "rampUs": 200000,
+        "regions": [
+          {
+            "startUs": 0,
+            "endUs": 60000000
+          }
+        ]
+      }
+    },
+    {
+      "id": "voice/0",
+      "kind": "audio",
+      "slotId": "voiceover",
+      "startUs": 1000000,
+      "endUs": 59000000,
+      "source": {
+        "assetUri": "fake://day-in-my-life/voiceover.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 58000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 83333,
+      "fadeOutUs": 500000
+    },
+    {
+      "id": "main/1",
+      "kind": "video",
+      "slotId": "coffee",
+      "startUs": 5000000,
+      "endUs": 10000000,
+      "source": {
+        "assetUri": "fake://day-in-my-life/coffee.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 5000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "commute",
+      "startUs": 10000000,
+      "endUs": 15416667,
+      "source": {
+        "assetUri": "fake://day-in-my-life/commute.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 10833333,
+        "rate": 2,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "work",
+      "startUs": 15000000,
+      "endUs": 22416667,
+      "source": {
+        "assetUri": "fake://day-in-my-life/work.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 11125000,
+        "rate": 1.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/4",
+      "kind": "video",
+      "slotId": "lunch",
+      "startUs": 22000000,
+      "endUs": 28208333,
+      "source": {
+        "assetUri": "fake://day-in-my-life/lunch.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6208333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/5",
+      "kind": "video",
+      "slotId": "gym",
+      "startUs": 28000000,
+      "endUs": 34333333,
+      "source": {
+        "assetUri": "fake://day-in-my-life/gym.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6333333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/6",
+      "kind": "video",
+      "slotId": "errands",
+      "startUs": 34000000,
+      "endUs": 40416667,
+      "source": {
+        "assetUri": "fake://day-in-my-life/errands.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 8041667,
+        "rate": 1.25,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/7",
+      "kind": "video",
+      "slotId": "dinner",
+      "startUs": 40000000,
+      "endUs": 47500000,
+      "source": {
+        "assetUri": "fake://day-in-my-life/dinner.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 7500000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/8",
+      "kind": "video",
+      "slotId": "unwind",
+      "startUs": 47000000,
+      "endUs": 54583333,
+      "source": {
+        "assetUri": "fake://day-in-my-life/unwind.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 7583333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/9",
+      "kind": "video",
+      "slotId": "night",
+      "startUs": 54000000,
+      "endUs": 60000000,
+      "source": {
+        "assetUri": "fake://day-in-my-life/night.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -20,
+      "fadeInUs": 0,
+      "fadeOutUs": 1000000
+    }
+  ],
+  "warnings": []
+}

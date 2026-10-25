@@ -391,6 +391,25 @@ The resolver fills these in (`PLAN_DEFAULTS`) until the template format has fiel
 `Inter-Bold` 64 px `#FFFFFF` centered, position `center` at (0.5, 0.5), animation length 300 ms, short-clip policy
 `freeze`, ducking -12 dB with 200 ms ramps.
 
+## Testing
+
+`pnpm test` runs every suite with coverage (90% minimum).
+
+**Render plan snapshots.** [`test/resolve.snapshot.test.ts`](test/resolve.snapshot.test.ts) binds fixed fake media
+(`fake://<template-id>/<slot-id>.mp4`, long enough for every slot, in 16:9, 9:16 and 4:5 sizes) to each template in
+[`templates/examples/`](../../templates/examples/). It checks that the template validates, resolves with no warnings
+and keeps every invariant, then compares the full plan with
+[`test/__snapshots__/<template-id>.renderplan.json`](test/__snapshots__/). The files are formatted like the rest of the
+repo, so a resolver change shows up in a review as a plain JSON diff.
+
+After an intended change to the resolver or a template, update the snapshots and review the diff before committing:
+
+```sh
+pnpm --filter @stackreel/core test -- -u
+```
+
+In CI a missing or different snapshot fails the test; snapshots are only written when you pass `-u` locally.
+
 ## Scripts
 
 | Script           | What it does                              |

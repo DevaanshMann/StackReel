@@ -1,0 +1,811 @@
+{
+  "renderPlanVersion": 1,
+  "templateId": "beat-cut-montage",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "background": "#000000"
+  },
+  "durationUs": 15000000,
+  "layers": [
+    {
+      "id": "main/0",
+      "trackId": "main",
+      "itemIndex": 0,
+      "z": 0,
+      "startUs": 0,
+      "endUs": 2000000,
+      "opacity": 1,
+      "slotId": "clip1",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip1.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1000000,
+        "rate": 0.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "fx/0",
+      "trackId": "fx",
+      "itemIndex": 0,
+      "z": 1,
+      "startUs": 200000,
+      "endUs": 1900000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Summer ’26",
+      "style": {
+        "font": "Inter-Black",
+        "sizePx": 120,
+        "color": "#FFFFFF",
+        "align": "center",
+        "stroke": {
+          "color": "#000000",
+          "widthPx": 6
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 806.4,
+        "anchor": "center",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "bounce",
+        "out": "scale",
+        "inDurationUs": 400000,
+        "outDurationUs": 133333
+      }
+    },
+    {
+      "id": "main/1",
+      "trackId": "main",
+      "itemIndex": 1,
+      "z": 0,
+      "startUs": 2000000,
+      "endUs": 3133333,
+      "opacity": 1,
+      "slotId": "clip2",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip2.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1133333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "fx/1",
+      "trackId": "fx",
+      "itemIndex": 1,
+      "z": 1,
+      "startUs": 2000000,
+      "endUs": 2500000,
+      "opacity": 1,
+      "kind": "sticker",
+      "asset": "flash",
+      "widthPx": 540,
+      "placement": {
+        "xPx": 540,
+        "yPx": 960,
+        "anchor": "center",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "scale",
+        "out": "fade",
+        "inDurationUs": 100000,
+        "outDurationUs": 200000
+      }
+    },
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "itemIndex": 2,
+      "z": 0,
+      "startUs": 3000000,
+      "endUs": 4166667,
+      "opacity": 1,
+      "slotId": "clip3",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip3.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1166667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "itemIndex": 3,
+      "z": 0,
+      "startUs": 4000000,
+      "endUs": 5166667,
+      "opacity": 1,
+      "slotId": "clip4",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip4.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1166667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "itemIndex": 4,
+      "z": 0,
+      "startUs": 5000000,
+      "endUs": 6200000,
+      "opacity": 1,
+      "slotId": "clip5",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip5.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1200000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "main/5",
+      "trackId": "main",
+      "itemIndex": 5,
+      "z": 0,
+      "startUs": 6000000,
+      "endUs": 7166667,
+      "opacity": 1,
+      "slotId": "clip6",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip6.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4666667,
+        "rate": 4,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "main/6",
+      "trackId": "main",
+      "itemIndex": 6,
+      "z": 0,
+      "startUs": 7000000,
+      "endUs": 8166667,
+      "opacity": 1,
+      "slotId": "clip7",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip7.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1166667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "main/7",
+      "trackId": "main",
+      "itemIndex": 7,
+      "z": 0,
+      "startUs": 8000000,
+      "endUs": 9133333,
+      "opacity": 1,
+      "slotId": "clip8",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip8.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1133333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "main/8",
+      "trackId": "main",
+      "itemIndex": 8,
+      "z": 0,
+      "startUs": 9000000,
+      "endUs": 10200000,
+      "opacity": 1,
+      "slotId": "clip9",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip9.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1200000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "main/9",
+      "trackId": "main",
+      "itemIndex": 9,
+      "z": 0,
+      "startUs": 10000000,
+      "endUs": 11000000,
+      "opacity": 1,
+      "slotId": "clip10",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip10.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "main/10",
+      "trackId": "main",
+      "itemIndex": 10,
+      "z": 0,
+      "startUs": 11000000,
+      "endUs": 12300000,
+      "opacity": 1,
+      "slotId": "clip11",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 0,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1920
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1920
+      },
+      "transform": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip11.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 2600000,
+        "rate": 2,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    },
+    {
+      "id": "main/11",
+      "trackId": "main",
+      "itemIndex": 11,
+      "z": 0,
+      "startUs": 12000000,
+      "endUs": 15000000,
+      "opacity": 1,
+      "slotId": "clip12",
+      "fit": "cover",
+      "fadeInUs": 0,
+      "fadeOutUs": 1000000,
+      "kind": "video",
+      "sourceSize": {
+        "width": 1080,
+        "height": 1350
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1080,
+        "height": 1350
+      },
+      "transform": [1.4222222222222223, 0, -228, 0, 1.4222222222222223, 0, 0, 0, 1],
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip12.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 766667,
+        "rate": 0.25,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60
+    }
+  ],
+  "transitions": [
+    {
+      "id": "main/2",
+      "trackId": "main",
+      "z": 0,
+      "type": "zoom-punch",
+      "startUs": 3000000,
+      "endUs": 3133333,
+      "fromLayerId": "main/1",
+      "toLayerId": "main/2"
+    },
+    {
+      "id": "main/3",
+      "trackId": "main",
+      "z": 0,
+      "type": "whip-pan",
+      "direction": "left",
+      "startUs": 4000000,
+      "endUs": 4166667,
+      "fromLayerId": "main/2",
+      "toLayerId": "main/3"
+    },
+    {
+      "id": "main/4",
+      "trackId": "main",
+      "z": 0,
+      "type": "whip-pan",
+      "direction": "right",
+      "startUs": 5000000,
+      "endUs": 5166667,
+      "fromLayerId": "main/3",
+      "toLayerId": "main/4"
+    },
+    {
+      "id": "main/5",
+      "trackId": "main",
+      "z": 0,
+      "type": "spin",
+      "startUs": 6000000,
+      "endUs": 6200000,
+      "fromLayerId": "main/4",
+      "toLayerId": "main/5"
+    },
+    {
+      "id": "main/6",
+      "trackId": "main",
+      "z": 0,
+      "type": "whip-pan",
+      "direction": "up",
+      "startUs": 7000000,
+      "endUs": 7166667,
+      "fromLayerId": "main/5",
+      "toLayerId": "main/6"
+    },
+    {
+      "id": "main/7",
+      "trackId": "main",
+      "z": 0,
+      "type": "whip-pan",
+      "direction": "down",
+      "startUs": 8000000,
+      "endUs": 8166667,
+      "fromLayerId": "main/6",
+      "toLayerId": "main/7"
+    },
+    {
+      "id": "main/8",
+      "trackId": "main",
+      "z": 0,
+      "type": "zoom-punch",
+      "startUs": 9000000,
+      "endUs": 9133333,
+      "fromLayerId": "main/7",
+      "toLayerId": "main/8"
+    },
+    {
+      "id": "main/9",
+      "trackId": "main",
+      "z": 0,
+      "type": "spin",
+      "startUs": 10000000,
+      "endUs": 10200000,
+      "fromLayerId": "main/8",
+      "toLayerId": "main/9"
+    },
+    {
+      "id": "main/11",
+      "trackId": "main",
+      "z": 0,
+      "type": "crossfade",
+      "startUs": 12000000,
+      "endUs": 12300000,
+      "fromLayerId": "main/10",
+      "toLayerId": "main/11"
+    }
+  ],
+  "audio": [
+    {
+      "id": "main/0",
+      "kind": "video",
+      "slotId": "clip1",
+      "startUs": 0,
+      "endUs": 2000000,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip1.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1000000,
+        "rate": 0.5,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "startUs": 0,
+      "endUs": 15000000,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/music.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 15000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": 0,
+      "fadeInUs": 0,
+      "fadeOutUs": 1000000
+    },
+    {
+      "id": "main/1",
+      "kind": "video",
+      "slotId": "clip2",
+      "startUs": 2000000,
+      "endUs": 3133333,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip2.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1133333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/2",
+      "kind": "video",
+      "slotId": "clip3",
+      "startUs": 3000000,
+      "endUs": 4166667,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip3.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1166667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/3",
+      "kind": "video",
+      "slotId": "clip4",
+      "startUs": 4000000,
+      "endUs": 5166667,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip4.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1166667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/4",
+      "kind": "video",
+      "slotId": "clip5",
+      "startUs": 5000000,
+      "endUs": 6200000,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip5.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1200000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/5",
+      "kind": "video",
+      "slotId": "clip6",
+      "startUs": 6000000,
+      "endUs": 7166667,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip6.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 4666667,
+        "rate": 4,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/6",
+      "kind": "video",
+      "slotId": "clip7",
+      "startUs": 7000000,
+      "endUs": 8166667,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip7.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1166667,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/7",
+      "kind": "video",
+      "slotId": "clip8",
+      "startUs": 8000000,
+      "endUs": 9133333,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip8.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1133333,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/8",
+      "kind": "video",
+      "slotId": "clip9",
+      "startUs": 9000000,
+      "endUs": 10200000,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip9.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1200000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/9",
+      "kind": "video",
+      "slotId": "clip10",
+      "startUs": 10000000,
+      "endUs": 11000000,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip10.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 1000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/10",
+      "kind": "video",
+      "slotId": "clip11",
+      "startUs": 11000000,
+      "endUs": 12300000,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip11.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 2600000,
+        "rate": 2,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 0
+    },
+    {
+      "id": "main/11",
+      "kind": "video",
+      "slotId": "clip12",
+      "startUs": 12000000,
+      "endUs": 15000000,
+      "source": {
+        "assetUri": "fake://beat-cut-montage/clip12.mp4",
+        "sourceStartUs": 0,
+        "sourceEndUs": 766667,
+        "rate": 0.25,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -60,
+      "fadeInUs": 0,
+      "fadeOutUs": 1000000
+    }
+  ],
+  "warnings": []
+}

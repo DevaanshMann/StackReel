@@ -339,7 +339,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
 5. **Testing**
    - [x] Unit tests for every schema rule (valid and invalid fixtures)
    - [ ] Property-based tests (fast-check) for the resolver: no negative durations, layers stay in bounds, transitions never overlap more than two clips
-   - [ ] Snapshot tests: the render plan for each sample template
+   - [x] Snapshot tests: the render plan for each sample template
    - [ ] Export `fixtures/` so Swift and Kotlin tests use **the exact same JSON**
 
 **Deliverables:** `@stackreel/template-schema@0.1.0`, `@stackreel/core@0.1.0`, 10 templates, spec doc.

@@ -1,0 +1,153 @@
+{
+  "renderPlanVersion": 1,
+  "templateId": "quote-card",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "background": "#111111"
+  },
+  "durationUs": 6000000,
+  "layers": [
+    {
+      "id": "background/0",
+      "trackId": "background",
+      "itemIndex": 0,
+      "z": 0,
+      "startUs": 0,
+      "endUs": 6000000,
+      "opacity": 1,
+      "slotId": "background",
+      "fit": "cover",
+      "fadeInUs": 500000,
+      "fadeOutUs": 500000,
+      "kind": "image",
+      "assetUri": "fake://quote-card/background.jpg",
+      "sourceSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "cropPx": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "transform": [1.7777777777777777, 0, -1166.6666666666665, 0, 1.7777777777777777, 0, 0, 0, 1]
+    },
+    {
+      "id": "quote/0",
+      "trackId": "quote",
+      "itemIndex": 0,
+      "z": 1,
+      "startUs": 0,
+      "endUs": 6000000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "“",
+      "style": {
+        "font": "PlayfairDisplay-Black",
+        "sizePx": 280,
+        "color": "#FFFFFF66",
+        "align": "center"
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 384,
+        "anchor": "top",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "none",
+        "out": "fade",
+        "inDurationUs": 0,
+        "outDurationUs": 400000
+      }
+    },
+    {
+      "id": "quote/1",
+      "trackId": "quote",
+      "itemIndex": 1,
+      "z": 1,
+      "startUs": 400000,
+      "endUs": 5600000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "Small steps, every single day.",
+      "style": {
+        "font": "PlayfairDisplay-Regular",
+        "sizePx": 76,
+        "color": "#FFFFFF",
+        "align": "center",
+        "background": {
+          "color": "#00000099",
+          "paddingPx": 32,
+          "cornerRadiusPx": 24
+        }
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 864,
+        "anchor": "center",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "typewriter",
+        "out": "fade",
+        "inDurationUs": 1500000,
+        "outDurationUs": 400000
+      }
+    },
+    {
+      "id": "quote/2",
+      "trackId": "quote",
+      "itemIndex": 2,
+      "z": 1,
+      "startUs": 2200000,
+      "endUs": 6000000,
+      "opacity": 1,
+      "kind": "text",
+      "text": "— Your name",
+      "style": {
+        "font": "Inter-Medium",
+        "sizePx": 44,
+        "color": "#FFFFFFCC",
+        "align": "center"
+      },
+      "placement": {
+        "xPx": 540,
+        "yPx": 1152,
+        "anchor": "center",
+        "rotationDeg": 0
+      },
+      "animation": {
+        "in": "fade",
+        "out": "none",
+        "inDurationUs": 600000,
+        "outDurationUs": 0
+      }
+    }
+  ],
+  "transitions": [],
+  "audio": [
+    {
+      "id": "music",
+      "kind": "music",
+      "slotId": "music",
+      "startUs": 0,
+      "endUs": 6000000,
+      "source": {
+        "assetUri": "fake://quote-card/music.m4a",
+        "sourceStartUs": 0,
+        "sourceEndUs": 6000000,
+        "rate": 1,
+        "afterEnd": "hold",
+        "fitMode": "trim"
+      },
+      "gainDb": -8,
+      "fadeInUs": 500000,
+      "fadeOutUs": 1000000
+    }
+  ],
+  "warnings": []
+}
