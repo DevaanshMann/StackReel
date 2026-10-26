@@ -6,7 +6,6 @@ import {
   intersectRanges,
   isEmptyRange,
   isOnFrame,
-  maxTimeUs,
   rangeContains,
   rangeContainsRange,
   rangeDuration,
@@ -17,6 +16,7 @@ import {
   timeRange,
   usToFrame,
 } from "../src/index.js";
+import { maxTimeUs } from "../src/limits.js";
 
 describe("frameToUs", () => {
   it.each([

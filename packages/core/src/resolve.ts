@@ -1,5 +1,6 @@
 import type { Animation, MediaItem, Slot, StickerItem, TextItem, Track } from "@stackreel/template-schema";
 import { DEFAULT_SHORT_CLIP_POLICY, fitSlot, type Fitted, type ShortClipPolicy, type TrimWindowPicker } from "./fit.js";
+import { maxTimeUs } from "./limits.js";
 import { itemKey, type Project, type SlotBinding } from "./project.js";
 import {
   PLAN_DEFAULTS,
@@ -13,7 +14,7 @@ import {
   type SourceTiming,
   type TransitionPlan,
 } from "./render-plan.js";
-import { frameToUs, maxTimeUs, snapToFrame, usToFrame, type TimeRange } from "./time.js";
+import { frameToUs, snapToFrame, usToFrame, type TimeRange } from "./time.js";
 import { cropRect, fitMatrix, type Placement, type Size } from "./transform.js";
 
 /** What the app knows about a media file. Engines read it from the file before resolving. */
@@ -49,7 +50,8 @@ const MUTED_DB = -60;
 const own = <T>(record: Record<string, T> | undefined, key: string): T | undefined =>
   record !== undefined && Object.hasOwn(record, key) ? record[key] : undefined;
 
-const isPositiveFinite = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
+/** A display side that keeps transforms finite: from 1 px to the largest safe integer. */
+const isUsableSide = (n: unknown): n is number => typeof n === "number" && n >= 1 && n <= Number.MAX_SAFE_INTEGER;
 
 const byStart = (a: TimeRange, b: TimeRange) => a.startUs - b.startUs || a.endUs - b.endUs;
 
@@ -107,7 +109,7 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
   const assetChecked = new Set<string>();
   const assetFor = (slot: Slot, binding: SlotBinding): { size: Size; durationUs?: number } => {
     const info = own(options.assets, binding.assetUri);
-    const sized = info !== undefined && isPositiveFinite(info.width) && isPositiveFinite(info.height);
+    const sized = info !== undefined && isUsableSide(info.width) && isUsableSide(info.height);
     const needsSize = slot.kind === "video" || slot.kind === "image";
     if ((info === undefined || (needsSize && !sized)) && !assetChecked.has(slot.id)) {
       warnings.push({

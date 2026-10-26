@@ -81,6 +81,11 @@ describe("fitMatrix at 1080×1920", () => {
     const corner = { x: 1, y: 1, width: 5e-324, height: 5e-324 };
     expect(cropRect(source, corner)).toEqual({ x: 1919, y: 1079, width: 1, height: 1 });
   });
+
+  it("never grows a crop past a source smaller than a pixel", () => {
+    const crop = cropRect({ width: 0.5, height: 0.5 }, { x: 0.5, y: 0.5, width: 0.5, height: 0.5 });
+    expect(crop).toEqual({ x: 0, y: 0, width: 0.5, height: 0.5 });
+  });
 });
 
 describe("matrix helpers", () => {

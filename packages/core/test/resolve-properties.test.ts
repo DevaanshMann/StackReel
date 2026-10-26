@@ -8,7 +8,6 @@ import {
   type Slot,
   type Template,
   type Track,
-  type ValidateResult,
 } from "@stackreel/template-schema";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
@@ -194,8 +193,15 @@ const sticker = fc.record(
   { requiredKeys: ["kind", "startUs", "durationUs", "asset", "widthNorm"] },
 );
 
+const videoTrack = (minLength: number) =>
+  fc.record({
+    type: fc.constant("video"),
+    items: fc.array(mediaItem, { minLength, maxLength: 6 }),
+    shuffled: fc.boolean(),
+  });
+
 const track = fc.oneof(
-  fc.record({ type: fc.constant("video"), items: fc.array(mediaItem, { maxLength: 6 }), shuffled: fc.boolean() }),
+  videoTrack(0),
   fc.record({ type: fc.constant("audio"), items: fc.array(mediaItem, { maxLength: 3 }) }),
   fc.record({ type: fc.constant("overlay"), items: fc.array(fc.oneof(textItem, sticker), { maxLength: 4 }) }),
 );
@@ -220,7 +226,9 @@ const templateRecipe = fc.record(
       fc.record({ optional: fc.boolean(), maxChars: fc.integer({ min: 1, max: 40 }) }, { requiredKeys: [] }),
       { maxLength: 2 },
     ),
-    tracks: fc.array(track, { maxLength: 5 }),
+    tracks: fc.array(track, { maxLength: 4 }),
+    /** A video track with at least one item, somewhere in the stack, so no template is empty. */
+    mainTrack: fc.record({ track: videoTrack(1), at: fc.nat() }),
     tailUs: offsetUs,
     music: fc.record(
       { slot: fc.nat(), start: musicStart, gainDb, fadeInUs: fadeUs, fadeOutUs: fadeUs },
@@ -228,7 +236,7 @@ const templateRecipe = fc.record(
     ),
     duckMusicUnderVoice: fc.boolean(),
   },
-  { requiredKeys: ["canvas", "videoSlots", "imageSlots", "audioSlots", "textSlots", "tracks", "tailUs"] },
+  { requiredKeys: ["canvas", "videoSlots", "imageSlots", "audioSlots", "textSlots", "tracks", "mainTrack", "tailUs"] },
 );
 
 /** Builds a template that is valid by construction: items fit the template and never overlap on a video track. */
@@ -266,7 +274,9 @@ function buildTemplate(r: ValueOf<typeof templateRecipe>): Template {
     return { ...rest, ...(textSlot && { slot: textSlot.id }), text: { ...text, ...(maxChars && { maxChars }) } };
   };
 
-  const tracks = r.tracks.map((t, i): Track => {
+  const at = r.mainTrack.at % (r.tracks.length + 1);
+  const recipeTracks = [...r.tracks.slice(0, at), r.mainTrack.track, ...r.tracks.slice(at)];
+  const tracks = recipeTracks.map((t, i): Track => {
     const id = `${t.type}${i}`;
     if (t.type === "overlay") return { id, type: "overlay", items: t.items.map(toOverlay) };
     if (t.type === "audio") {
@@ -310,10 +320,11 @@ function buildTemplate(r: ValueOf<typeof templateRecipe>): Template {
 }
 
 const onlyValid = (templates: fc.Arbitrary<Template>) =>
-  templates
-    .map((t) => validate(t))
-    .filter((r): r is Extract<ValidateResult, { ok: true }> => r.ok)
-    .map((r) => r.template);
+  templates.map((t) => {
+    const result = validate(t);
+    if (!result.ok) throw new Error(`Generated an invalid template: ${JSON.stringify(result.errors)}`);
+    return result.template;
+  });
 
 const generatedTemplates = onlyValid(templateRecipe.map(buildTemplate));
 
@@ -429,6 +440,9 @@ const info = fc.oneof(
       { width: 0, height: 0, durationUs: 0 },
       { width: Number.NaN, height: -1, durationUs: 1.5 },
       { width: Infinity, height: 1080, durationUs: -10 },
+      { width: 1e-310, height: 1080 },
+      { width: 1e306, height: 1 },
+      { width: 1, height: 1e306 },
     ),
   },
 );
@@ -643,6 +657,7 @@ function boundsProblems(plan: RenderPlan, { project, assets }: Case): string[] {
       onCanvas(layer);
       if (layer.kind === "video") inTrim(`layer ${layer.id}`, layer.slotId, layer.source);
     } else {
+      // Overlays are only checked at their anchor and sticker width; text size isn't known before layout.
       fits(`layer ${layer.id} animation`, layer.animation.inDurationUs + layer.animation.outDurationUs, layer);
       const { xPx, yPx } = layer.placement;
       if (!(xPx >= 0 && xPx <= width && yPx >= 0 && yPx <= height)) {
@@ -729,18 +744,68 @@ describe.each([
   });
 });
 
+const HUGE_PLACES = [
+  "template duration",
+  "trim in",
+  "trim out",
+  "trim window picker",
+  "item fades",
+  "overlay animations",
+  "music start",
+  "music fades",
+] as const;
+type HugePlace = (typeof HUGE_PLACES)[number];
+
+/** Puts `us` in each of `places`, keeping the project valid. */
+function stretch({ project, assets }: Case, places: readonly HugePlace[], us: number): Case {
+  const stretched = structuredClone(project);
+  const { template } = stretched;
+  const music = template.audio?.music;
+  const at = (place: HugePlace) => places.includes(place);
+  if (at("template duration") || (at("music start") && music)) template.durationUs = us;
+  if (at("music start") && music) music.startUs = us - 1;
+  if (at("music fades") && music) {
+    music.fadeInUs = us;
+    music.fadeOutUs = us;
+  }
+  for (const track of template.tracks) {
+    if (track.type === "overlay" && at("overlay animations")) {
+      for (const item of track.items) {
+        item.animation = { in: "fade", out: "fade", ...item.animation, inDurationUs: us, outDurationUs: us };
+      }
+    }
+    if (track.type !== "overlay" && at("item fades")) {
+      for (const item of track.items) {
+        item.fadeInUs = us;
+        item.fadeOutUs = us;
+      }
+    }
+  }
+  for (const b of Object.values(stretched.bindings)) {
+    // Halfway, so a huge trim out as well still leaves frames to play.
+    if (at("trim in")) b.trimInUs = Math.floor(us / 2);
+    if (at("trim out")) b.trimOutUs = Math.max(b.trimOutUs, us);
+    b.trimOutUs = Math.max(b.trimOutUs, b.trimInUs + 1);
+  }
+  return { project: stretched, assets };
+}
+
 describe("resolve with valid times far longer than any real video", () => {
   const hugeUs = fc.integer({ min: 2 ** 45, max: Number.MAX_SAFE_INTEGER });
-  const where = fc.constantFrom("template duration", "trim", "trim window picker");
+  const where = fc.constantFrom<readonly HugePlace[]>(...HUGE_PLACES.map((p) => [p]), HUGE_PLACES);
 
-  it("never throws", () => {
+  it("never throws, and passes the invariant, duration, bounds and overlap checks", () => {
     fc.assert(
-      fc.property(cases(generatedTemplates), optionsRecipe, where, hugeUs, (input, options, at, us) => {
-        const { project, assets } = structuredClone(input);
-        if (at === "template duration") project.template.durationUs = us;
-        if (at === "trim") for (const b of Object.values(project.bindings)) b.trimOutUs = Math.max(b.trimOutUs, us);
-        const recipe = at === "trim window picker" ? { ...options, pick: { returns: us } } : options;
-        expect(() => resolveCase({ project, assets }, recipe)).not.toThrow();
+      fc.property(cases(generatedTemplates), optionsRecipe, where, hugeUs, (input, options, places, us) => {
+        const stretched = stretch(input, places, us);
+        const recipe = places.includes("trim window picker") ? { ...options, pick: { returns: us } } : options;
+        const plan = resolveCase(stretched, recipe);
+        expect([
+          ...checkPlanInvariants(plan),
+          ...durationProblems(plan),
+          ...boundsProblems(plan, stretched),
+          ...overlapProblems(plan),
+        ]).toEqual([]);
       }),
       { numRuns: RUNS },
     );

@@ -4,7 +4,6 @@ import {
   IDENTITY,
   checkPlanInvariants,
   createProject,
-  maxTimeUs,
   resolve,
   validateProject,
   type AssetInfo,
@@ -16,6 +15,7 @@ import {
   type TextLayer,
   type VideoLayer,
 } from "../src/index.js";
+import { maxTimeUs } from "../src/limits.js";
 import { testTemplate } from "./helpers.js";
 
 const HD = { width: 1920, height: 1080 };
@@ -363,6 +363,23 @@ describe("resolve: slot fitting", () => {
       ["asset-info-missing", `No size for the media in "Clip c0"; assuming the canvas size`],
       ["asset-info-missing", `No size for the media in "Clip c1"; assuming the canvas size`],
     ]);
+  });
+
+  it.each([
+    { width: 1e-310, height: 1080 },
+    { width: 1e306, height: 1 },
+    { width: 1, height: 1e306 },
+  ])("treats a $width×$height size as missing, so the transform stays finite", (size) => {
+    const t = clips([{}, {}]);
+    t.slots = t.slots.map((s) => (s.id === "c1" ? { id: "c1", kind: "image", label: "Photo" } : s));
+    const junk = bound(t, ["c0", "c1"]);
+    const p = plan(junk, { assets: assetsFor(junk, { ...size, durationUs: 10_000_000 }) });
+    expect(p.warnings.map((w) => w.message)).toEqual([
+      `No size for the media in "Clip c0"; assuming the canvas size`,
+      `No size for the media in "Photo"; assuming the canvas size`,
+    ]);
+    expect(layer(p, "main/0", "video").transform).toEqual(IDENTITY);
+    expect(layer(p, "main/1", "image").transform).toEqual(IDENTITY);
   });
 
   it("ignores inherited keys in bindings and assets", () => {

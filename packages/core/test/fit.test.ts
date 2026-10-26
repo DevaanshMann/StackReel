@@ -1,6 +1,7 @@
 import type { Slot } from "@stackreel/template-schema";
 import { describe, expect, it } from "vitest";
-import { fitClip, fitSlot, isOnFrame, maxTimeUs, type FitRequest, type Fitted } from "../src/index.js";
+import { fitClip, fitSlot, isOnFrame, type FitRequest, type Fitted } from "../src/index.js";
+import { maxTimeUs } from "../src/limits.js";
 
 const base: FitRequest = { durationUs: 2_000_000, trimInUs: 0, trimOutUs: 10_000_000, fps: 30 };
 
@@ -60,6 +61,11 @@ describe("fitClip with a long clip", () => {
     expect([fit.mode, fit.sourceStartUs, fit.sourceEndUs, fit.neededUs]).toEqual(["trim", 0, 33_333, 8333]);
     const last = fitted({ ...oneFrame, pickWindow: (c) => c.windowEndUs });
     expect([last.sourceStartUs, last.sourceEndUs]).toEqual([9_966_667, 10_000_000]);
+  });
+
+  it("plays at least one frame when the layer needs no source", () => {
+    const fit = fitted({ durationUs: 0, speed: 0.25, pickWindow: () => 1e12 });
+    expect([fit.mode, fit.sourceStartUs, fit.sourceEndUs, fit.neededUs]).toEqual(["trim", 9_966_667, 10_000_000, 0]);
   });
 
   it("clamps a huge picker result before snapping it", () => {

@@ -1,6 +1,7 @@
 import type { Slot } from "@stackreel/template-schema";
+import { maxTimeUs } from "./limits.js";
 import type { SlotBinding } from "./project.js";
-import { frameToUs, maxTimeUs, snapToFrame, usToFrame } from "./time.js";
+import { frameToUs, snapToFrame, usToFrame } from "./time.js";
 
 /**
  * What to do when a clip has less footage than its slot needs:
@@ -107,7 +108,7 @@ export function fitClip(request: FitRequest): ClipFit {
   const fitted = { status: "fitted", neededUs, availableUs, minSpeedReached: false } as const;
 
   if (availableUs >= neededUs) {
-    const latestStartUs = snapToFrame(windowEndUs - neededUs, fps, "floor");
+    const latestStartUs = snapToFrame(windowEndUs - Math.max(neededUs, 1), fps, "floor");
     const picked = (request.pickWindow ?? pickWindowStart)({ windowStartUs, windowEndUs, neededUs });
     const pickedUs = Number.isFinite(picked) ? Math.round(picked) : windowStartUs;
     const startUs = snapToFrame(Math.min(Math.max(pickedUs, windowStartUs), latestStartUs), fps);
