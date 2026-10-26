@@ -1,6 +1,7 @@
 import type { Slot } from "@stackreel/template-schema";
+import { maxTimeUs } from "./limits.js";
 import type { SlotBinding } from "./project.js";
-import { snapToFrame } from "./time.js";
+import { frameToUs, snapToFrame, usToFrame } from "./time.js";
 
 /**
  * What to do when a clip has less footage than its slot needs:
@@ -89,11 +90,13 @@ export type ClipFit = Fitted | EmptyWindow;
 
 /** Works out which part of a bound clip plays in a layer. Never throws for valid template and binding values. */
 export function fitClip(request: FitRequest): ClipFit {
-  const { durationUs, fps, trimInUs } = request;
+  const { durationUs, fps } = request;
   const speed = request.speed ?? 1;
   const policy = request.policy ?? DEFAULT_SHORT_CLIP_POLICY;
-  const trimOutUs =
-    request.sourceDurationUs === undefined ? request.trimOutUs : Math.min(request.trimOutUs, request.sourceDurationUs);
+  // Valid trims can be later than the frame math handles, far past the end of any real file.
+  const maxUs = maxTimeUs(fps);
+  const trimInUs = Math.min(request.trimInUs, maxUs);
+  const trimOutUs = Math.min(request.trimOutUs, request.sourceDurationUs ?? maxUs, maxUs);
 
   // Shrink the window to whole frames so the result never reaches outside the user's trim.
   const windowStartUs = snapToFrame(trimInUs, fps, "ceil");
@@ -105,11 +108,13 @@ export function fitClip(request: FitRequest): ClipFit {
   const fitted = { status: "fitted", neededUs, availableUs, minSpeedReached: false } as const;
 
   if (availableUs >= neededUs) {
-    const latestStartUs = snapToFrame(windowEndUs - neededUs, fps, "floor");
+    const latestStartUs = snapToFrame(windowEndUs - Math.max(neededUs, 1), fps, "floor");
     const picked = (request.pickWindow ?? pickWindowStart)({ windowStartUs, windowEndUs, neededUs });
     const pickedUs = Number.isFinite(picked) ? Math.round(picked) : windowStartUs;
-    const startUs = Math.min(Math.max(snapToFrame(Math.max(pickedUs, 0), fps), windowStartUs), latestStartUs);
-    const endUs = Math.min(snapToFrame(startUs + neededUs, fps), windowEndUs);
+    const startUs = snapToFrame(Math.min(Math.max(pickedUs, windowStartUs), latestStartUs), fps);
+    // At least one frame, even when the layer needs less than half a frame of source.
+    const nextFrameUs = frameToUs(usToFrame(startUs, fps) + 1, fps);
+    const endUs = Math.min(Math.max(snapToFrame(startUs + neededUs, fps), nextFrameUs), windowEndUs);
     return { ...fitted, mode: "trim", sourceStartUs: startUs, sourceEndUs: endUs, rate: speed, afterEnd: "hold" };
   }
 

@@ -71,7 +71,8 @@ to 240; templates normally use 24, 25, 30 or 60.
 - **`snapToFrame` defaults to `round`**, for snapping edits and trims to the frame grid.
 
 Ranges are half-open, `[startUs, endUs)`. Ranges that only touch don't overlap, and an empty range overlaps and
-contains nothing. Invalid input (negative or fractional times, unsupported fps) throws a `RangeError`.
+contains nothing. Invalid input (negative or fractional times, unsupported fps) throws a `RangeError`, as do times
+beyond the frame math's limit (about 217 days at 240 fps). `resolve()` and `fitClip()` clamp those times to it.
 
 ## Project
 
@@ -217,8 +218,9 @@ tracks make no layers. `kind` is one of:
 
 **Media transform.** `transform` is a row-major 3×3 affine matrix `[a, b, c, d, e, f, 0, 0, 1]` that maps source
 pixels `(x, y)` to canvas pixels `(a*x + b*y + c, d*x + e*y + f)`, origin top-left, y down. Engines draw only the
-`cropPx` rectangle of the source through it and clip to the canvas. `sourceSize` is the displayed size, after the
-file's rotation metadata, so engines apply that rotation first. The crop rectangle is centered on the canvas:
+`cropPx` rectangle of the source through it and clip to the canvas. `cropPx` is the binding's crop in source pixels
+(the whole frame without one), at least 1 px a side and inside the source. `sourceSize` is the displayed size, after
+the file's rotation metadata, so engines apply that rotation first. The crop rectangle is centered on the canvas:
 
 | `fit`     | Scale                                                         |
 | --------- | ------------------------------------------------------------- |
@@ -284,9 +286,9 @@ Warnings never stop resolving. Each has a `type`, the ids it concerns, and a `me
 ### Invariants
 
 `checkPlanInvariants(plan)` returns the broken rules (empty for a sound plan): positive lengths inside
-`[0, durationUs)` on frame starts, non-empty source ranges with positive rates, unique ids, sorted lists, transitions
-that match their layers, and at most two visible layers per video track, only inside a transition. Tests run it on
-every built-in template with each short-clip policy, and engines can run it on plans they receive.
+`[0, durationUs)` on frame starts, non-empty source ranges with positive rates, finite transforms, unique ids, sorted
+lists, transitions that match their layers, and at most two visible layers per video track, only inside a transition.
+Tests run it on every built-in template with each short-clip policy, and engines can run it on plans they receive.
 
 ### Example
 

@@ -7,6 +7,7 @@ import { isOnFrame, rangeContains, type TimeRange } from "./time.js";
  *
  * - Every layer, transition and audio entry has a positive length inside `[0, durationUs)`, on frame starts.
  * - Source ranges are non-empty and play at a positive rate.
+ * - Video and image transforms hold only finite numbers.
  * - Ids are unique, and `layers`, `transitions` and `audio` are sorted as documented.
  * - On a video track at most two layers are visible at once, and only inside a transition that pairs them.
  */
@@ -37,6 +38,9 @@ export function checkPlanInvariants(plan: RenderPlan): string[] {
   for (const layer of plan.layers) {
     checkRange(`layer ${layer.id}`, layer);
     if (layer.kind === "video") checkSource(`layer ${layer.id}`, layer.source);
+    if ((layer.kind === "video" || layer.kind === "image") && !layer.transform.every(Number.isFinite)) {
+      problems.push(`layer ${layer.id}: transform is not finite`);
+    }
   }
   for (const t of plan.transitions) checkRange(`transition ${t.id}`, t);
   for (const a of plan.audio) {

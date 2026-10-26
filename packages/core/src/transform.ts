@@ -66,14 +66,16 @@ export function transformPoint(m: Matrix3, x: number, y: number): [number, numbe
   return [m[0] * x + m[1] * y + m[2], m[3] * x + m[4] * y + m[5]];
 }
 
-/** The part of the source to show, in source pixels. No crop means the whole frame. */
+/** The part of the source to show, in pixels: the whole frame, or the crop kept inside it and at least 1 px a side. */
 export function cropRect(source: Size, crop?: Crop): Rect {
   if (!crop) return { x: 0, y: 0, width: source.width, height: source.height };
+  const width = Math.min(Math.max(crop.width * source.width, 1), source.width);
+  const height = Math.min(Math.max(crop.height * source.height, 1), source.height);
   return {
-    x: crop.x * source.width,
-    y: crop.y * source.height,
-    width: crop.width * source.width,
-    height: crop.height * source.height,
+    x: Math.min(crop.x * source.width, source.width - width),
+    y: Math.min(crop.y * source.height, source.height - height),
+    width,
+    height,
   };
 }
 

@@ -338,7 +338,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
    - [ ] Each template ships with a `.thumb.jpg` and a short `.preview.mp4` (generated in Phase 4)
 5. **Testing**
    - [x] Unit tests for every schema rule (valid and invalid fixtures)
-   - [ ] Property-based tests (fast-check) for the resolver: no negative durations, layers stay in bounds, transitions never overlap more than two clips
+   - [x] Property-based tests (fast-check) for the resolver: no negative durations, layers stay in bounds, transitions never overlap more than two clips
    - [x] Snapshot tests: the render plan for each sample template
    - [x] Export `fixtures/` so Swift and Kotlin tests use **the exact same JSON**
 

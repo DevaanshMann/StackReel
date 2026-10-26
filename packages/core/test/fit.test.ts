@@ -1,6 +1,7 @@
 import type { Slot } from "@stackreel/template-schema";
 import { describe, expect, it } from "vitest";
 import { fitClip, fitSlot, isOnFrame, type FitRequest, type Fitted } from "../src/index.js";
+import { maxTimeUs } from "../src/limits.js";
 
 const base: FitRequest = { durationUs: 2_000_000, trimInUs: 0, trimOutUs: 10_000_000, fps: 30 };
 
@@ -52,6 +53,31 @@ describe("fitClip with a long clip", () => {
   it("clamps the trim to the source length", () => {
     const fit = fitted({ trimOutUs: 10_000_000, sourceDurationUs: 1_000_000 });
     expect([fit.mode, fit.sourceEndUs]).toEqual(["freeze", 1_000_000]);
+  });
+
+  it("plays at least one frame when the layer needs less than half a frame of source", () => {
+    const oneFrame = { durationUs: 33_333, speed: 0.25, sourceDurationUs: 10_000_000 };
+    const fit = fitted(oneFrame);
+    expect([fit.mode, fit.sourceStartUs, fit.sourceEndUs, fit.neededUs]).toEqual(["trim", 0, 33_333, 8333]);
+    const last = fitted({ ...oneFrame, pickWindow: (c) => c.windowEndUs });
+    expect([last.sourceStartUs, last.sourceEndUs]).toEqual([9_966_667, 10_000_000]);
+  });
+
+  it("plays at least one frame when the layer needs no source", () => {
+    const fit = fitted({ durationUs: 0, speed: 0.25, pickWindow: () => 1e12 });
+    expect([fit.mode, fit.sourceStartUs, fit.sourceEndUs, fit.neededUs]).toEqual(["trim", 9_966_667, 10_000_000, 0]);
+  });
+
+  it("clamps a huge picker result before snapping it", () => {
+    expect(fitted({ pickWindow: () => Number.MAX_SAFE_INTEGER }).sourceStartUs).toBe(8_000_000);
+  });
+
+  it("clamps valid trims that are later than the frame math handles", () => {
+    const maxUs = maxTimeUs(240);
+    const fit = fitted({ fps: 240, trimOutUs: Number.MAX_SAFE_INTEGER, pickWindow: (c) => c.windowEndUs });
+    expect([fit.sourceStartUs, fit.sourceEndUs]).toEqual([maxUs - 2_000_000, maxUs]);
+    const late = { fps: 240, trimInUs: Number.MAX_SAFE_INTEGER - 1, trimOutUs: Number.MAX_SAFE_INTEGER };
+    expect(fitClip({ ...base, ...late })).toEqual({ status: "empty-window", windowStartUs: maxUs, windowEndUs: maxUs });
   });
 });
 
