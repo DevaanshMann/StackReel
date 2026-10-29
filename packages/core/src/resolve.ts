@@ -343,7 +343,7 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
       xPx: pos.x * canvas.width,
       yPx: pos.y * canvas.height,
       anchor: pos.anchor,
-      rotationDeg: pos.rotationDeg ?? 0,
+      rotationDeg: pos.rotationDeg ?? PLAN_DEFAULTS.position.rotationDeg,
     };
   };
 

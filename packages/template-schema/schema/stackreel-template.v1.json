@@ -34,7 +34,7 @@
         "width": { "type": "integer", "minimum": 16, "maximum": 8192, "description": "Output width in pixels." },
         "height": { "type": "integer", "minimum": 16, "maximum": 8192, "description": "Output height in pixels." },
         "fps": { "type": "integer", "minimum": 1, "maximum": 240, "description": "Frames per second." },
-        "background": { "description": "Fill behind all tracks. Defaults to #000000.", "$ref": "#/$defs/Color" }
+        "background": { "description": "Fill behind all tracks.", "default": "#000000", "$ref": "#/$defs/Color" }
       },
       "required": ["width", "height", "fps"],
       "additionalProperties": false
@@ -49,7 +49,8 @@
       "properties": {
         "music": { "$ref": "#/$defs/Music" },
         "duckMusicUnderVoice": {
-          "description": "Lower the music while a clip has speech. Defaults to false.",
+          "description": "Lower the music while a clip has speech.",
+          "default": false,
           "type": "boolean"
         }
       },
@@ -59,8 +60,9 @@
       "type": "object",
       "properties": {
         "slot": { "description": "Id of an audio slot.", "$ref": "#/$defs/Id" },
-        "startUs": { "description": "When the music starts. Defaults to 0.", "$ref": "#/$defs/Microseconds" },
+        "startUs": { "description": "When the music starts.", "default": 0, "$ref": "#/$defs/Microseconds" },
         "gainDb": {
+          "default": 0,
           "type": "number",
           "minimum": -60,
           "maximum": 12,
@@ -96,7 +98,7 @@
           "maxLength": 80,
           "description": "Shown to the user when they fill the slot."
         },
-        "optional": { "description": "The template renders without this slot. Defaults to false.", "type": "boolean" },
+        "optional": { "description": "The template renders without this slot.", "default": false, "type": "boolean" },
         "kind": { "type": "string", "const": "video" },
         "minDurationUs": {
           "description": "Shortest clip that fills the slot without padding.",
@@ -116,7 +118,7 @@
           "maxLength": 80,
           "description": "Shown to the user when they fill the slot."
         },
-        "optional": { "description": "The template renders without this slot. Defaults to false.", "type": "boolean" },
+        "optional": { "description": "The template renders without this slot.", "default": false, "type": "boolean" },
         "kind": { "type": "string", "const": "image" }
       },
       "required": ["id", "label", "kind"],
@@ -132,7 +134,7 @@
           "maxLength": 80,
           "description": "Shown to the user when they fill the slot."
         },
-        "optional": { "description": "The template renders without this slot. Defaults to false.", "type": "boolean" },
+        "optional": { "description": "The template renders without this slot.", "default": false, "type": "boolean" },
         "kind": { "type": "string", "const": "audio" },
         "minDurationUs": { "$ref": "#/$defs/Microseconds" }
       },
@@ -149,7 +151,7 @@
           "maxLength": 80,
           "description": "Shown to the user when they fill the slot."
         },
-        "optional": { "description": "The template renders without this slot. Defaults to false.", "type": "boolean" },
+        "optional": { "description": "The template renders without this slot.", "default": false, "type": "boolean" },
         "kind": { "type": "string", "const": "text" },
         "maxChars": { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 }
       },
@@ -185,14 +187,16 @@
           "maximum": 9007199254740991,
           "description": "A non-zero length of time in integer microseconds."
         },
-        "fit": { "$ref": "#/$defs/FitMode" },
+        "fit": { "default": "cover", "$ref": "#/$defs/FitMode" },
         "speed": {
-          "description": "Playback rate, 0.25 to 4. Defaults to 1.",
+          "description": "Playback rate, 0.25 to 4.",
+          "default": 1,
           "type": "number",
           "minimum": 0.25,
           "maximum": 4
         },
         "gainDb": {
+          "default": 0,
           "type": "number",
           "minimum": -60,
           "maximum": 12,
@@ -205,17 +209,13 @@
       "required": ["slot", "startUs", "durationUs"],
       "additionalProperties": false
     },
-    "FitMode": {
-      "type": "string",
-      "enum": ["cover", "contain", "fill"],
-      "description": "How media fills the canvas. Defaults to cover."
-    },
+    "FitMode": { "type": "string", "enum": ["cover", "contain", "fill"], "description": "How media fills the canvas." },
     "Transition": {
       "type": "object",
       "properties": {
         "type": { "$ref": "#/$defs/TransitionType" },
         "durationUs": { "$ref": "#/$defs/Microseconds" },
-        "direction": { "description": "For slide and whip-pan. Defaults to left.", "$ref": "#/$defs/Direction" }
+        "direction": { "description": "For slide and whip-pan.", "default": "left", "$ref": "#/$defs/Direction" }
       },
       "required": ["type", "durationUs"],
       "additionalProperties": false,
@@ -260,8 +260,14 @@
           "required": ["default"],
           "additionalProperties": false
         },
-        "style": { "$ref": "#/$defs/Style" },
-        "position": { "$ref": "#/$defs/Position" },
+        "style": {
+          "default": { "font": "Inter-Bold", "sizePx": 64, "color": "#FFFFFF", "align": "center" },
+          "$ref": "#/$defs/Style"
+        },
+        "position": {
+          "default": { "anchor": "center", "x": 0.5, "y": 0.5, "rotationDeg": 0 },
+          "$ref": "#/$defs/Position"
+        },
         "animation": { "$ref": "#/$defs/Animation" }
       },
       "required": ["kind", "startUs", "durationUs", "text"],
@@ -277,7 +283,7 @@
         },
         "sizePx": { "type": "number", "exclusiveMinimum": 0, "description": "Font size in pixels at the canvas size." },
         "color": { "$ref": "#/$defs/Color" },
-        "align": { "type": "string", "enum": ["left", "center", "right"] },
+        "align": { "default": "center", "type": "string", "enum": ["left", "center", "right"] },
         "stroke": {
           "type": "object",
           "properties": { "color": { "$ref": "#/$defs/Color" }, "widthPx": { "type": "number", "minimum": 0 } },
@@ -315,7 +321,7 @@
         "anchor": { "$ref": "#/$defs/Anchor" },
         "x": { "$ref": "#/$defs/Normalized" },
         "y": { "$ref": "#/$defs/Normalized" },
-        "rotationDeg": { "type": "number", "minimum": -360, "maximum": 360 }
+        "rotationDeg": { "default": 0, "type": "number", "minimum": -360, "maximum": 360 }
       },
       "required": ["anchor", "x", "y"],
       "additionalProperties": false
@@ -336,8 +342,8 @@
       "properties": {
         "in": { "$ref": "#/$defs/AnimationName" },
         "out": { "$ref": "#/$defs/AnimationName" },
-        "inDurationUs": { "$ref": "#/$defs/Microseconds" },
-        "outDurationUs": { "$ref": "#/$defs/Microseconds" }
+        "inDurationUs": { "default": 300000, "$ref": "#/$defs/Microseconds" },
+        "outDurationUs": { "default": 300000, "$ref": "#/$defs/Microseconds" }
       },
       "additionalProperties": false
     },
@@ -381,7 +387,10 @@
           "maximum": 1,
           "description": "Sticker width relative to the canvas width."
         },
-        "position": { "$ref": "#/$defs/Position" },
+        "position": {
+          "default": { "anchor": "center", "x": 0.5, "y": 0.5, "rotationDeg": 0 },
+          "$ref": "#/$defs/Position"
+        },
         "animation": { "$ref": "#/$defs/Animation" }
       },
       "required": ["kind", "startUs", "durationUs", "asset", "widthNorm"],
