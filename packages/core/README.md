@@ -389,9 +389,10 @@ bound. The first clip is extended by the 250 ms `whip-pan` (rounded to 8 frames 
 
 ### Defaults the template format doesn't define yet
 
-The resolver fills these in (`PLAN_DEFAULTS`) until the template format has fields or defaults for them: text style
-`Inter-Bold` 64 px `#FFFFFF` centered, position `center` at (0.5, 0.5), animation length 300 ms, short-clip policy
-`freeze`, ducking -12 dB with 200 ms ramps.
+The resolver fills in two defaults of its own until the template format has fields for them: short-clip policy
+`freeze`, and ducking -12 dB with 200 ms ramps. Every other default (text style, position, animation lengths, canvas
+background and so on) is the template format's, from `TEMPLATE_DEFAULTS` in
+[`@stackreel/template-schema`](../template-schema/README.md#defaults), and `PLAN_DEFAULTS` reuses those values.
 
 ## Testing
 

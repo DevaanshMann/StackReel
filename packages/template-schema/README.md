@@ -90,18 +90,28 @@ Cross-field rules, checked by `validate()`:
 
 ### Defaults
 
-The schema doesn't fill in defaults, so every engine must apply the same ones:
+The schema doesn't fill in defaults, so every engine must apply the same ones. They're exported as
+`TEMPLATE_DEFAULTS`, and the JSON Schema carries each one as a `default` keyword on its field.
 
-| Field                       | Default   |
-| --------------------------- | --------- |
-| `canvas.background`         | `#000000` |
-| `slot.optional`             | `false`   |
-| `mediaItem.fit`             | `cover`   |
-| `mediaItem.speed`           | `1`       |
-| `mediaItem.gainDb`          | `0`       |
-| `transition.direction`      | `left`    |
-| `audio.music.startUs`       | `0`       |
-| `audio.duckMusicUnderVoice` | `false`   |
+| Field                                               | Default                                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `canvas.background`                                 | `#000000`                                                                       |
+| `slot.optional`                                     | `false`                                                                         |
+| `mediaItem.fit`                                     | `cover`                                                                         |
+| `mediaItem.speed`                                   | `1`                                                                             |
+| `mediaItem.gainDb`                                  | `0`                                                                             |
+| `transition.direction`                              | `left`                                                                          |
+| `textItem.style`                                    | `{ "font": "Inter-Bold", "sizePx": 64, "color": "#FFFFFF", "align": "center" }` |
+| `style.align`                                       | `center`                                                                        |
+| `textItem.position`, `stickerItem.position`         | `{ "anchor": "center", "x": 0.5, "y": 0.5, "rotationDeg": 0 }`                  |
+| `position.rotationDeg`                              | `0`                                                                             |
+| `animation.inDurationUs`, `animation.outDurationUs` | `300000` (300 ms)                                                               |
+| `audio.music.startUs`                               | `0`                                                                             |
+| `audio.music.gainDb`                                | `0`                                                                             |
+| `audio.duckMusicUnderVoice`                         | `false`                                                                         |
+
+A text item with no `style` gets the whole default style; one with a `style` only fills in `align`. Positions work
+the same way with `rotationDeg`. Animation durations apply to any `in` or `out` but `none`, which always lasts 0.
 
 ## Fixtures
 

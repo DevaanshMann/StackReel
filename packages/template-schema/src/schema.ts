@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TEMPLATE_DEFAULTS } from "./defaults.js";
 
 /** The `schemaVersion` this package reads and writes. */
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -44,7 +45,10 @@ export const Canvas = z
     width: z.int().min(16).max(8192).meta({ description: "Output width in pixels." }),
     height: z.int().min(16).max(8192).meta({ description: "Output height in pixels." }),
     fps: z.int().min(1).max(240).meta({ description: "Frames per second." }),
-    background: Color.optional().meta({ description: "Fill behind all tracks. Defaults to #000000." }),
+    background: Color.optional().meta({
+      description: "Fill behind all tracks.",
+      default: TEMPLATE_DEFAULTS.canvas.background,
+    }),
   })
   .meta({ id: "Canvas" });
 
@@ -53,7 +57,10 @@ export const Canvas = z
 const slotBase = {
   id: Id,
   label: z.string().min(1).max(80).meta({ description: "Shown to the user when they fill the slot." }),
-  optional: z.boolean().optional().meta({ description: "The template renders without this slot. Defaults to false." }),
+  optional: z.boolean().optional().meta({
+    description: "The template renders without this slot.",
+    default: TEMPLATE_DEFAULTS.slot.optional,
+  }),
 };
 
 export const VideoSlot = z
@@ -99,7 +106,10 @@ export const Transition = z
   .strictObject({
     type: TransitionType,
     durationUs: Microseconds,
-    direction: Direction.optional().meta({ description: "For slide and whip-pan. Defaults to left." }),
+    direction: Direction.optional().meta({
+      description: "For slide and whip-pan.",
+      default: TEMPLATE_DEFAULTS.transition.direction,
+    }),
   })
   .meta({ id: "Transition", description: "Plays across the cut at the start of the item that owns it." });
 
@@ -111,8 +121,8 @@ export const Animation = z
   .strictObject({
     in: AnimationName.optional(),
     out: AnimationName.optional(),
-    inDurationUs: Microseconds.optional(),
-    outDurationUs: Microseconds.optional(),
+    inDurationUs: Microseconds.optional().meta({ default: TEMPLATE_DEFAULTS.animation.inDurationUs }),
+    outDurationUs: Microseconds.optional().meta({ default: TEMPLATE_DEFAULTS.animation.outDurationUs }),
   })
   .meta({ id: "Animation" });
 
@@ -125,7 +135,7 @@ export const Position = z
     anchor: Anchor,
     x: Normalized,
     y: Normalized,
-    rotationDeg: z.number().min(-360).max(360).optional(),
+    rotationDeg: z.number().min(-360).max(360).optional().meta({ default: TEMPLATE_DEFAULTS.position.rotationDeg }),
   })
   .meta({ id: "Position" });
 
@@ -134,7 +144,7 @@ export const Style = z
     font: z.string().min(1).meta({ description: "PostScript name of a bundled font, e.g. Inter-Black." }),
     sizePx: z.number().positive().meta({ description: "Font size in pixels at the canvas size." }),
     color: Color,
-    align: z.enum(["left", "center", "right"]).optional(),
+    align: z.enum(["left", "center", "right"]).optional().meta({ default: TEMPLATE_DEFAULTS.style.align }),
     stroke: z.strictObject({ color: Color, widthPx: z.number().nonnegative() }).optional(),
     shadow: z
       .strictObject({
@@ -159,15 +169,20 @@ const timed = {
 
 export const FitMode = z
   .enum(["cover", "contain", "fill"])
-  .meta({ id: "FitMode", description: "How media fills the canvas. Defaults to cover." });
+  .meta({ id: "FitMode", description: "How media fills the canvas." });
 
 export const MediaItem = z
   .strictObject({
     slot: Id.meta({ description: "Id of the slot whose media plays here." }),
     ...timed,
-    fit: FitMode.optional(),
-    speed: z.number().min(0.25).max(4).optional().meta({ description: "Playback rate, 0.25 to 4. Defaults to 1." }),
-    gainDb: GainDb.optional(),
+    fit: FitMode.optional().meta({ default: TEMPLATE_DEFAULTS.mediaItem.fit }),
+    speed: z
+      .number()
+      .min(0.25)
+      .max(4)
+      .optional()
+      .meta({ description: "Playback rate, 0.25 to 4.", default: TEMPLATE_DEFAULTS.mediaItem.speed }),
+    gainDb: GainDb.optional().meta({ default: TEMPLATE_DEFAULTS.mediaItem.gainDb }),
     fadeInUs: Microseconds.optional(),
     fadeOutUs: Microseconds.optional(),
     transitionIn: Transition.optional(),
@@ -184,8 +199,8 @@ export const TextItem = z
       editable: z.boolean().optional(),
       maxChars: z.int().positive().optional(),
     }),
-    style: Style.optional(),
-    position: Position.optional(),
+    style: Style.optional().meta({ default: TEMPLATE_DEFAULTS.style }),
+    position: Position.optional().meta({ default: TEMPLATE_DEFAULTS.position }),
     animation: Animation.optional(),
   })
   .meta({ id: "TextItem" });
@@ -196,7 +211,7 @@ export const StickerItem = z
     ...timed,
     asset: z.string().min(1).meta({ description: "Id of a sticker bundled with the app or template." }),
     widthNorm: z.number().gt(0).max(1).meta({ description: "Sticker width relative to the canvas width." }),
-    position: Position.optional(),
+    position: Position.optional().meta({ default: TEMPLATE_DEFAULTS.position }),
     animation: Animation.optional(),
   })
   .meta({ id: "StickerItem" });
@@ -230,8 +245,11 @@ export const Track = z
 export const Music = z
   .strictObject({
     slot: Id.meta({ description: "Id of an audio slot." }),
-    startUs: Microseconds.optional().meta({ description: "When the music starts. Defaults to 0." }),
-    gainDb: GainDb.optional(),
+    startUs: Microseconds.optional().meta({
+      description: "When the music starts.",
+      default: TEMPLATE_DEFAULTS.music.startUs,
+    }),
+    gainDb: GainDb.optional().meta({ default: TEMPLATE_DEFAULTS.music.gainDb }),
     fadeInUs: Microseconds.optional(),
     fadeOutUs: Microseconds.optional(),
   })
@@ -240,10 +258,10 @@ export const Music = z
 export const Audio = z
   .strictObject({
     music: Music.optional(),
-    duckMusicUnderVoice: z
-      .boolean()
-      .optional()
-      .meta({ description: "Lower the music while a clip has speech. Defaults to false." }),
+    duckMusicUnderVoice: z.boolean().optional().meta({
+      description: "Lower the music while a clip has speech.",
+      default: TEMPLATE_DEFAULTS.audio.duckMusicUnderVoice,
+    }),
   })
   .meta({ id: "Audio" });
 

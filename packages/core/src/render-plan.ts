@@ -1,11 +1,12 @@
-import type {
-  Anchor,
-  AnimationName,
-  Color,
-  Direction,
-  FitMode,
-  Style,
-  TransitionType,
+import {
+  TEMPLATE_DEFAULTS,
+  type Anchor,
+  type AnimationName,
+  type Color,
+  type Direction,
+  type FitMode,
+  type Style,
+  type TransitionType,
 } from "@stackreel/template-schema";
 import type { AfterEnd, ClipFitMode, ShortClipPolicy } from "./fit.js";
 import type { TimeRange } from "./time.js";
@@ -194,17 +195,20 @@ export type PlanWarning =
 
 export type PlanWarningType = PlanWarning["type"];
 
-/** Fallbacks the resolver uses where the template leaves a field out and the schema defines no default. */
+/**
+ * Fallbacks the resolver uses where the template leaves a field out. Template fields take the template format's own
+ * defaults (`TEMPLATE_DEFAULTS`); ducking is a resolver option.
+ */
 export const PLAN_DEFAULTS = {
-  background: "#000000",
-  fit: "cover",
-  speed: 1,
-  gainDb: 0,
-  direction: "left",
-  musicStartUs: 0,
-  style: { font: "Inter-Bold", sizePx: 64, color: "#FFFFFF", align: "center" },
-  position: { anchor: "center", x: 0.5, y: 0.5, rotationDeg: 0 },
-  animationDurationUs: 300_000,
+  background: TEMPLATE_DEFAULTS.canvas.background,
+  fit: TEMPLATE_DEFAULTS.mediaItem.fit,
+  speed: TEMPLATE_DEFAULTS.mediaItem.speed,
+  gainDb: TEMPLATE_DEFAULTS.mediaItem.gainDb,
+  direction: TEMPLATE_DEFAULTS.transition.direction,
+  musicStartUs: TEMPLATE_DEFAULTS.music.startUs,
+  style: TEMPLATE_DEFAULTS.style,
+  position: TEMPLATE_DEFAULTS.position,
+  animationDurationUs: TEMPLATE_DEFAULTS.animation.inDurationUs,
   duckGainDb: -12,
   duckRampUs: 200_000,
 } as const satisfies {
