@@ -38,9 +38,9 @@ export interface ResolveOptions {
   minSpeed?: number;
   /** Chooses where long clips start. Defaults to the start of the user's trim. */
   pickTrimWindow?: TrimWindowPicker;
-  /** Gain added to music while voice plays, when the template ducks. Defaults to -12 dB. */
+  /** Gain added to music while voice plays, when the template ducks. Overrides the template's `music.duckGainDb`. */
   duckGainDb?: number;
-  /** Length of the ramp into and out of each ducking region. Defaults to 200 ms. */
+  /** Length of the ramp into and out of each ducking region. Overrides the template's `music.duckRampUs`. */
   duckRampUs?: number;
 }
 
@@ -410,7 +410,13 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
     };
     const fitted = fitLayer(slot, musicBinding, placed, audioPolicy);
     if (fitted) {
-      const voice = audio.filter((a) => a.gainDb > MUTED_DB);
+      // Clips the template marks as speech. When it marks none, every audible clip counts.
+      const marked = new Set(
+        template.tracks.flatMap((t) =>
+          t.type === "overlay" ? [] : t.items.flatMap((item, i) => (item.voice === true ? [itemKey(t.id, i)] : [])),
+        ),
+      );
+      const voice = audio.filter((a) => a.gainDb > MUTED_DB && (marked.size === 0 || marked.has(a.id)));
       const regions = unionRanges(
         voice.map((a) => ({ startUs: Math.max(a.startUs, startUs), endUs: Math.min(a.endUs, durationUs) })),
       ).filter((r) => r.endUs > r.startUs);
@@ -426,8 +432,8 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
         fadeOutUs: rampOut(startUs, durationUs, music.fadeOutUs ?? 0),
         ...(template.audio?.duckMusicUnderVoice === true && {
           ducking: {
-            gainDb: options.duckGainDb ?? PLAN_DEFAULTS.duckGainDb,
-            rampUs: options.duckRampUs ?? PLAN_DEFAULTS.duckRampUs,
+            gainDb: options.duckGainDb ?? music.duckGainDb ?? PLAN_DEFAULTS.duckGainDb,
+            rampUs: options.duckRampUs ?? music.duckRampUs ?? PLAN_DEFAULTS.duckRampUs,
             regions,
           },
         }),

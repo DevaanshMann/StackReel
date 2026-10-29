@@ -186,6 +186,9 @@ export const MediaItem = z
     fadeInUs: Microseconds.optional(),
     fadeOutUs: Microseconds.optional(),
     transitionIn: Transition.optional(),
+    voice: z.boolean().optional().meta({
+      description: "The clip has speech. If any item sets this, music ducks only under those items.",
+    }),
   })
   .meta({ id: "MediaItem" });
 
@@ -252,6 +255,14 @@ export const Music = z
     gainDb: GainDb.optional().meta({ default: TEMPLATE_DEFAULTS.music.gainDb }),
     fadeInUs: Microseconds.optional(),
     fadeOutUs: Microseconds.optional(),
+    duckGainDb: z.number().min(-30).max(0).optional().meta({
+      description: "Gain added to the music while voice plays, from -30 to 0 dB. Only used with duckMusicUnderVoice.",
+      default: TEMPLATE_DEFAULTS.music.duckGainDb,
+    }),
+    duckRampUs: Microseconds.optional().meta({
+      description: "Ramp into and out of ducking, centered on where the voice starts and stops.",
+      default: TEMPLATE_DEFAULTS.music.duckRampUs,
+    }),
   })
   .meta({ id: "Music" });
 
@@ -332,6 +343,9 @@ function checkCrossFieldRules(t: TemplateShape, ctx: z.RefinementCtx): void {
       }
       if (!("kind" in item)) {
         checkSlotRef([...at, "slot"], item.slot, track.type === "audio" ? ["audio"] : ["video", "image"]);
+        if (item.voice === true && slotKinds.get(item.slot) === "image") {
+          issue([...at, "voice"], `Slot "${item.slot}" is an image, which has no sound to mark as voice`);
+        }
       } else if (item.kind === "text") {
         if (item.slot !== undefined) checkSlotRef([...at, "slot"], item.slot, ["text"]);
         const { default: text, maxChars } = item.text;

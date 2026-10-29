@@ -13,7 +13,7 @@ export const TEMPLATE_DEFAULTS = {
   position: { anchor: "center", x: 0.5, y: 0.5, rotationDeg: 0 },
   /** Only for an `in` or `out` animation other than `none`, which always lasts 0. */
   animation: { inDurationUs: 300_000, outDurationUs: 300_000 },
-  music: { startUs: 0, gainDb: 0 },
+  music: { startUs: 0, gainDb: 0, duckGainDb: -12, duckRampUs: 200_000 },
   audio: { duckMusicUnderVoice: false },
 } as const satisfies {
   // Leaf types only: the object schemas read these values, so `Style`, `Position`, … would be circular here.
@@ -24,6 +24,6 @@ export const TEMPLATE_DEFAULTS = {
   style: { font: string; sizePx: number; color: Color; align: "left" | "center" | "right" };
   position: { anchor: Anchor; x: Normalized; y: Normalized; rotationDeg: number };
   animation: { inDurationUs: Microseconds; outDurationUs: Microseconds };
-  music: { startUs: Microseconds; gainDb: number };
+  music: { startUs: Microseconds; gainDb: number; duckGainDb: number; duckRampUs: Microseconds };
   audio: { duckMusicUnderVoice: boolean };
 };

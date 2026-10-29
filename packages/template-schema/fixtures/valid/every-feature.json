@@ -16,7 +16,9 @@
       "startUs": 0,
       "gainDb": -8,
       "fadeInUs": 250000,
-      "fadeOutUs": 750000
+      "fadeOutUs": 750000,
+      "duckGainDb": -18,
+      "duckRampUs": 150000
     },
     "duckMusicUnderVoice": true
   },
@@ -105,7 +107,8 @@
           "slot": "voice",
           "startUs": 500000,
           "durationUs": 4000000,
-          "gainDb": 2
+          "gainDb": 2,
+          "voice": true
         }
       ]
     },

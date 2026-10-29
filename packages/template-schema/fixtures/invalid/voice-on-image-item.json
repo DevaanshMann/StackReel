@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "minimal",
+  "name": "Minimal",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "durationUs": 3000000,
+  "slots": [
+    {
+      "id": "clip1",
+      "kind": "video",
+      "label": "Your clip"
+    },
+    {
+      "id": "photo",
+      "kind": "image",
+      "label": "A photo"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        {
+          "slot": "clip1",
+          "startUs": 0,
+          "durationUs": 1500000,
+          "voice": true
+        },
+        {
+          "slot": "photo",
+          "startUs": 1500000,
+          "durationUs": 1500000,
+          "voice": true
+        }
+      ]
+    }
+  ]
+}

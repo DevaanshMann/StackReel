@@ -173,8 +173,8 @@ throws. Problems with the user's media come back in `plan.warnings`, and the pla
 | `shortClipPolicy` | `freeze`   | What to do with clips shorter than their slot. Audio treats `slow` as `freeze`    |
 | `minSpeed`        | `0.25`     | Slowest speed `slow` uses                                                         |
 | `pickTrimWindow`  | trim start | Chooses where long clips start                                                    |
-| `duckGainDb`      | `-12`      | Gain added to music inside ducking regions                                        |
-| `duckRampUs`      | `200000`   | Ramp length at each ducking region edge                                           |
+| `duckGainDb`      | template   | Gain added to music inside ducking regions. Overrides `audio.music.duckGainDb`    |
+| `duckRampUs`      | template   | Ramp length at each ducking region edge. Overrides `audio.music.duckRampUs`       |
 
 ## RenderPlan format (v1)
 
@@ -266,9 +266,12 @@ as for video layers (`hold` means silence after the end):
 - `kind: "audio"`: an item on an audio track, such as a voice-over.
 - `kind: "music"`: the template's music, `id: "music"`, from `music.startUs` to the end of the video.
 
-When the template sets `duckMusicUnderVoice`, the music carries `ducking: { gainDb, rampUs, regions }`. Regions are
-the merged times of every other entry with a gain above -60 dB (treated as muted), clipped to the music. Until speech
-detection exists, any audible clip counts as voice. Ramps are centered on each region edge.
+When the template sets `duckMusicUnderVoice`, the music carries `ducking: { gainDb, rampUs, regions }`. `gainDb` and
+`rampUs` come from the options, then the template's `music.duckGainDb` and `music.duckRampUs`, then -12 dB and
+200 ms. Regions are the merged times of the voice entries with a gain above -60 dB (treated as muted), clipped to the
+music. Voice entries are those of items marked `voice: true` or, when the template marks none, every other entry.
+Ramps are centered on each region edge. Until on-device speech detection arrives (Phase 6), regions cover whole
+clips.
 
 ### Warnings
 
@@ -389,9 +392,9 @@ bound. The first clip is extended by the 250 ms `whip-pan` (rounded to 8 frames 
 
 ### Defaults the template format doesn't define yet
 
-The resolver fills in two defaults of its own until the template format has fields for them: short-clip policy
-`freeze`, and ducking -12 dB with 200 ms ramps. Every other default (text style, position, animation lengths, canvas
-background and so on) is the template format's, from `TEMPLATE_DEFAULTS` in
+The resolver fills in one default of its own until the template format has a field for it: short-clip policy
+`freeze`. Every other default (text style, position, animation lengths, canvas background, ducking and so on) is the
+template format's, from `TEMPLATE_DEFAULTS` in
 [`@stackreel/template-schema`](../template-schema/README.md#defaults), and `PLAN_DEFAULTS` reuses those values.
 
 ## Testing

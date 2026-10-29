@@ -112,6 +112,7 @@ const mediaItem = fc.record(
     fadeInUs: fadeUs,
     fadeOutUs: fadeUs,
     transitionIn: transition,
+    voice: fc.boolean(),
   },
   { requiredKeys: ["slot", "gapUs", "durationUs", "order"] },
 );
@@ -231,7 +232,15 @@ const templateRecipe = fc.record(
     mainTrack: fc.record({ track: videoTrack(1), at: fc.nat() }),
     tailUs: offsetUs,
     music: fc.record(
-      { slot: fc.nat(), start: musicStart, gainDb, fadeInUs: fadeUs, fadeOutUs: fadeUs },
+      {
+        slot: fc.nat(),
+        start: musicStart,
+        gainDb,
+        fadeInUs: fadeUs,
+        fadeOutUs: fadeUs,
+        duckGainDb: fc.double({ min: -30, max: 0, noNaN: true }),
+        duckRampUs: fadeUs,
+      },
       { requiredKeys: ["slot"] },
     ),
     duckMusicUnderVoice: fc.boolean(),
@@ -252,14 +261,16 @@ function buildTemplate(r: ValueOf<typeof templateRecipe>): Template {
   const texts = slots.filter((s) => s.kind === "text");
 
   const toMedia = (
-    { slot: _slot, gapUs: _gapUs, order: _order, transitionIn, ...rest }: ValueOf<typeof mediaItem>,
-    slot: string,
+    { slot: _slot, gapUs: _gapUs, order: _order, transitionIn, voice, ...rest }: ValueOf<typeof mediaItem>,
+    slot: Slot,
     startUs: number,
   ): MediaItem => ({
-    slot,
+    slot: slot.id,
     startUs,
     ...rest,
     ...(transitionIn && { transitionIn: toTransition(transitionIn, rest.durationUs) }),
+    // Images have no sound to mark as voice.
+    ...(voice !== undefined && slot.kind !== "image" && { voice }),
   });
 
   const toOverlay = (item: ValueOf<typeof textItem> | ValueOf<typeof sticker>): OverlayItem => {
@@ -282,7 +293,7 @@ function buildTemplate(r: ValueOf<typeof templateRecipe>): Template {
     if (t.type === "audio") {
       const items = t.items.flatMap((item) => {
         const slot = nth(sounds, item.slot);
-        return slot ? [toMedia(item, slot.id, item.gapUs)] : [];
+        return slot ? [toMedia(item, slot, item.gapUs)] : [];
       });
       return { id, type: "audio", items };
     }
@@ -290,7 +301,7 @@ function buildTemplate(r: ValueOf<typeof templateRecipe>): Template {
     const items = t.items.map((item) => {
       const startUs = cursor + item.gapUs;
       cursor = startUs + item.durationUs;
-      return { order: item.order, item: toMedia(item, nth(visual, item.slot)!.id, startUs) };
+      return { order: item.order, item: toMedia(item, nth(visual, item.slot)!, startUs) };
     });
     if (t.shuffled) items.sort((a, b) => a.order - b.order);
     return { id, type: "video", items: items.map((x) => x.item) };

@@ -550,6 +550,49 @@ describe("resolve: audio", () => {
     expect([music.startUs, music.gainDb, music.fadeInUs]).toEqual([0, 0, 0]);
   });
 
+  it("takes ducking gain and ramp from the template, and lets options override each", () => {
+    const tuned = structuredClone(project);
+    tuned.template.audio!.music = { ...tuned.template.audio!.music!, duckGainDb: -24, duckRampUs: 50_000 };
+    const ducking = (options: ResolveOptions) =>
+      plan(tuned, { assets, ...options }).audio.find((a) => a.id === "music")?.ducking;
+    expect(ducking({})).toMatchObject({ gainDb: -24, rampUs: 50_000 });
+    expect(ducking({ duckGainDb: -6 })).toMatchObject({ gainDb: -6, rampUs: 50_000 });
+    expect(ducking({ duckRampUs: 0 })).toMatchObject({ gainDb: -24, rampUs: 0 });
+  });
+
+  /** Sets `voice` on the media items with these keys. */
+  const marked = (marks: Record<string, boolean>) => {
+    const copy = structuredClone(project);
+    for (const track of copy.template.tracks) {
+      if (track.type === "overlay") continue;
+      track.items.forEach((item, i) => {
+        const mark = marks[`${track.id}/${i}`];
+        if (mark !== undefined) item.voice = mark;
+      });
+    }
+    return copy;
+  };
+  const regions = (p: Project) => plan(p, { assets }).audio.find((a) => a.id === "music")?.ducking?.regions;
+
+  it("ducks only under clips marked as voice when the template marks any", () => {
+    expect(regions(marked({ "vo/0": true }))).toEqual([{ startUs: 2_500_000, endUs: 3_500_000 }]);
+    expect(regions(marked({ "main/0": true, "vo/0": false }))).toEqual([{ startUs: 500_000, endUs: 2_000_000 }]);
+    // A muted voice clip doesn't duck, and neither do the unmarked clips.
+    expect(regions(marked({ "main/1": true }))).toEqual([]);
+    const unbound = marked({ "vo/0": true });
+    delete unbound.bindings["voice"];
+    expect(regions(unbound)).toEqual([]);
+  });
+
+  it("ducks under every audible clip when no clip is marked as voice", () => {
+    const all = [
+      { startUs: 500_000, endUs: 2_000_000 },
+      { startUs: 2_500_000, endUs: 3_500_000 },
+    ];
+    expect(regions(project)).toEqual(all);
+    expect(regions(marked({ "main/0": false, "main/1": false, "vo/0": false }))).toEqual(all);
+  });
+
   it("leaves music out when its slot is empty or its trim has no frames", () => {
     const empty = structuredClone(project);
     delete empty.bindings["music"];
