@@ -69,7 +69,19 @@
           "description": "Gain in dB, from -60 to +12. 0 is unchanged."
         },
         "fadeInUs": { "$ref": "#/$defs/Microseconds" },
-        "fadeOutUs": { "$ref": "#/$defs/Microseconds" }
+        "fadeOutUs": { "$ref": "#/$defs/Microseconds" },
+        "duckGainDb": {
+          "description": "Gain added to the music while voice plays, from -30 to 0 dB. Only used with duckMusicUnderVoice.",
+          "default": -12,
+          "type": "number",
+          "minimum": -30,
+          "maximum": 0
+        },
+        "duckRampUs": {
+          "description": "Ramp into and out of ducking, centered on where the voice starts and stops.",
+          "default": 200000,
+          "$ref": "#/$defs/Microseconds"
+        }
       },
       "required": ["slot"],
       "additionalProperties": false
@@ -204,7 +216,11 @@
         },
         "fadeInUs": { "$ref": "#/$defs/Microseconds" },
         "fadeOutUs": { "$ref": "#/$defs/Microseconds" },
-        "transitionIn": { "$ref": "#/$defs/Transition" }
+        "transitionIn": { "$ref": "#/$defs/Transition" },
+        "voice": {
+          "description": "The clip has speech. If any item sets this, music ducks only under those items.",
+          "type": "boolean"
+        }
       },
       "required": ["slot", "startUs", "durationUs"],
       "additionalProperties": false

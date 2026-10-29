@@ -61,6 +61,20 @@ describe("validate", () => {
     ]);
   });
 
+  it("marks only clips with sound as voice", () => {
+    const doc = minimal();
+    doc.slots.push({ id: "photo", kind: "image", label: "Photo" });
+    doc.tracks[0]!.items = [
+      { slot: "clip1", startUs: 0, durationUs: 1000000, voice: true },
+      { slot: "photo", startUs: 1000000, durationUs: 1000000, voice: false },
+      { slot: "photo", startUs: 2000000, durationUs: 1000000, voice: true },
+    ];
+    const result = validate(doc);
+    expect(result.ok ? [] : result.errors).toEqual([
+      { path: "/tracks/0/items/2/voice", message: 'Slot "photo" is an image, which has no sound to mark as voice' },
+    ]);
+  });
+
   it("checks overlap on video tracks regardless of item order", () => {
     const doc = minimal();
     doc.durationUs = 6000000;

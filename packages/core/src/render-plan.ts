@@ -196,8 +196,8 @@ export type PlanWarning =
 export type PlanWarningType = PlanWarning["type"];
 
 /**
- * Fallbacks the resolver uses where the template leaves a field out. Template fields take the template format's own
- * defaults (`TEMPLATE_DEFAULTS`); ducking is a resolver option.
+ * Fallbacks the resolver uses where the template leaves a field out: the template format's own defaults
+ * (`TEMPLATE_DEFAULTS`). Ducking options passed to `resolve()` take precedence over the template.
  */
 export const PLAN_DEFAULTS = {
   background: TEMPLATE_DEFAULTS.canvas.background,
@@ -209,8 +209,8 @@ export const PLAN_DEFAULTS = {
   style: TEMPLATE_DEFAULTS.style,
   position: TEMPLATE_DEFAULTS.position,
   animationDurationUs: TEMPLATE_DEFAULTS.animation.inDurationUs,
-  duckGainDb: -12,
-  duckRampUs: 200_000,
+  duckGainDb: TEMPLATE_DEFAULTS.music.duckGainDb,
+  duckRampUs: TEMPLATE_DEFAULTS.music.duckRampUs,
 } as const satisfies {
   background: Color;
   fit: FitMode;

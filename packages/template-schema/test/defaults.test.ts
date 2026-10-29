@@ -60,6 +60,8 @@ describe("TEMPLATE_DEFAULTS", () => {
       "Animation.outDurationUs": d.animation.outDurationUs,
       "Music.startUs": d.music.startUs,
       "Music.gainDb": d.music.gainDb,
+      "Music.duckGainDb": d.music.duckGainDb,
+      "Music.duckRampUs": d.music.duckRampUs,
       "Audio.duckMusicUnderVoice": d.audio.duckMusicUnderVoice,
     });
   });

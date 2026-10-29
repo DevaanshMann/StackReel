@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "minimal",
+  "name": "Minimal",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "durationUs": 3000000,
+  "slots": [
+    {
+      "id": "clip1",
+      "kind": "video",
+      "label": "Your clip"
+    },
+    {
+      "id": "song",
+      "kind": "audio",
+      "label": "Music"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "type": "video",
+      "items": [
+        {
+          "slot": "clip1",
+          "startUs": 0,
+          "durationUs": 3000000
+        }
+      ]
+    }
+  ],
+  "audio": {
+    "music": {
+      "slot": "song",
+      "duckRampUs": 150000.5
+    },
+    "duckMusicUnderVoice": true
+  }
+}

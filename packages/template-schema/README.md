@@ -87,6 +87,7 @@ Cross-field rules, checked by `validate()`:
 - A `transitionIn` is no longer than its item.
 - `text.default` fits in `text.maxChars`, counted in code points.
 - `audio.music.startUs` is before the end of the template.
+- Only clips with sound are marked as voice: `voice: true` isn't allowed on an item for an `image` slot.
 
 ### Defaults
 
@@ -108,10 +109,29 @@ The schema doesn't fill in defaults, so every engine must apply the same ones. T
 | `animation.inDurationUs`, `animation.outDurationUs` | `300000` (300 ms)                                                               |
 | `audio.music.startUs`                               | `0`                                                                             |
 | `audio.music.gainDb`                                | `0`                                                                             |
+| `audio.music.duckGainDb`                            | `-12`                                                                           |
+| `audio.music.duckRampUs`                            | `200000` (200 ms)                                                               |
 | `audio.duckMusicUnderVoice`                         | `false`                                                                         |
 
 A text item with no `style` gets the whole default style; one with a `style` only fills in `align`. Positions work
 the same way with `rotationDeg`. Animation durations apply to any `in` or `out` but `none`, which always lasts 0.
+
+### Ducking
+
+With `audio.duckMusicUnderVoice: true`, engines add `audio.music.duckGainDb` (-30 to 0 dB) to the music while voice
+plays, with a ramp of `audio.music.duckRampUs` centered on each edge. Which clips count as voice:
+
+- If any media item sets `voice: true`, only those items' clips. Unmarked clips never duck the music, even when the
+  marked items' slots are empty.
+- Otherwise every clip with sound: video clips and audio-track items. This is how templates made before `voice` existed
+  behave.
+
+Clips at -60 dB count as muted and never duck the music, marked or not. `voice` has no default: leaving it out
+everywhere and setting it to `false` everywhere mean the same thing.
+
+For now a voice clip ducks the music for its whole length. Phase 6 brings on-device speech detection, which will fill
+in voice regions automatically so the music only ducks while someone is talking. Templates won't need to change for
+it.
 
 ## Fixtures
 

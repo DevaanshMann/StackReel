@@ -103,6 +103,10 @@
     "path": "/tracks/1/items/0/slot",
     "description": "Text items use text slots"
   },
+  "voice-on-image-item.json": {
+    "path": "/tracks/0/items/1/voice",
+    "description": "Only clips with sound are marked as voice"
+  },
   "item-past-end.json": {
     "path": "/tracks/0/items/0/durationUs",
     "description": "Items end within durationUs"
@@ -134,6 +138,14 @@
   "music-starts-past-end.json": {
     "path": "/audio/music/startUs",
     "description": "Music starts before the template ends"
+  },
+  "duck-gain-out-of-range.json": {
+    "path": "/audio/music/duckGainDb",
+    "description": "Ducking gain is -30 to 0 dB"
+  },
+  "duck-ramp-not-integer.json": {
+    "path": "/audio/music/duckRampUs",
+    "description": "The ducking ramp is integer microseconds"
   },
   "unknown-safe-zone-preset.json": {
     "path": "/safeZones/preset",
