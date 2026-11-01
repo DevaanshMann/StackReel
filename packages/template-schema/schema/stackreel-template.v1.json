@@ -115,10 +115,23 @@
         "minDurationUs": {
           "description": "Shortest clip that fills the slot without padding.",
           "$ref": "#/$defs/Microseconds"
+        },
+        "shortClipPolicy": { "default": "freeze", "$ref": "#/$defs/ShortClipPolicy" },
+        "minSpeed": {
+          "description": "Slowest rate slow may use, 0.25 to 4. Only used when shortClipPolicy is slow.",
+          "default": 0.25,
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 4
         }
       },
       "required": ["id", "label", "kind"],
       "additionalProperties": false
+    },
+    "ShortClipPolicy": {
+      "type": "string",
+      "enum": ["freeze", "slow", "loop"],
+      "description": "For a clip shorter than its slot: freeze holds the last frame, slow slows the clip down to fill the slot (then holds the last frame), loop plays it again from the start."
     },
     "ImageSlot": {
       "type": "object",
@@ -148,7 +161,13 @@
         },
         "optional": { "description": "The template renders without this slot.", "default": false, "type": "boolean" },
         "kind": { "type": "string", "const": "audio" },
-        "minDurationUs": { "$ref": "#/$defs/Microseconds" }
+        "minDurationUs": { "$ref": "#/$defs/Microseconds" },
+        "shortClipPolicy": {
+          "description": "Audio never slows down: freeze goes silent after the end, loop plays it again from the start.",
+          "default": "freeze",
+          "type": "string",
+          "enum": ["freeze", "loop"]
+        }
       },
       "required": ["id", "label", "kind"],
       "additionalProperties": false

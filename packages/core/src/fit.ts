@@ -1,4 +1,4 @@
-import type { Slot } from "@stackreel/template-schema";
+import { ShortClipPolicy as SchemaShortClipPolicy, TEMPLATE_DEFAULTS, type Slot } from "@stackreel/template-schema";
 import { maxTimeUs } from "./limits.js";
 import type { SlotBinding } from "./project.js";
 import { frameToUs, snapToFrame, usToFrame } from "./time.js";
@@ -9,13 +9,13 @@ import { frameToUs, snapToFrame, usToFrame } from "./time.js";
  * - `slow`: slow the clip down so it fills the slot, but never below the minimum speed (then hold the last frame)
  * - `loop`: play the clip at the template speed and start it again from the beginning each time it ends
  */
-export type ShortClipPolicy = "freeze" | "slow" | "loop";
+export type ShortClipPolicy = SchemaShortClipPolicy;
 
-export const SHORT_CLIP_POLICIES: readonly ShortClipPolicy[] = ["freeze", "slow", "loop"];
-export const DEFAULT_SHORT_CLIP_POLICY: ShortClipPolicy = "freeze";
+export const SHORT_CLIP_POLICIES: readonly ShortClipPolicy[] = SchemaShortClipPolicy.options;
+export const DEFAULT_SHORT_CLIP_POLICY: ShortClipPolicy = TEMPLATE_DEFAULTS.slot.shortClipPolicy;
 
-/** The slowest a clip is slowed down to fill a slot. Matches the schema's lowest `speed`. */
-export const DEFAULT_MIN_SPEED = 0.25;
+/** The slowest a clip is slowed down to fill a slot, when its slot doesn't say. Matches the schema's lowest `speed`. */
+export const DEFAULT_MIN_SPEED = TEMPLATE_DEFAULTS.slot.minSpeed;
 
 /**
  * What an engine shows when a layer outlasts its source range: `hold` keeps the last frame (silence for audio),

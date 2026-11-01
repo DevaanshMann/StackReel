@@ -14,7 +14,7 @@ so together they use every feature of template format v1. All are 1080×1920.
 | [`top-5-countdown`](top-5-countdown.json)   | Top 5 Countdown  | List or countdown | 25 s     | 12    | Ten text slots, `left` and `right` anchors, right-aligned text, heavy stroke, `scale` in and `slide-left` out, `typewriter` title, `bounce` sticker, `zoom-punch` on the winner                                                                                            |
 | [`day-in-my-life`](day-in-my-life.json)     | Day in My Life   | Day in the life   | 60 s     | 13    | 24 fps, ten clips, speed 1.25× to 2×, voice-over on an audio track, music ducked with 2 s fades, `typewriter` timestamps on a `bottom-right` anchor, semi-transparent text color, custom safe-zone insets                                                                  |
 | [`quote-card`](quote-card.json)             | Quote Card       | Quote / text-only | 6 s      | 4     | Text-only layout with an optional image background (fade-in and fade-out), `none` and `typewriter` animations, translucent decorative glyph, `none` safe-zone preset                                                                                                       |
-| [`beat-cut-montage`](beat-cut-montage.json) | Beat-Cut Montage | Beat-cut montage  | 15 s     | 14    | One-second cuts on a 120 BPM beat, every transition (`cut`, `crossfade`, `whip-pan` in all four directions, `zoom-punch`, `spin`), speed 0.25× to 4×, muted clips (−60 dB), required music without ducking                                                                 |
+| [`beat-cut-montage`](beat-cut-montage.json) | Beat-Cut Montage | Beat-cut montage  | 15 s     | 14    | One-second cuts on a 120 BPM beat, every transition (`cut`, `crossfade`, `whip-pan` in all four directions, `zoom-punch`, `spin`), speed 0.25× to 4×, muted clips (−60 dB), beat clips that loop when too short (`shortClipPolicy: loop`), required music without ducking  |
 
 ## Coverage check
 
@@ -22,7 +22,8 @@ so together they use every feature of template format v1. All are 1080×1920.
 file here and fails if any value the schema allows (slot kinds, track types, item kinds, transitions and directions,
 text animations, fit modes, anchors, text alignment, safe-zone presets) is used by none of them. It reads those values
 from the Zod schema, so adding a value to the schema means adding it to an example too. It also checks features that
-have no enum, such as speed, gain and fades, music ducking, text styles, rotation and safe-zone insets.
+have no enum, such as speed, gain and fades, music ducking, text styles, rotation and safe-zone insets, and that
+some slot sets a short-clip policy.
 
 ## Not here yet
 

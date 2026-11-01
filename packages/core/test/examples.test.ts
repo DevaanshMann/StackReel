@@ -45,6 +45,9 @@ function fill(template: Template): { project: Project; assets: Record<string, As
   return { project, assets };
 }
 
+/** Each short-clip policy as an option, and "template", which passes none so each slot's own policy applies. */
+const POLICIES = [...SHORT_CLIP_POLICIES, "template"] as const;
+
 describe.each(templates)("%s", (_file, template) => {
   const { project, assets } = fill(template);
 
@@ -52,8 +55,8 @@ describe.each(templates)("%s", (_file, template) => {
     expect(validateProject(project).ok).toBe(true);
   });
 
-  it.each(SHORT_CLIP_POLICIES)("resolves with the %s policy and keeps every invariant", (policy) => {
-    const plan = resolve(project, { assets, shortClipPolicy: policy });
+  it.each(POLICIES)("resolves with the %s policy and keeps every invariant", (policy) => {
+    const plan = resolve(project, { assets, ...(policy !== "template" && { shortClipPolicy: policy }) });
     expect(checkPlanInvariants(plan)).toEqual([]);
     expect(plan.durationUs).toBe(template.durationUs);
     expect(plan.warnings.filter((w) => w.type !== "clip-too-short" && w.type !== "min-speed-reached")).toEqual([]);

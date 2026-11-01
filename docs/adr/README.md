@@ -5,3 +5,4 @@ Each significant technical decision gets a short numbered file: `NNNN-short-titl
 | #                                                   | Decision                                      | Status   |
 | --------------------------------------------------- | --------------------------------------------- | -------- |
 | [0001](0001-build-from-scratch-not-fork-opencut.md) | Build from scratch instead of forking OpenCut | Accepted |
+| [0004](0004-short-clip-policy-on-slots.md)          | Put the short-clip policy on slots            | Proposed |

@@ -27,7 +27,9 @@
       "id": "clip1",
       "kind": "video",
       "label": "Opener",
-      "minDurationUs": 2000000
+      "minDurationUs": 2000000,
+      "shortClipPolicy": "slow",
+      "minSpeed": 0.5
     },
     {
       "id": "photo",
@@ -38,20 +40,23 @@
     {
       "id": "clip2",
       "kind": "video",
-      "label": "Closer"
+      "label": "Closer",
+      "shortClipPolicy": "loop"
     },
     {
       "id": "music",
       "kind": "audio",
       "label": "Music",
       "optional": true,
-      "minDurationUs": 8000000
+      "minDurationUs": 8000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "voice",
       "kind": "audio",
       "label": "Voice-over",
-      "optional": true
+      "optional": true,
+      "shortClipPolicy": "freeze"
     },
     {
       "id": "headline",

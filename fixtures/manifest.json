@@ -8,7 +8,7 @@
       "id": "beat-cut-montage",
       "project": {
         "path": "projects/beat-cut-montage.project.json",
-        "sha256": "ec388bb31b496cf2fa350c1e8a2820bd60b743aa252af9ab57636521cc2f2a95"
+        "sha256": "cc37e7e63e59051f8a1e949b732738d5f4adbbb3e80d85cc76a64586f68a3c6a"
       },
       "projectSchemaVersion": 1,
       "renderPlan": {
@@ -22,7 +22,7 @@
       "schemaVersion": 1,
       "template": {
         "path": "templates/beat-cut-montage.json",
-        "sha256": "cb7885c48934fb5c72458cc5f0d569c0c77e04ffff1324ca18f538db8d53b191"
+        "sha256": "29242c1d37a06051f9ed2e4ff93e8687fb1d2d06d3075dfa3ea5226b20e3a248"
       }
     },
     {

@@ -150,7 +150,9 @@ picker (motion, faces): it gets the frame-aligned window and the needed length, 
 `fitSlot(slot, binding, request)` adds empty slots: an unbound optional slot is `{ status: "skipped" }`, an unbound
 required one is `{ status: "missing-slot" }`.
 
-The template format has no `shortClipPolicy` field yet, so the policy is a resolver option.
+`resolve()` takes the policy and `minSpeed` from each slot's `shortClipPolicy` and `minSpeed` fields (see the
+[template format](../template-schema/README.md#short-clips)), unless its options override them. A slot's `minSpeed`
+only counts when its own policy is `slow`. Each `clip-too-short` warning carries the policy its slot used.
 
 ## Resolving a project
 
@@ -159,7 +161,7 @@ import { checkPlanInvariants, resolve } from "@stackreel/core";
 
 const plan = resolve(project, {
   assets: { "file:///clips/beach.mp4": { width: 1920, height: 1080, durationUs: 12_400_000 } },
-  shortClipPolicy: "freeze", // or "slow" | "loop"
+  shortClipPolicy: "freeze", // optional: overrides every slot's shortClipPolicy
 });
 checkPlanInvariants(plan); // [] for every plan resolve() returns
 ```
@@ -170,8 +172,8 @@ throws. Problems with the user's media come back in `plan.warnings`, and the pla
 | Option            | Default    | What it does                                                                      |
 | ----------------- | ---------- | --------------------------------------------------------------------------------- |
 | `assets`          | `{}`       | Size (`width`, `height`, display orientation) and `durationUs` of each bound file |
-| `shortClipPolicy` | `freeze`   | What to do with clips shorter than their slot. Audio treats `slow` as `freeze`    |
-| `minSpeed`        | `0.25`     | Slowest speed `slow` uses                                                         |
+| `shortClipPolicy` | template   | Overrides each slot's `shortClipPolicy`. Audio treats `slow` as `freeze`          |
+| `minSpeed`        | template   | Slowest speed `slow` uses. Overrides each slot's `minSpeed`                       |
 | `pickTrimWindow`  | trim start | Chooses where long clips start                                                    |
 | `duckGainDb`      | template   | Gain added to music inside ducking regions. Overrides `audio.music.duckGainDb`    |
 | `duckRampUs`      | template   | Ramp length at each ducking region edge. Overrides `audio.music.duckRampUs`       |
@@ -390,12 +392,12 @@ bound. The first clip is extended by the 250 ms `whip-pan` (rounded to 8 frames 
 }
 ```
 
-### Defaults the template format doesn't define yet
+### Defaults
 
-The resolver fills in one default of its own until the template format has a field for it: short-clip policy
-`freeze`. Every other default (text style, position, animation lengths, canvas background, ducking and so on) is the
-template format's, from `TEMPLATE_DEFAULTS` in
-[`@stackreel/template-schema`](../template-schema/README.md#defaults), and `PLAN_DEFAULTS` reuses those values.
+Every default the resolver fills in (text style, position, animation lengths, canvas background, ducking, short-clip
+policy and so on) is the template format's, from `TEMPLATE_DEFAULTS` in
+[`@stackreel/template-schema`](../template-schema/README.md#defaults). `PLAN_DEFAULTS`, `DEFAULT_SHORT_CLIP_POLICY`
+and `DEFAULT_MIN_SPEED` reuse those values.
 
 ## Testing
 

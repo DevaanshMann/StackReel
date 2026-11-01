@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { toJsonPointer, validate, type Template } from "../src/index.js";
+import { TEMPLATE_DEFAULTS, toJsonPointer, validate, type Template } from "../src/index.js";
 import { fixturesDir, readJson } from "./helpers.js";
 
 const minimal = () => readJson(join(fixturesDir, "valid/minimal.json")) as Template;
@@ -73,6 +73,16 @@ describe("validate", () => {
     expect(result.ok ? [] : result.errors).toEqual([
       { path: "/tracks/0/items/2/voice", message: 'Slot "photo" is an image, which has no sound to mark as voice' },
     ]);
+  });
+
+  it("accepts minSpeed with any policy, so documents that write out every default stay valid", () => {
+    const doc = minimal();
+    doc.slots = [
+      { id: "clip1", kind: "video", label: "Every default", ...TEMPLATE_DEFAULTS.slot },
+      { id: "loop", kind: "video", label: "Loop", shortClipPolicy: "loop", minSpeed: 0.5 },
+      { id: "plain", kind: "video", label: "No policy", minSpeed: 0.5 },
+    ];
+    expect(validate(doc)).toEqual({ ok: true, template: doc });
   });
 
   it("checks overlap on video tracks regardless of item order", () => {

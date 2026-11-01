@@ -1,7 +1,7 @@
-import { TEMPLATE_DEFAULTS as t } from "@stackreel/template-schema";
+import { ShortClipPolicy, TEMPLATE_DEFAULTS as t } from "@stackreel/template-schema";
 import jsonSchema from "@stackreel/template-schema/schema.json" with { type: "json" };
 import { describe, expect, it } from "vitest";
-import { PLAN_DEFAULTS } from "../src/index.js";
+import { DEFAULT_MIN_SPEED, DEFAULT_SHORT_CLIP_POLICY, PLAN_DEFAULTS, SHORT_CLIP_POLICIES } from "../src/index.js";
 
 const defs = jsonSchema.$defs;
 
@@ -42,5 +42,20 @@ describe("PLAN_DEFAULTS", () => {
     expect(defs.StickerItem.properties.position.default).toEqual(PLAN_DEFAULTS.position);
     expect(defs.Music.properties.gainDb.default).toBe(PLAN_DEFAULTS.gainDb);
     expect(defs.Animation.properties.outDurationUs.default).toBe(PLAN_DEFAULTS.animationDurationUs);
+  });
+});
+
+describe("short-clip defaults", () => {
+  it("match the template format's", () => {
+    expect(SHORT_CLIP_POLICIES).toEqual(ShortClipPolicy.options);
+    expect(DEFAULT_SHORT_CLIP_POLICY).toBe(t.slot.shortClipPolicy);
+    expect(DEFAULT_MIN_SPEED).toBe(t.slot.minSpeed);
+  });
+
+  it("match the committed JSON Schema", () => {
+    expect(SHORT_CLIP_POLICIES).toEqual(defs.ShortClipPolicy.enum);
+    expect(DEFAULT_SHORT_CLIP_POLICY).toBe(defs.VideoSlot.properties.shortClipPolicy.default);
+    expect(DEFAULT_SHORT_CLIP_POLICY).toBe(defs.AudioSlot.properties.shortClipPolicy.default);
+    expect(DEFAULT_MIN_SPEED).toBe(defs.VideoSlot.properties.minSpeed.default);
   });
 });

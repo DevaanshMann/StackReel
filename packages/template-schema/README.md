@@ -98,6 +98,8 @@ The schema doesn't fill in defaults, so every engine must apply the same ones. T
 | --------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `canvas.background`                                 | `#000000`                                                                       |
 | `slot.optional`                                     | `false`                                                                         |
+| `slot.shortClipPolicy` (video and audio slots)      | `freeze`                                                                        |
+| `slot.minSpeed` (video slots)                       | `0.25`                                                                          |
 | `mediaItem.fit`                                     | `cover`                                                                         |
 | `mediaItem.speed`                                   | `1`                                                                             |
 | `mediaItem.gainDb`                                  | `0`                                                                             |
@@ -132,6 +134,22 @@ everywhere and setting it to `false` everywhere mean the same thing.
 For now a voice clip ducks the music for its whole length. Phase 6 brings on-device speech detection, which will fill
 in voice regions automatically so the music only ducks while someone is talking. Templates won't need to change for
 it.
+
+### Short clips
+
+A video or audio slot's `shortClipPolicy` says what engines do when the user's clip is shorter than the time the
+template gives it:
+
+| Policy             | Video                                                                                 | Audio                        |
+| ------------------ | ------------------------------------------------------------------------------------- | ---------------------------- |
+| `freeze` (default) | Play the clip, then hold its last frame                                               | Play it, then silence        |
+| `slow`             | Slow the clip down to fill the slot, never below `minSpeed`, then hold the last frame | Not allowed on audio slots   |
+| `loop`             | Play the clip again from the start each time it ends                                  | Play it again from the start |
+
+`minSpeed` (0.25 to 4, like `speed`) is only used with `slow`. Other policies ignore it, so a document that writes out
+every default (`"shortClipPolicy": "freeze", "minSpeed": 0.25`) stays valid. Leaving the fields out means `freeze`,
+so templates made before they existed keep their behavior. Why the policy lives on slots, not on the template or on
+media items, is in [ADR 0004](../../docs/adr/0004-short-clip-policy-on-slots.md).
 
 ## Fixtures
 
