@@ -38,6 +38,9 @@ export const Id = z
 /** Gain in decibels. 0 keeps the source level. */
 const GainDb = z.number().min(-60).max(12).meta({ description: "Gain in dB, from -60 to +12. 0 is unchanged." });
 
+/** A playback rate. 1 is normal speed. */
+const Speed = z.number().min(0.25).max(4);
+
 // Canvas
 
 export const Canvas = z
@@ -63,11 +66,25 @@ const slotBase = {
   }),
 };
 
+/** What engines do when the user's clip is shorter than its slot. See docs/adr/0004-short-clip-policy-on-slots.md. */
+export const ShortClipPolicy = z.enum(["freeze", "slow", "loop"]).meta({
+  id: "ShortClipPolicy",
+  description:
+    "For a clip shorter than its slot: freeze holds the last frame, slow slows the clip down to fill the slot " +
+    "(then holds the last frame), loop plays it again from the start.",
+});
+export type ShortClipPolicy = z.infer<typeof ShortClipPolicy>;
+
 export const VideoSlot = z
   .strictObject({
     ...slotBase,
     kind: z.literal("video"),
     minDurationUs: Microseconds.optional().meta({ description: "Shortest clip that fills the slot without padding." }),
+    shortClipPolicy: ShortClipPolicy.optional().meta({ default: TEMPLATE_DEFAULTS.slot.shortClipPolicy }),
+    minSpeed: Speed.optional().meta({
+      description: "Slowest rate slow may use, 0.25 to 4. Only used when shortClipPolicy is slow.",
+      default: TEMPLATE_DEFAULTS.slot.minSpeed,
+    }),
   })
   .meta({ id: "VideoSlot" });
 
@@ -78,6 +95,10 @@ export const AudioSlot = z
     ...slotBase,
     kind: z.literal("audio"),
     minDurationUs: Microseconds.optional(),
+    shortClipPolicy: ShortClipPolicy.exclude(["slow"]).optional().meta({
+      description: "Audio never slows down: freeze goes silent after the end, loop plays it again from the start.",
+      default: TEMPLATE_DEFAULTS.slot.shortClipPolicy,
+    }),
   })
   .meta({ id: "AudioSlot" });
 
@@ -176,12 +197,10 @@ export const MediaItem = z
     slot: Id.meta({ description: "Id of the slot whose media plays here." }),
     ...timed,
     fit: FitMode.optional().meta({ default: TEMPLATE_DEFAULTS.mediaItem.fit }),
-    speed: z
-      .number()
-      .min(0.25)
-      .max(4)
-      .optional()
-      .meta({ description: "Playback rate, 0.25 to 4.", default: TEMPLATE_DEFAULTS.mediaItem.speed }),
+    speed: Speed.optional().meta({
+      description: "Playback rate, 0.25 to 4.",
+      default: TEMPLATE_DEFAULTS.mediaItem.speed,
+    }),
     gainDb: GainDb.optional().meta({ default: TEMPLATE_DEFAULTS.mediaItem.gainDb }),
     fadeInUs: Microseconds.optional(),
     fadeOutUs: Microseconds.optional(),

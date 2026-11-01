@@ -1,4 +1,4 @@
-import type { MediaItem, Template } from "@stackreel/template-schema";
+import type { MediaItem, Template, VideoSlot } from "@stackreel/template-schema";
 import { describe, expect, it } from "vitest";
 import {
   IDENTITY,
@@ -311,6 +311,69 @@ describe("resolve: slot fitting", () => {
     expect(plan(project, { assets, shortClipPolicy: "slow", minSpeed: 0.1 }).warnings).toHaveLength(1);
   });
 
+  /** Two 2 s items with 400 ms clips, whose slots get these extra fields. */
+  const shortClips = (...fields: Omit<VideoSlot, "id" | "kind" | "label">[]) => {
+    const t = clips([{ durationUs: 2_000_000 }, { durationUs: 2_000_000 }]);
+    fields.forEach((extra, i) => {
+      t.slots[i] = { id: `c${i}`, kind: "video", label: `Clip c${i}`, ...extra };
+    });
+    const p = bound(t);
+    return [p, { assets: assetsFor(p, { ...HD, durationUs: 400_000 }) }] as const;
+  };
+  const sources = (p: RenderPlan) => ["main/0", "main/1"].map((id) => layer(p, id, "video").source);
+  const policies = (p: RenderPlan) => p.warnings.flatMap((w) => (w.type === "clip-too-short" ? [w.policy] : []));
+
+  it("follows each slot's own policy", () => {
+    const [project, options] = shortClips({ shortClipPolicy: "loop" }, { shortClipPolicy: "slow", minSpeed: 0.5 });
+    const p = plan(project, options);
+    expect(sources(p)).toMatchObject([
+      { rate: 1, afterEnd: "loop", fitMode: "loop" },
+      { rate: 0.5, afterEnd: "hold", fitMode: "slow" },
+    ]);
+    expect(policies(p)).toEqual(["loop", "slow"]);
+  });
+
+  it("lets the option override every slot's policy", () => {
+    const [project, options] = shortClips({ shortClipPolicy: "loop" }, { shortClipPolicy: "slow", minSpeed: 0.5 });
+    const p = plan(project, { ...options, shortClipPolicy: "freeze" });
+    expect(sources(p)).toMatchObject([
+      { rate: 1, afterEnd: "hold", fitMode: "freeze" },
+      { rate: 1, afterEnd: "hold", fitMode: "freeze" },
+    ]);
+    expect(policies(p)).toEqual(["freeze", "freeze"]);
+  });
+
+  it("takes minSpeed from the slot, and lets the option override it", () => {
+    const [project, options] = shortClips({ shortClipPolicy: "slow" }, { shortClipPolicy: "slow", minSpeed: 0.5 });
+    const rates = (more: ResolveOptions) => sources(plan(project, { ...options, ...more })).map((s) => s.rate);
+    expect(rates({})).toEqual([0.25, 0.5]);
+    expect(rates({ shortClipPolicy: "slow" })).toEqual([0.25, 0.5]);
+    expect(rates({ minSpeed: 0.1 })).toEqual([0.2, 0.2]);
+  });
+
+  it("ignores minSpeed on a slot whose own policy isn't slow, even when the option says slow", () => {
+    const [without, options] = shortClips({ shortClipPolicy: "freeze" }, { shortClipPolicy: "loop" });
+    const [withMinSpeed] = shortClips(
+      { shortClipPolicy: "freeze", minSpeed: 0.5 },
+      { shortClipPolicy: "loop", minSpeed: 0.5 },
+    );
+    const overrides: ResolveOptions[] = [{}, { shortClipPolicy: "slow" }];
+    for (const more of overrides) {
+      expect(plan(withMinSpeed, { ...options, ...more })).toEqual(plan(without, { ...options, ...more }));
+    }
+    expect(sources(plan(withMinSpeed, { ...options, shortClipPolicy: "slow" })).map((s) => s.rate)).toEqual([
+      0.25, 0.25,
+    ]);
+  });
+
+  it("resolves slots without the fields as before: freeze, and slow never below 0.25", () => {
+    const [project, options] = shortClips({}, {});
+    const p = plan(project, options);
+    expect(p).toEqual(plan(project, { ...options, shortClipPolicy: "freeze", minSpeed: 0.25 }));
+    expect(policies(p)).toEqual(["freeze", "freeze"]);
+    expect(sources(plan(project, { ...options, shortClipPolicy: "slow" })).map((s) => s.rate)).toEqual([0.25, 0.25]);
+  });
+
   it("plays long clips at the template speed and lets a picker choose the window", () => {
     const p = plan(project, { assets, pickTrimWindow: (c) => c.windowEndUs - c.neededUs });
     expect(layer(p, "main/1", "video").source).toMatchObject({
@@ -538,6 +601,29 @@ describe("resolve: audio", () => {
     expect(voice.fadeOutUs).toBe(200_000);
     // Audio never slows down: the short voice-over plays at full speed, then goes silent.
     expect(voice.source).toMatchObject({ rate: 1, afterEnd: "hold", fitMode: "freeze" });
+  });
+
+  it("loops music and audio-track clips whose slots say loop, and never slows them down", () => {
+    const looping = structuredClone(project);
+    for (const slot of looping.template.slots) if (slot.kind === "audio") slot.shortClipPolicy = "loop";
+    looping.bindings["music"] = bind("music.m4a", 1_000_000);
+    const sources = (p: RenderPlan) =>
+      Object.fromEntries(p.audio.filter((a) => a.kind !== "video").map((a) => [a.id, a.source]));
+
+    const p = plan(looping, { assets });
+    expect(sources(p)).toMatchObject({
+      music: { sourceStartUs: 0, sourceEndUs: 1_000_000, rate: 1, afterEnd: "loop", fitMode: "loop" },
+      "vo/0": { sourceStartUs: 0, sourceEndUs: 500_000, rate: 1, afterEnd: "loop", fitMode: "loop" },
+    });
+    expect(p.warnings.flatMap((w) => (w.type === "clip-too-short" ? [[w.layerId, w.policy]] : []))).toEqual([
+      ["vo/0", "loop"],
+      ["music", "loop"],
+    ]);
+    // The option still wins, and audio treats slow as freeze.
+    expect(sources(plan(looping, { assets, shortClipPolicy: "slow" }))).toMatchObject({
+      music: { rate: 1, afterEnd: "hold", fitMode: "freeze" },
+      "vo/0": { rate: 1, afterEnd: "hold", fitMode: "freeze" },
+    });
   });
 
   it("takes ducking settings from options and skips ducking when the template doesn't ask", () => {

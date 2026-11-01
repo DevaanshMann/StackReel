@@ -31,6 +31,18 @@
     "path": "/slots/0/kind",
     "description": "Slot kind is video, image, audio or text"
   },
+  "unknown-short-clip-policy.json": {
+    "path": "/slots/0/shortClipPolicy",
+    "description": "Short-clip policy is freeze, slow or loop"
+  },
+  "slow-on-audio-slot.json": {
+    "path": "/slots/1/shortClipPolicy",
+    "description": "Audio slots never slow down: freeze or loop"
+  },
+  "min-speed-out-of-range.json": {
+    "path": "/slots/0/minSpeed",
+    "description": "minSpeed is 0.25 to 4"
+  },
   "unknown-track-type.json": {
     "path": "/tracks/0/type",
     "description": "Track type is video, overlay or audio"

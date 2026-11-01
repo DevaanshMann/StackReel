@@ -1,5 +1,12 @@
 import type { Animation, MediaItem, Slot, StickerItem, TextItem, Track } from "@stackreel/template-schema";
-import { DEFAULT_SHORT_CLIP_POLICY, fitSlot, type Fitted, type ShortClipPolicy, type TrimWindowPicker } from "./fit.js";
+import {
+  DEFAULT_MIN_SPEED,
+  DEFAULT_SHORT_CLIP_POLICY,
+  fitSlot,
+  type Fitted,
+  type ShortClipPolicy,
+  type TrimWindowPicker,
+} from "./fit.js";
 import { maxTimeUs } from "./limits.js";
 import { itemKey, type Project, type SlotBinding } from "./project.js";
 import {
@@ -30,11 +37,11 @@ export interface ResolveOptions {
   /** Facts about each bound file, keyed by `assetUri`. */
   assets?: Record<string, AssetInfo>;
   /**
-   * What to do with clips that are too short for their slot. Defaults to `freeze`. Audio never slows down: `slow`
-   * acts as `freeze` (silence after the end) for audio-track items and music.
+   * What to do with clips that are too short for their slot. Overrides each slot's `shortClipPolicy`, which defaults
+   * to `freeze`. Audio never slows down: `slow` acts as `freeze` (silence after the end) for audio slots.
    */
   shortClipPolicy?: ShortClipPolicy;
-  /** Lowest speed `slow` may use. Defaults to 0.25. */
+  /** Lowest speed `slow` may use. Overrides each slot's `minSpeed`, which defaults to 0.25. */
   minSpeed?: number;
   /** Chooses where long clips start. Defaults to the start of the user's trim. */
   pickTrimWindow?: TrimWindowPicker;
@@ -87,7 +94,6 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
   const { canvas } = template;
   const fps = canvas.fps;
   const canvasSize: Size = { width: canvas.width, height: canvas.height };
-  const policy = options.shortClipPolicy ?? DEFAULT_SHORT_CLIP_POLICY;
   // Valid template times can be later than the frame math handles; they end up at its limit instead.
   const maxUs = maxTimeUs(fps);
   const snap = (us: number) => snapToFrame(Math.min(us, maxUs), fps);
@@ -130,16 +136,32 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
   const rampOut = (startUs: number, endUs: number, us: number) =>
     endUs - Math.max(snap(Math.max(endUs - us, 0)), startUs);
 
+  /** A slot's short-clip settings: the options, then the slot's own fields, then the defaults. */
+  const shortClip = (slot: Slot): { policy: ShortClipPolicy; minSpeed: number } => {
+    const policy =
+      options.shortClipPolicy ??
+      ("shortClipPolicy" in slot ? slot.shortClipPolicy : undefined) ??
+      DEFAULT_SHORT_CLIP_POLICY;
+    // A slot's minSpeed only counts when the slot itself says slow.
+    const slotMinSpeed = slot.kind === "video" && slot.shortClipPolicy === "slow" ? slot.minSpeed : undefined;
+    return {
+      // Audio never slows down to fit; it goes silent after the end instead.
+      policy: slot.kind === "audio" && policy === "slow" ? "freeze" : policy,
+      minSpeed: options.minSpeed ?? slotMinSpeed ?? DEFAULT_MIN_SPEED,
+    };
+  };
+
   /** Fits a bound slot into a layer and records any warnings. Returns `null` when the layer should be left out. */
-  const fitLayer = (slot: Slot, binding: SlotBinding, placed: PlacedItem, slotPolicy: ShortClipPolicy) => {
+  const fitLayer = (slot: Slot, binding: SlotBinding, placed: PlacedItem) => {
     const asset = assetFor(slot, binding);
+    const { policy, minSpeed } = shortClip(slot);
     const fit = fitSlot(slot, binding, {
       durationUs: placed.endUs - placed.startUs,
       speed: placed.item.speed ?? PLAN_DEFAULTS.speed,
       fps,
-      policy: slotPolicy,
+      policy,
+      minSpeed,
       ...(asset.durationUs !== undefined && { sourceDurationUs: asset.durationUs }),
-      ...(options.minSpeed !== undefined && { minSpeed: options.minSpeed }),
       ...(options.pickTrimWindow !== undefined && { pickWindow: options.pickTrimWindow }),
     });
     if (fit.status !== "fitted") {
@@ -151,7 +173,7 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
       });
       return null;
     }
-    fitWarnings(slot, placed.id, fit, slotPolicy);
+    fitWarnings(slot, placed.id, fit, policy);
     return { asset, fit };
   };
 
@@ -266,7 +288,7 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
         made.add(p.id);
         continue;
       }
-      const fitted = fitLayer(slot, binding, p, policy);
+      const fitted = fitLayer(slot, binding, p);
       if (!fitted) continue;
       const cropPx = cropRect(fitted.asset.size, binding.crop);
       const source = timing(binding, fitted.fit);
@@ -300,14 +322,11 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
     }
   };
 
-  /** Audio never slows down to fit; it goes silent after the end instead. */
-  const audioPolicy: ShortClipPolicy = policy === "slow" ? "freeze" : policy;
-
   const resolveAudioTrack = (track: Track & { type: "audio" }) => {
     for (const p of placeMediaItems(track)) {
       const slot = slots.get(p.item.slot)!;
       const binding = own(bindings, p.item.slot)!;
-      const fitted = fitLayer(slot, binding, p, audioPolicy);
+      const fitted = fitLayer(slot, binding, p);
       if (!fitted) continue;
       audio.push({
         id: p.id,
@@ -408,7 +427,7 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
       baseEndUs: durationUs,
       endUs: durationUs,
     };
-    const fitted = fitLayer(slot, musicBinding, placed, audioPolicy);
+    const fitted = fitLayer(slot, musicBinding, placed);
     if (fitted) {
       // Clips the template marks as speech. When it marks none, every audible clip counts.
       const marked = new Set(

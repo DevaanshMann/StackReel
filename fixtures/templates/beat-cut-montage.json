@@ -33,61 +33,71 @@
       "id": "clip2",
       "kind": "video",
       "label": "Beat clip 1",
-      "minDurationUs": 1000000
+      "minDurationUs": 1000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip3",
       "kind": "video",
       "label": "Beat clip 2",
-      "minDurationUs": 1000000
+      "minDurationUs": 1000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip4",
       "kind": "video",
       "label": "Beat clip 3",
-      "minDurationUs": 1000000
+      "minDurationUs": 1000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip5",
       "kind": "video",
       "label": "Beat clip 4",
-      "minDurationUs": 1000000
+      "minDurationUs": 1000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip6",
       "kind": "video",
       "label": "Beat clip 5",
-      "minDurationUs": 4000000
+      "minDurationUs": 4000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip7",
       "kind": "video",
       "label": "Beat clip 6",
-      "minDurationUs": 1000000
+      "minDurationUs": 1000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip8",
       "kind": "video",
       "label": "Beat clip 7",
-      "minDurationUs": 1000000
+      "minDurationUs": 1000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip9",
       "kind": "video",
       "label": "Beat clip 8",
-      "minDurationUs": 1000000
+      "minDurationUs": 1000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip10",
       "kind": "video",
       "label": "Beat clip 9",
-      "minDurationUs": 1000000
+      "minDurationUs": 1000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip11",
       "kind": "video",
       "label": "Beat clip 10",
-      "minDurationUs": 2000000
+      "minDurationUs": 2000000,
+      "shortClipPolicy": "loop"
     },
     {
       "id": "clip12",

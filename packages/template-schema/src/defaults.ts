@@ -1,4 +1,4 @@
-import type { Anchor, Color, Direction, FitMode, Microseconds, Normalized } from "./schema.js";
+import type { Anchor, Color, Direction, FitMode, Microseconds, Normalized, ShortClipPolicy } from "./schema.js";
 
 /**
  * What every engine uses where a template leaves an optional field out. validate() never fills these in; the JSON
@@ -6,7 +6,8 @@ import type { Anchor, Color, Direction, FitMode, Microseconds, Normalized } from
  */
 export const TEMPLATE_DEFAULTS = {
   canvas: { background: "#000000" },
-  slot: { optional: false },
+  /** `shortClipPolicy` is for video and audio slots, `minSpeed` for video slots with policy `slow`. */
+  slot: { optional: false, shortClipPolicy: "freeze", minSpeed: 0.25 },
   mediaItem: { fit: "cover", speed: 1, gainDb: 0 },
   transition: { direction: "left" },
   style: { font: "Inter-Bold", sizePx: 64, color: "#FFFFFF", align: "center" },
@@ -18,7 +19,7 @@ export const TEMPLATE_DEFAULTS = {
 } as const satisfies {
   // Leaf types only: the object schemas read these values, so `Style`, `Position`, … would be circular here.
   canvas: { background: Color };
-  slot: { optional: boolean };
+  slot: { optional: boolean; shortClipPolicy: ShortClipPolicy; minSpeed: number };
   mediaItem: { fit: FitMode; speed: number; gainDb: number };
   transition: { direction: Direction };
   style: { font: string; sizePx: number; color: Color; align: "left" | "center" | "right" };

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   Animation,
   Audio,
+  AudioSlot,
   Canvas,
   MediaItem,
   Music,
@@ -31,6 +32,8 @@ describe("TEMPLATE_DEFAULTS", () => {
   it("is valid for the fields it fills in", () => {
     expect(Canvas.parse({ width: 1080, height: 1920, fps: 30, ...d.canvas })).toBeTruthy();
     expect(VideoSlot.parse({ id: "clip", kind: "video", label: "Clip", ...d.slot })).toBeTruthy();
+    const { minSpeed: _videoOnly, ...audioSlot } = d.slot;
+    expect(AudioSlot.parse({ id: "song", kind: "audio", label: "Song", ...audioSlot })).toBeTruthy();
     expect(MediaItem.parse({ slot: "clip", startUs: 0, durationUs: 1, ...d.mediaItem })).toBeTruthy();
     expect(Transition.parse({ type: "slide", durationUs: 1, ...d.transition })).toBeTruthy();
     expect(Style.parse(d.style)).toEqual(d.style);
@@ -44,8 +47,11 @@ describe("TEMPLATE_DEFAULTS", () => {
     expect(jsonSchemaDefaults()).toEqual({
       "Canvas.background": d.canvas.background,
       "VideoSlot.optional": d.slot.optional,
+      "VideoSlot.shortClipPolicy": d.slot.shortClipPolicy,
+      "VideoSlot.minSpeed": d.slot.minSpeed,
       "ImageSlot.optional": d.slot.optional,
       "AudioSlot.optional": d.slot.optional,
+      "AudioSlot.shortClipPolicy": d.slot.shortClipPolicy,
       "TextSlot.optional": d.slot.optional,
       "MediaItem.fit": d.mediaItem.fit,
       "MediaItem.speed": d.mediaItem.speed,

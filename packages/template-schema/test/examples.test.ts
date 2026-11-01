@@ -72,6 +72,8 @@ const features: Record<string, (t: Template) => boolean> = {
     ),
   "an optional slot": (t) => t.slots.some((s) => s.optional === true),
   "a slot with minDurationUs": (t) => t.slots.some((s) => "minDurationUs" in s && s.minDurationUs !== undefined),
+  "a slot with a short-clip policy": (t) =>
+    t.slots.some((s) => "shortClipPolicy" in s && s.shortClipPolicy !== undefined),
   "a text slot with maxChars": (t) => t.slots.some((s) => s.kind === "text" && s.maxChars !== undefined),
   "more than one video track": (t) => t.tracks.filter((tr) => tr.type === "video").length > 1,
   "a slow-motion clip (speed < 1)": (t) => mediaOf(t).some((i) => i.speed !== undefined && i.speed < 1),

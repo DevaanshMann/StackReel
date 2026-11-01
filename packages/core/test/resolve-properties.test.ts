@@ -12,6 +12,7 @@ import {
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_SHORT_CLIP_POLICY,
   SHORT_CLIP_POLICIES,
   checkPlanInvariants,
   createProject,
@@ -215,14 +216,26 @@ const musicStart = fc.oneof(
 const startAt = (start: ValueOf<typeof musicStart>, durationUs: number) =>
   "share" in start ? Math.floor(start.share * durationUs) : Math.max(durationUs - start.beforeEndUs, 0);
 
-const timedSlot = fc.record({ optional: fc.boolean(), minDurationUs: lengthUs }, { requiredKeys: [] });
+const videoSlot = fc.record(
+  {
+    optional: fc.boolean(),
+    minDurationUs: lengthUs,
+    shortClipPolicy: fc.constantFrom(...SHORT_CLIP_POLICIES),
+    minSpeed: speed,
+  },
+  { requiredKeys: [] },
+);
+const audioSlot = fc.record(
+  { optional: fc.boolean(), minDurationUs: lengthUs, shortClipPolicy: fc.constantFrom("freeze", "loop") },
+  { requiredKeys: [] },
+);
 
 const templateRecipe = fc.record(
   {
     canvas,
-    videoSlots: fc.array(timedSlot, { minLength: 1, maxLength: 4 }),
+    videoSlots: fc.array(videoSlot, { minLength: 1, maxLength: 4 }),
     imageSlots: fc.array(fc.record({ optional: fc.boolean() }, { requiredKeys: [] }), { maxLength: 2 }),
-    audioSlots: fc.array(timedSlot, { maxLength: 3 }),
+    audioSlots: fc.array(audioSlot, { maxLength: 3 }),
     textSlots: fc.array(
       fc.record({ optional: fc.boolean(), maxChars: fc.integer({ min: 1, max: 40 }) }, { requiredKeys: [] }),
       { maxLength: 2 },
@@ -558,7 +571,7 @@ const optionsRecipe = fc.record(
     duckGainDb: fc.double({ min: -60, max: 0, noNaN: true }),
     duckRampUs: fc.integer({ min: 0, max: 1_000_000 }),
   },
-  { requiredKeys: ["shortClipPolicy"] },
+  { requiredKeys: [] },
 );
 
 /** Resolves a generated case, after checking the generators made a project that validateProject() accepts. */
@@ -726,14 +739,37 @@ function overlapProblems(plan: RenderPlan): string[] {
   return problems;
 }
 
+/** Each short clip uses its slot's policy unless the options override it, and audio never slows down. */
+function policyProblems(plan: RenderPlan, { project }: Case, options: ValueOf<typeof optionsRecipe>): string[] {
+  const problems: string[] = [];
+  const slots = new Map(project.template.slots.map((s) => [s.id, s]));
+  for (const w of plan.warnings) {
+    if (w.type !== "clip-too-short") continue;
+    const slot = slots.get(w.slotId)!;
+    const policy =
+      options.shortClipPolicy ??
+      ("shortClipPolicy" in slot ? slot.shortClipPolicy : undefined) ??
+      DEFAULT_SHORT_CLIP_POLICY;
+    const expected = slot.kind === "audio" && policy === "slow" ? "freeze" : policy;
+    const fitMode = plan.audio.find((a) => a.id === w.layerId)?.source.fitMode;
+    if (w.policy !== expected || fitMode !== expected) {
+      problems.push(`${w.layerId}: warned ${w.policy} and fitted ${fitMode}, expected ${expected}`);
+    }
+  }
+  for (const a of plan.audio) {
+    if (a.kind !== "video" && a.source.fitMode === "slow") problems.push(`audio ${a.id} slows down`);
+  }
+  return problems;
+}
+
 describe.each([
   ["generated templates", generatedTemplates],
   ["variations of the sample templates", sampleVariations],
 ])("resolve on %s", (_name, templates) => {
-  const check = (problems: (plan: RenderPlan, input: Case) => string[]) =>
+  const check = (problems: (plan: RenderPlan, input: Case, options: ValueOf<typeof optionsRecipe>) => string[]) =>
     fc.assert(
       fc.property(cases(templates), optionsRecipe, (input, options) => {
-        expect(problems(resolveCase(input, options), input)).toEqual([]);
+        expect(problems(resolveCase(input, options), input, options)).toEqual([]);
       }),
       { numRuns: RUNS },
     );
@@ -752,6 +788,10 @@ describe.each([
 
   it("never shows more than two clips of a video track at once, and two only inside their transition", () => {
     check(overlapProblems);
+  });
+
+  it("uses each slot's short-clip policy unless the options override it", () => {
+    check(policyProblems);
   });
 });
 
