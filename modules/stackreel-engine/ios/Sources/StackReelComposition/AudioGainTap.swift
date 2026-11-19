@@ -55,15 +55,36 @@ enum AudioGainTap {
           }
         }
       })
-    var tap: MTAudioProcessingTap?
-    let status = withExtendedLifetime(state) {
-      MTAudioProcessingTapCreate(
-        kCFAllocatorDefault, &callbacks,
-        MTAudioProcessingTapCreationFlags(kMTAudioProcessingTapCreationFlag_PreEffects), &tap)
+    return try withExtendedLifetime(state) {
+      try create { tap in
+        MTAudioProcessingTapCreate(
+          kCFAllocatorDefault, &callbacks,
+          MTAudioProcessingTapCreationFlags(kMTAudioProcessingTapCreationFlag_PreEffects), tap)
+      }
     }
+  }
+
+  // The SDK annotation for the retained out parameter changed after Xcode 16.
+  // Let the imported function's signature select the ownership conversion.
+  private static func create(
+    _ call: (UnsafeMutablePointer<MTAudioProcessingTap?>) -> OSStatus
+  ) throws -> MTAudioProcessingTap {
+    var tap: MTAudioProcessingTap?
+    let status = call(&tap)
     guard status == noErr, let tap else {
       throw VideoCompositionBuilder.BuildError.unableToCreateGainTap(status)
     }
     return tap
+  }
+
+  private static func create(
+    _ call: (UnsafeMutablePointer<Unmanaged<MTAudioProcessingTap>?>) -> OSStatus
+  ) throws -> MTAudioProcessingTap {
+    var tap: Unmanaged<MTAudioProcessingTap>?
+    let status = call(&tap)
+    guard status == noErr, let tap else {
+      throw VideoCompositionBuilder.BuildError.unableToCreateGainTap(status)
+    }
+    return tap.takeRetainedValue()
   }
 }
