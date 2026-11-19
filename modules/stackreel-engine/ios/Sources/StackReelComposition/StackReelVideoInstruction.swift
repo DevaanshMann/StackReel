@@ -28,6 +28,7 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
   public let containsTweening: Bool
   public let enablePostProcessing = false
   public let passthroughTrackID = kCMPersistentTrackID_Invalid
+  let textTexturesByLayerID: [String: TextTexture]
 
   /// An empty array requests no video frames, for example during an overlay-only interval.
   public var requiredSourceTrackIDs: [NSValue]? {
@@ -38,19 +39,20 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
 
   private init(
     timeRange: CMTimeRange, canvas: Canvas, layers: [Layer], transitions: [Transition],
-    videoInputsByLayerID: [String: VideoInput]
+    videoInputsByLayerID: [String: VideoInput], textTexturesByLayerID: [String: TextTexture]
   ) {
     self.timeRange = timeRange
     self.canvas = canvas
     self.layers = layers
     self.transitions = transitions
     self.videoInputsByLayerID = videoInputsByLayerID
+    self.textTexturesByLayerID = textTexturesByLayerID
     sourceTrackIDs = Set(
       videoInputsByLayerID.values.filter { !$0.usesHeldFrame }.map(\.clip.trackID)
     ).sorted()
     // Request a frame at every output tick in gaps, even when the background remains constant.
     containsTweening =
-      layers.isEmpty || !transitions.isEmpty
+      sourceTrackIDs.isEmpty || !transitions.isEmpty
       || layers.contains { layer in
         switch layer.content {
         case .video(let media, _), .image(let media, _):
@@ -70,9 +72,10 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
     case endTransition(Int)
   }
 
-  static func schedule(_ plan: RenderPlan, clipsByLayerID: [String: VideoComposition.Clip])
-    throws -> [StackReelVideoInstruction]
-  {
+  static func schedule(
+    _ plan: RenderPlan, clipsByLayerID: [String: VideoComposition.Clip],
+    textTexturesByLayerID: [String: TextTexture] = [:]
+  ) throws -> [StackReelVideoInstruction] {
     guard plan.durationUs > 0 else { throw ScheduleError.invalidPlanDuration }
     var events: [Int64: [Event]] = [0: [], plan.durationUs: []]
     var layerTiming: [String: Layer.Timing] = [:]
@@ -148,7 +151,7 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
           timeRange: CMTimeRange(start: start, end: VideoCompositionBuilder.time(endUs)),
           canvas: plan.canvas, layers: visibleLayers,
           transitions: activeTransitions.sorted().map { transitions[$0] },
-          videoInputsByLayerID: videoInputs))
+          videoInputsByLayerID: videoInputs, textTexturesByLayerID: textTexturesByLayerID))
     }
     return instructions
   }
