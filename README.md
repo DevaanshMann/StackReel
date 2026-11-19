@@ -363,6 +363,7 @@ _Runs in parallel with Phase 3._
    - [ ] Create an Expo module in `modules/stackreel-engine` (`npx create-expo-module --local`)
    - [ ] Swift package layout: `Plan/` (Codable models generated from JSON Schema), `Composition/`, `Compositor/`, `Text/`, `Export/`, `Preview/`
    - [ ] Generate Swift `Codable` types from `stackreel-template.v1.json` (quicktype) and check them in CI
+   - [x] Decode RenderPlan v1 in Swift and test the shared plans in macOS CI
 2. **Composition builder**
    - [ ] Map the render plan to `AVMutableComposition`: insert each clip's source range on alternating A/B video tracks so transitions can overlap
    - [ ] Audio: `AVMutableAudioMix` with volume ramps for fades and ducking

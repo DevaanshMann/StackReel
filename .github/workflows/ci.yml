@@ -52,3 +52,11 @@ jobs:
           name: stackreel-template-schema-v1
           path: packages/template-schema/schema/stackreel-template.v1.json
           if-no-files-found: error
+
+  ios-plan:
+    name: ios-plan
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: swift test --package-path modules/stackreel-engine/ios
