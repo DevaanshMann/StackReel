@@ -64,6 +64,13 @@ v1 is the only version, so for now `migrate()` returns v1 documents as they are.
 The JSON Schema covers the shape of a document. The cross-field rules below can't be expressed in JSON Schema, so
 engines that only use the JSON Schema must check them too.
 
+#### CI artifact
+
+CI builds the schema and checks that it matches the committed file before uploading it. For Swift or Kotlin code
+generation, select a successful run from [CI runs on `main`](https://github.com/DevaanshMann/StackReel/actions/workflows/ci.yml?query=branch%3Amain).
+Download `stackreel-template-schema-v1` from the run's **Artifacts** section. The archive contains
+`stackreel-template.v1.json` for that run's commit.
+
 ## Rules
 
 - `schemaVersion` is required and must be `1`.

@@ -38,3 +38,17 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+
+      - name: Build and verify template JSON Schema
+        shell: bash
+        run: |
+          pnpm --filter @stackreel/template-schema build
+          template_schema_path=packages/template-schema/schema/stackreel-template.v1.json
+          git show "HEAD:$template_schema_path" | diff -u - "$template_schema_path"
+
+      - name: Upload template JSON Schema
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stackreel-template-schema-v1
+          path: packages/template-schema/schema/stackreel-template.v1.json
+          if-no-files-found: error
