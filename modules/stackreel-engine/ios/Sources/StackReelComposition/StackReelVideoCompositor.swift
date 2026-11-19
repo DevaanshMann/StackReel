@@ -15,7 +15,7 @@ extension VideoComposition {
     case unableToExtendAsset
   }
 
-  /// Creates the paired AVFoundation asset and video composition for video cuts and crossfades.
+  /// Creates the paired AVFoundation asset and video composition for video cuts, crossfades and slides.
   public func makeRenderComposition() throws -> (
     asset: AVComposition, videoComposition: AVVideoComposition
   ) {
@@ -31,7 +31,9 @@ extension VideoComposition {
       }
     }
     guard !clipsByLayerID.isEmpty else { throw RenderError.noVideoLayers }
-    if let transition = renderPlan.transitions.first(where: { $0.type != .crossfade }) {
+    if let transition = renderPlan.transitions.first(where: {
+      $0.type != .crossfade && $0.type != .slide
+    }) {
       throw RenderError.unsupportedTransition(transitionID: transition.id)
     }
 
@@ -124,22 +126,20 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
         if instruction.transitions.contains(where: { $0.fromLayerId == id }) { continue }
         let incoming = try image(for: layer, in: instruction, request: request, timeUs: timeUs)
         if let transition = instruction.transitions.first(where: { $0.toLayerId == id }) {
-          var outgoing = result
+          let outgoing: CIImage?
           if let fromID = transition.fromLayerId {
             guard let from = instruction.layers.first(where: { $0.timing.id == fromID })
             else { throw FrameError.invalidInstruction }
             outgoing = try image(for: from, in: instruction, request: request, timeUs: timeUs)
-              .composited(over: result)
+          } else {
+            outgoing = nil
           }
           let progress =
             (timeUs - Double(transition.startUs))
             / Double(transition.endUs - transition.startUs)
-          result = outgoing.applyingFilter(
-            "CIDissolveTransition",
-            parameters: [
-              kCIInputTargetImageKey: incoming.composited(over: result),
-              kCIInputTimeKey: max(0, min(1, progress)),
-            ])
+          result = try composite(
+            transition, incoming: incoming, outgoing: outgoing, over: result,
+            bounds: bounds, progress: max(0, min(1, progress)))
         } else {
           result = incoming.composited(over: result)
         }
@@ -149,6 +149,42 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
       request.finish(withComposedVideoFrame: output)
     } catch {
       request.finish(with: error)
+    }
+  }
+
+  private func composite(
+    _ transition: Transition, incoming: CIImage, outgoing: CIImage?, over background: CIImage,
+    bounds: CGRect, progress: CGFloat
+  ) throws -> CIImage {
+    switch transition.type {
+    case .crossfade:
+      return (outgoing?.composited(over: background) ?? background).applyingFilter(
+        "CIDissolveTransition",
+        parameters: [
+          kCIInputTargetImageKey: incoming.composited(over: background),
+          kCIInputTimeKey: progress,
+        ])
+    case .slide:
+      let travel: CGPoint
+      // Positive y points up in Core Image.
+      switch transition.direction ?? .left {
+      case .left: travel = CGPoint(x: -bounds.width, y: 0)
+      case .right: travel = CGPoint(x: bounds.width, y: 0)
+      case .up: travel = CGPoint(x: 0, y: bounds.height)
+      case .down: travel = CGPoint(x: 0, y: -bounds.height)
+      }
+      // Snap the shared edge once so filtering the two clips cannot expose a seam between them.
+      let x = (progress * travel.x).rounded()
+      let y = (progress * travel.y).rounded()
+      let base =
+        outgoing?.cropped(to: bounds)
+        .transformed(by: CGAffineTransform(translationX: x, y: y))
+        .composited(over: background) ?? background
+      return incoming.cropped(to: bounds)
+        .transformed(by: CGAffineTransform(translationX: x - travel.x, y: y - travel.y))
+        .composited(over: base)
+    case .whipPan, .zoomPunch, .spin:
+      throw FrameError.invalidInstruction
     }
   }
 

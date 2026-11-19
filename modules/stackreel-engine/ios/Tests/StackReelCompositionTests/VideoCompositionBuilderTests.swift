@@ -223,6 +223,106 @@ final class VideoCompositionBuilderTests: XCTestCase {
   }
 
   @MainActor
+  func testRendersSlidesInAllDirectionsThroughAVFoundation() async throws {
+    let red = try await makeMovie { _, _ in (255, 0, 0) }
+    let blue = try await makeMovie { _, _ in (0, 0, 255) }
+    let outgoing = clip(0, start: 0, end: 2_000_000, sourceStart: 0, sourceEnd: 2_000_000)
+    let incoming = clip(
+      1, start: 1_000_000, end: 2_500_000, sourceStart: 0, sourceEnd: 1_500_000,
+      assetURI: "fixture://blue.mov")
+    // Sample opposite corners to catch both an inverted direction and translation on the wrong axis.
+    let cases: [(direction: String, redCorners: [Bool], seam: [(Int, Int)])] = [
+      ("left", [true, false, true, false], [(25, 24), (26, 24)]),
+      ("right", [false, true, false, true], [(6, 24), (5, 24)]),
+      ("up", [true, true, false, false], [(16, 37), (16, 38)]),
+      ("down", [false, false, true, true], [(16, 10), (16, 9)]),
+    ]
+    let corners = [(4, 6), (28, 6), (4, 42), (28, 42)]
+    for (direction, redCorners, seam) in cases {
+      let plan = try decodePlan(
+        duration: 2_500_000, layers: [outgoing, incoming],
+        transitions: [
+          [
+            "id": "video/1", "trackId": "video", "z": 0, "type": "slide", "direction": direction,
+            "startUs": 1_000_000, "endUs": 2_000_000, "fromLayerId": "video/0",
+            "toLayerId": "video/1",
+          ]
+        ])
+      let composition = try await VideoCompositionBuilder.build(plan) { uri in
+        uri == "fixture://blue.mov" ? blue : red
+      }
+      let frames = try readFrames(
+        composition.makeRenderComposition(), at: [29, 30, 36, 45, 54, 60])
+      let redPixel = try pixel(frames[29])
+      let bluePixel = try pixel(frames[60])
+      assertPixel(redPixel, near: [245, 0, 0])
+      assertPixel(bluePixel, near: [0, 0, 245])
+      XCTAssertEqual(try pixel(frames[30]), redPixel, direction)
+      assertPixel(try pixel(frames[36]), near: redPixel)
+      assertPixel(try pixel(frames[54]), near: bluePixel)
+      for ((x, y), isRed) in zip(corners, redCorners) {
+        XCTAssertEqual(
+          try pixel(frames[45], x: x, y: y), isRed ? redPixel : bluePixel, direction)
+      }
+      // A fractional step (20% progress) rounds the shared edge to one pixel.
+      for ((x, y), expected) in zip(seam, [redPixel, bluePixel]) {
+        XCTAssertEqual(try pixel(frames[36], x: x, y: y), expected, direction)
+      }
+    }
+  }
+
+  @MainActor
+  func testSlideFromBackgroundDefaultsLeftAndKeepsOtherTracksFixed() async throws {
+    let red = try await makeMovie { _, _ in (255, 0, 0) }
+    let green = try await makeMovie { _, _ in (0, 255, 0) }
+    let blue = try await makeMovie { _, _ in (0, 0, 255) }
+    var underlay = clip(
+      0, start: 0, end: 2_000_000, sourceStart: 0, sourceEnd: 2_000_000,
+      assetURI: "fixture://green.mov")
+    underlay["id"] = "underlay/0"
+    underlay["trackId"] = "underlay"
+    var incoming = clip(0, start: 500_000, end: 2_000_000, sourceStart: 0, sourceEnd: 1_500_000)
+    incoming["z"] = 1
+    // The projected image extends beyond both canvas edges before it slides.
+    incoming["transform"] = [2, 0, -16, 0, 1, 0, 0, 0, 1]
+    var overlay = clip(
+      0, start: 0, end: 2_000_000, sourceStart: 0, sourceEnd: 2_000_000,
+      assetURI: "fixture://blue.mov")
+    overlay["id"] = "overlay/0"
+    overlay["trackId"] = "overlay"
+    overlay["z"] = 2
+    overlay["cropPx"] = ["x": 8, "y": 8, "width": 8, "height": 8]
+    let plan = try decodePlan(
+      duration: 2_000_000, layers: [underlay, incoming, overlay],
+      transitions: [
+        [
+          "id": "video/0", "trackId": "video", "z": 1, "type": "slide", "startUs": 500_000,
+          "endUs": 1_500_000, "fromLayerId": NSNull(), "toLayerId": "video/0",
+        ]
+      ])
+    let assets = [
+      "fixture://clip.mov": red, "fixture://green.mov": green, "fixture://blue.mov": blue,
+    ]
+    let composition = try await VideoCompositionBuilder.build(plan) { uri in
+      try XCTUnwrap(assets[uri])
+    }
+    let frames = try readFrames(composition.makeRenderComposition(), at: [14, 15, 30, 45])
+    let greenPixel = try pixel(frames[14], x: 24)
+    let bluePixel = try pixel(frames[14], x: 12, y: 12)
+    let redPixel = try pixel(frames[45], x: 24)
+    XCTAssertGreaterThan(greenPixel[1], 235)
+    XCTAssertLessThan(max(greenPixel[0], greenPixel[2]), 40)
+    assertPixel(bluePixel, near: [0, 0, 245])
+    assertPixel(redPixel, near: [245, 0, 0])
+    XCTAssertEqual(try pixel(frames[15], x: 24), greenPixel)
+    XCTAssertEqual(try pixel(frames[30], x: 8), greenPixel)
+    assertPixel(try pixel(frames[30], x: 24), near: redPixel)
+    for index in [15, 30, 45] {
+      XCTAssertEqual(try pixel(frames[index], x: 12, y: 12), bluePixel)
+    }
+  }
+
+  @MainActor
   func testRendersPortraitCropAndCanvasTransformThroughAVFoundation() async throws {
     let rotation = CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: 48, ty: 0)
     let url = try await makeMovie(transform: rotation) { x, y in
