@@ -317,7 +317,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
 
 1. **Write the spec first**
    - [ ] `docs/template-format.md`: every field, its units, defaults, and an example
-   - [ ] Decide the v1 feature set: video, image, and audio slots; text overlays; 6–8 transitions (cut, crossfade, whip-pan, zoom-punch, slide, spin); 8–10 text animations; fit modes (`cover`, `contain`, `fill`); speed (0.25×–4×); volume and fades; music with ducking
+   - [x] Decide the [v1 feature set](docs/template-format.md#v1-feature-set)
    - [ ] Write ADR 0002: _integer microseconds for all time values_
    - [ ] Write ADR 0003: _normalized coordinates and anchor points_
 2. **Implement `@stackreel/template-schema`**
