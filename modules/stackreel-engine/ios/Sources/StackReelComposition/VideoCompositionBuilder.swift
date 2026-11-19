@@ -1,4 +1,5 @@
-import AVFoundation
+// Older SDKs import loadTracks as nonisolated without annotating its AVAssetTrack results.
+@preconcurrency import AVFoundation
 import StackReelPlan
 
 /// The video tracks and timing a compositor needs to look up frames by render-plan layer ID.
