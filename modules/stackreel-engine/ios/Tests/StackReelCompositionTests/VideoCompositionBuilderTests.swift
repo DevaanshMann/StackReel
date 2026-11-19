@@ -127,6 +127,9 @@ final class VideoCompositionBuilderTests: XCTestCase {
     XCTAssertEqual(held.clip.trackID, hold.trackID)
     XCTAssertEqual(held.clip.playableTimeRange, range(1_000_000, 1_400_000))
     XCTAssertEqual(instructions[2].requiredSourceTrackIDs, [])
+    XCTAssertThrowsError(try result.makeRenderComposition()) {
+      XCTAssertEqual($0 as? VideoComposition.RenderError, .unsupportedHold(layerID: "video/1"))
+    }
   }
 
   @MainActor
@@ -169,6 +172,74 @@ final class VideoCompositionBuilderTests: XCTestCase {
     XCTAssertNil(instructions[0].transitions.first?.fromLayerId)
     XCTAssertEqual(instructions[0].canvas.background, "#000000")
     XCTAssertTrue(instructions.allSatisfy { $0.requiredSourceTrackIDs == [] })
+    XCTAssertThrowsError(try result.makeRenderComposition()) {
+      XCTAssertEqual($0 as? VideoComposition.RenderError, .unsupportedLayer(layerID: "image/0"))
+    }
+  }
+
+  @MainActor
+  func testRendersCrossfadesAndTrailingBackgroundThroughAVFoundation() async throws {
+    let red = try await makeMovie { _, _ in (255, 0, 0) }
+    let blue = try await makeMovie { _, _ in (0, 0, 255) }
+    var incoming = clip(
+      1, start: 1_000_000, end: 2_500_000, sourceStart: 0, sourceEnd: 1_500_000,
+      assetURI: "fixture://blue.mov")
+    incoming["fadeOutUs"] = 500_000
+    let plan = try decodePlan(
+      duration: 3_000_000,
+      layers: [
+        clip(0, start: 200_000, end: 2_000_000, sourceStart: 200_000, sourceEnd: 2_000_000),
+        incoming,
+      ],
+      transitions: [
+        [
+          "id": "video/0", "trackId": "video", "z": 0, "type": "crossfade", "startUs": 200_000,
+          "endUs": 600_000, "fromLayerId": NSNull(), "toLayerId": "video/0",
+        ],
+        [
+          "id": "video/1", "trackId": "video", "z": 0, "type": "crossfade", "startUs": 1_000_000,
+          "endUs": 2_000_000, "fromLayerId": "video/0", "toLayerId": "video/1",
+        ],
+      ], background: "#00FF00")
+    let result = try await VideoCompositionBuilder.build(plan) { uri in
+      uri == "fixture://blue.mov" ? blue : red
+    }
+    let render = try result.makeRenderComposition()
+    XCTAssertEqual(render.asset.duration, result.timelineDuration)
+    let frames = try readFrames(render, at: Set(0..<90))
+    XCTAssertEqual(render.videoComposition.frameDuration, CMTime(value: 1, timescale: 30))
+    XCTAssertEqual(render.videoComposition.renderSize, CGSize(width: 32, height: 48))
+    let green = try pixel(frames[0])
+    let beforeCrossfade = try pixel(frames[24])
+    let afterCrossfade = try pixel(frames[60])
+    XCTAssertEqual(green, [0, 255, 0])
+    XCTAssertEqual(try pixel(frames[6]), green)
+    assertPixel(beforeCrossfade, near: [245, 0, 0])
+    assertPixel(afterCrossfade, near: [0, 0, 245])
+    assertPixel(try pixel(frames[12]), near: blend(green, beforeCrossfade, progress: 0.5))
+    assertPixel(try pixel(frames[45]), near: blend(beforeCrossfade, afterCrossfade, progress: 0.5))
+    assertPixel(try pixel(frames[68]), near: blend(afterCrossfade, green, progress: 8.0 / 15))
+    XCTAssertEqual(try pixel(frames[81]), green)
+  }
+
+  @MainActor
+  func testRendersPortraitCropAndCanvasTransformThroughAVFoundation() async throws {
+    let rotation = CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: 48, ty: 0)
+    let url = try await makeMovie(transform: rotation) { x, y in
+      if y < 24 { return (0, 255, 0) }
+      return x < 16 ? (255, 0, 0) : (0, 0, 255)
+    }
+    var layer = clip(0, start: 0, end: 1_000_000, sourceStart: 0, sourceEnd: 1_000_000)
+    layer["sourceSize"] = ["width": 48, "height": 32]
+    layer["cropPx"] = ["x": 4, "y": 0, "width": 20, "height": 32]
+    layer["transform"] = [1, 0, 2, 0, 1, 8, 0, 0, 1]
+    let plan = try decodePlan(duration: 1_000_000, layers: [layer])
+    let result = try await VideoCompositionBuilder.build(plan) { _ in url }
+    let frames = try readFrames(result.makeRenderComposition(), at: [15])
+    assertPixel(try pixel(frames[15], x: 14, y: 13), near: [245, 0, 0])
+    assertPixel(try pixel(frames[15], x: 14, y: 29), near: [0, 0, 245])
+    XCTAssertEqual(try pixel(frames[15], x: 28, y: 19), [0, 0, 0])
+    XCTAssertEqual(try pixel(frames[15], x: 14, y: 4), [0, 0, 0])
   }
 
   func testScheduleRejectsTransitionWithInactiveSource() throws {
@@ -234,13 +305,13 @@ final class VideoCompositionBuilderTests: XCTestCase {
 
   private func clip(
     _ index: Int, start: Int64, end: Int64, sourceStart: Int64, sourceEnd: Int64,
-    rate: Double = 1, fitMode: String = "trim"
+    rate: Double = 1, fitMode: String = "trim", assetURI: String = "fixture://clip.mov"
   ) -> [String: Any] {
     [
       "id": "video/\(index)", "trackId": "video", "itemIndex": index, "z": 0, "startUs": start,
       "endUs": end, "opacity": 1, "kind": "video", "slotId": "clip",
       "source": [
-        "assetUri": "fixture://clip.mov", "sourceStartUs": sourceStart, "sourceEndUs": sourceEnd,
+        "assetUri": assetURI, "sourceStartUs": sourceStart, "sourceEndUs": sourceEnd,
         "rate": rate, "afterEnd": fitMode == "loop" ? "loop" : "hold", "fitMode": fitMode,
       ],
       "fit": "cover", "sourceSize": ["width": 32, "height": 48],
@@ -261,11 +332,12 @@ final class VideoCompositionBuilderTests: XCTestCase {
   }
 
   private func decodePlan(
-    duration: Int64, layers: [[String: Any]], transitions: [[String: Any]] = []
+    duration: Int64, layers: [[String: Any]], transitions: [[String: Any]] = [],
+    background: String = "#000000"
   ) throws -> RenderPlan {
     let json: [String: Any] = [
       "renderPlanVersion": 1, "templateId": "composition-test", "durationUs": duration,
-      "canvas": ["width": 32, "height": 48, "fps": 30, "background": "#000000"],
+      "canvas": ["width": 32, "height": 48, "fps": 30, "background": background],
       "layers": layers, "transitions": transitions, "audio": [], "warnings": [],
     ]
     return try JSONDecoder().decode(
@@ -285,10 +357,14 @@ final class VideoCompositionBuilderTests: XCTestCase {
     case cannotAllocateFrame(OSStatus)
     case cannotWriteMovie
     case writerTimedOut
+    case cannotReadComposition
   }
 
   @MainActor
-  private func makeMovie(transform: CGAffineTransform = .identity) async throws -> URL {
+  private func makeMovie(
+    transform: CGAffineTransform = .identity,
+    pixel: (Int, Int) -> (red: UInt8, green: UInt8, blue: UInt8) = { _, _ in (128, 128, 128) }
+  ) async throws -> URL {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
     addTeardownBlock { try FileManager.default.removeItem(at: directory) }
@@ -300,6 +376,11 @@ final class VideoCompositionBuilderTests: XCTestCase {
       mediaType: .video,
       outputSettings: [
         AVVideoCodecKey: AVVideoCodecType.jpeg, AVVideoWidthKey: 32, AVVideoHeightKey: 48,
+        AVVideoColorPropertiesKey: [
+          AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+          AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+          AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
+        ],
       ])
     input.transform = transform
     let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input)
@@ -318,7 +399,17 @@ final class VideoCompositionBuilderTests: XCTestCase {
     }
     CVPixelBufferLockBaseAddress(buffer, [])
     if let address = CVPixelBufferGetBaseAddress(buffer) {
-      memset(address, 128, CVPixelBufferGetDataSize(buffer))
+      let base = address.assumingMemoryBound(to: UInt8.self)
+      for y in 0..<CVPixelBufferGetHeight(buffer) {
+        let row = base + y * CVPixelBufferGetBytesPerRow(buffer)
+        for x in 0..<CVPixelBufferGetWidth(buffer) {
+          let color = pixel(x, y)
+          row[4 * x] = color.blue
+          row[4 * x + 1] = color.green
+          row[4 * x + 2] = color.red
+          row[4 * x + 3] = 255
+        }
+      }
     }
     CVPixelBufferUnlockBaseAddress(buffer, [])
 
@@ -341,5 +432,59 @@ final class VideoCompositionBuilderTests: XCTestCase {
     }
     guard writer.status == .completed else { throw writer.error ?? TestError.cannotWriteMovie }
     return url
+  }
+
+  private func readFrames(
+    _ render: (asset: AVComposition, videoComposition: AVVideoComposition),
+    at frameNumbers: Set<Int>
+  ) throws -> [Int: CVPixelBuffer] {
+    let reader = try AVAssetReader(asset: render.asset)
+    let output = AVAssetReaderVideoCompositionOutput(
+      videoTracks: render.asset.tracks(withMediaType: .video),
+      videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
+    output.videoComposition = render.videoComposition
+    guard reader.canAdd(output) else { throw TestError.cannotReadComposition }
+    reader.add(output)
+    guard reader.startReading() else { throw reader.error ?? TestError.cannotReadComposition }
+
+    var frames: [Int: CVPixelBuffer] = [:]
+    while let sample = output.copyNextSampleBuffer() {
+      let frameNumber = Int(
+        sample.presentationTimeStamp.convertScale(30, method: .roundHalfAwayFromZero).value)
+      if frameNumbers.contains(frameNumber) { frames[frameNumber] = sample.imageBuffer }
+    }
+    guard reader.status == .completed else { throw reader.error ?? TestError.cannotReadComposition }
+    XCTAssertEqual(Set(frames.keys), frameNumbers)
+    return frames
+  }
+
+  private func pixel(_ frame: CVPixelBuffer?, x: Int = 16, y: Int = 24) throws -> [Int] {
+    let frame = try XCTUnwrap(frame)
+    CVPixelBufferLockBaseAddress(frame, .readOnly)
+    defer { CVPixelBufferUnlockBaseAddress(frame, .readOnly) }
+    let base = try XCTUnwrap(CVPixelBufferGetBaseAddress(frame)).assumingMemoryBound(to: UInt8.self)
+    let pixel = base + y * CVPixelBufferGetBytesPerRow(frame) + 4 * x
+    return [Int(pixel[2]), Int(pixel[1]), Int(pixel[0])]
+  }
+
+  private func assertPixel(
+    _ pixel: [Int], near expected: [Int], file: StaticString = #filePath, line: UInt = #line
+  ) {
+    // The source frames use JPEG, so allow a small RGB-channel tolerance.
+    XCTAssertTrue(
+      zip(pixel, expected).allSatisfy { abs($0 - $1) <= 15 },
+      "Expected \(expected), got \(pixel)", file: file, line: line)
+  }
+
+  private func blend(_ from: [Int], _ to: [Int], progress: Double) -> [Int] {
+    func linear(_ byte: Int) -> Double {
+      let value = Double(byte) / 255
+      return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+    }
+    return zip(from, to).map { start, end in
+      let value = linear(start) * (1 - progress) + linear(end) * progress
+      let sRGB = value <= 0.0031308 ? value * 12.92 : 1.055 * pow(value, 1 / 2.4) - 0.055
+      return Int((sRGB * 255).rounded())
+    }
   }
 }
