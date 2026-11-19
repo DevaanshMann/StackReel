@@ -372,6 +372,7 @@ _Runs in parallel with Phase 3._
 3. **Metal compositor**
    - [x] Schedule custom AVFoundation video composition instructions with the layers and transitions active in each time range
    - [x] Render video cuts and crossfades from those instructions with `AVVideoCompositing`
+   - [x] Render directional video slides with `AVVideoCompositing`
    - [ ] Metal pipeline: YUV → RGB conversion, per-layer transform (fit/crop/scale/rotate), opacity, blend
    - [ ] Transitions as Metal fragment shaders (crossfade, whip-pan blur, zoom-punch, slide, spin)
    - [ ] Pool `CVPixelBuffer`s and textures. Allocate nothing per frame.

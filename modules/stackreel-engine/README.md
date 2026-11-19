@@ -29,7 +29,7 @@ Use `result.timelineDuration` for the full timeline, which may extend past the l
 The instructions cover the full timeline and carry layers in draw order, active transitions, and the track
 IDs that supply source frames. Held inputs identify the clip whose last playable frame the compositor needs.
 
-For a video plan with cuts and crossfades, create the paired asset and video composition:
+For a video plan with cuts, crossfades, and slides, create the paired asset and video composition:
 
 ```swift
 let render = try result.makeRenderComposition()
@@ -39,7 +39,10 @@ item.videoComposition = render.videoComposition
 
 The custom compositor uses Metal-backed Core Image when available. It applies source orientation, the plan's
 crop and transform, clip fades, and linear-light crossfades. See the [sampled test frames](../../docs/ios-crossfade.png).
-Still images, text, stickers, held frames, and other transition effects return an unsupported-feature error.
+Slides move both clips together by one canvas width or height over the transition interval. The direction
+defaults to left. A slide from the background moves only the incoming clip, and other tracks stay in place.
+See [sampled frames for all four directions](../../docs/ios-slide.png).
+Still images, text, stickers, held frames, whip-pans, zoom punches, and spins return an unsupported-feature error.
 Audio mixing is a separate engine step.
 
 Run the Swift tests on macOS with Xcode 16 or newer:
