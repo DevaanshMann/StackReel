@@ -383,6 +383,89 @@ final class VideoCompositionBuilderTests: XCTestCase {
   }
 
   @MainActor
+  func testRendersStyledTextDuringItsTimelineInterval() async throws {
+    let url = try await makeMovie { _, _ in (0, 0, 255) }
+    var video = clip(0, start: 0, end: 2_000_000, sourceStart: 0, sourceEnd: 2_000_000)
+    video["transform"] = [5, 0, 0, 0, 5, 0, 0, 0, 1]
+    var foreground = clip(0, start: 0, end: 2_000_000, sourceStart: 0, sourceEnd: 2_000_000)
+    foreground["id"] = "foreground/0"
+    foreground["trackId"] = "foreground"
+    foreground["z"] = 2
+    foreground["cropPx"] = ["x": 0, "y": 0, "width": 20, "height": 18]
+    foreground["transform"] = [1, 0, 85, 0, 1, 126, 0, 0, 1]
+    var overlay = textLayer(0, start: 400_000, end: 2_400_000, x: 12, y: 72)
+    overlay["style"] = [
+      "font": "Helvetica-Bold", "sizePx": 25, "color": "#FFFFFF", "align": "center",
+      "stroke": ["color": "#FF9900", "widthPx": 2],
+      "shadow": ["color": "#FF00FF", "blurPx": 0, "offsetXPx": 4, "offsetYPx": 4],
+      "background": ["color": "#007030", "paddingPx": 12, "cornerRadiusPx": 9],
+    ]
+    overlay["animation"] = [
+      "in": "fade", "out": "fade", "inDurationUs": 400_000, "outDurationUs": 400_000,
+    ]
+    let plan = try decodePlan(
+      duration: 2_600_000, layers: [video, foreground, overlay],
+      canvas: CGSize(width: 160, height: 240))
+    let result = try await VideoCompositionBuilder.build(plan) { _ in url }
+    let render = try result.makeRenderComposition()
+    let frames = try readFrames(render, at: [9, 12, 18, 24, 63, 75])
+    let blue = try pixel(frames[9], x: 19, y: 86)
+    let pill = try pixel(frames[24], x: 19, y: 86)
+    assertPixel(blue, near: [0, 0, 245])
+    assertPixel(pill, near: [0, 112, 48])
+    XCTAssertEqual(try pixel(frames[12], x: 19, y: 86), blue)
+    assertPixel(try pixel(frames[18], x: 19, y: 86), near: blend(blue, pill, progress: 0.5))
+    XCTAssertEqual(try pixel(frames[24], x: 12, y: 72), blue)
+    XCTAssertEqual(try pixel(frames[24], x: 90, y: 131), blue)
+    XCTAssertGreaterThan(try pixel(frames[63], x: 19, y: 86)[1], 40)
+    XCTAssertEqual(try pixel(frames[75], x: 19, y: 86), [0, 0, 0])
+
+    var sawFill = false
+    var sawOutline = false
+    var sawShadow = false
+    for y in 85..<146 {
+      for x in 22..<110 {
+        let rgb = try pixel(frames[24], x: x, y: y)
+        sawFill = sawFill || rgb.allSatisfy { $0 > 235 }
+        sawOutline = sawOutline || (rgb[0] > 235 && rgb[1] > 100 && rgb[2] < 35)
+        sawShadow = sawShadow || (rgb[0] > 235 && rgb[1] < 35 && rgb[2] > 235)
+      }
+    }
+    XCTAssertTrue(sawFill)
+    XCTAssertTrue(sawOutline)
+    XCTAssertTrue(sawShadow)
+  }
+
+  @MainActor
+  func testReusesTextTextureAcrossPlacementsAndRotatesAboutAnchor() async throws {
+    let url = try await makeMovie { _, _ in (0, 0, 0) }
+    var video = clip(0, start: 0, end: 1_200_000, sourceStart: 0, sourceEnd: 1_200_000)
+    video["transform"] = [5, 0, 0, 0, 5, 0, 0, 0, 1]
+    let rotated = textLayer(0, start: 0, end: 2_000_000, x: 95, y: 20, rotation: 90)
+    var sliding = textLayer(1, start: 0, end: 2_000_000, x: 60, y: 132)
+    sliding["animation"] = [
+      "in": "slide-right", "out": "none", "inDurationUs": 1_000_000, "outDurationUs": 0,
+    ]
+    let plan = try decodePlan(
+      duration: 2_000_000, layers: [video, rotated, sliding],
+      canvas: CGSize(width: 160, height: 240))
+    let result = try await VideoCompositionBuilder.build(plan) { _ in url }
+    let render = try result.makeRenderComposition()
+    let instruction = try XCTUnwrap(
+      render.videoComposition.instructions.first as? StackReelVideoInstruction)
+    let first = try XCTUnwrap(instruction.textTexturesByLayerID["titles/0"])
+    let second = try XCTUnwrap(instruction.textTexturesByLayerID["titles/1"])
+    XCTAssertTrue(first.image === second.image)
+    let frames = try readFrames(render, at: [15, 30, 59])
+    XCTAssertEqual(try pixel(frames[30], x: 90, y: 26), [255, 0, 0])
+    XCTAssertEqual(try pixel(frames[30], x: 100, y: 26), [0, 0, 0])
+    XCTAssertEqual(try pixel(frames[15], x: 55, y: 137), [255, 0, 0])
+    XCTAssertEqual(try pixel(frames[30], x: 55, y: 137), [0, 0, 0])
+    XCTAssertEqual(try pixel(frames[30], x: 65, y: 137), [255, 0, 0])
+    XCTAssertEqual(try pixel(frames[59], x: 65, y: 137), [255, 0, 0])
+  }
+
+  @MainActor
   func testRendersPortraitCropAndCanvasTransformThroughAVFoundation() async throws {
     let rotation = CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: 48, ty: 0)
     let url = try await makeMovie(transform: rotation) { x, y in
@@ -493,15 +576,34 @@ final class VideoCompositionBuilderTests: XCTestCase {
 
   private func decodePlan(
     duration: Int64, layers: [[String: Any]], transitions: [[String: Any]] = [],
-    background: String = "#000000", audio: [[String: Any]] = []
+    background: String = "#000000", audio: [[String: Any]] = [],
+    canvas: CGSize = CGSize(width: 32, height: 48)
   ) throws -> RenderPlan {
     let json: [String: Any] = [
       "renderPlanVersion": 1, "templateId": "composition-test", "durationUs": duration,
-      "canvas": ["width": 32, "height": 48, "fps": 30, "background": background],
+      "canvas": [
+        "width": Int(canvas.width), "height": Int(canvas.height), "fps": 30,
+        "background": background,
+      ],
       "layers": layers, "transitions": transitions, "audio": audio, "warnings": [],
     ]
     return try JSONDecoder().decode(
       RenderPlan.self, from: JSONSerialization.data(withJSONObject: json))
+  }
+
+  private func textLayer(
+    _ index: Int, start: Int64, end: Int64, x: Int, y: Int, rotation: Int = 0
+  ) -> [String: Any] {
+    [
+      "id": "titles/\(index)", "trackId": "titles", "itemIndex": index, "z": 1, "startUs": start,
+      "endUs": end, "opacity": 1, "kind": "text", "text": "STACK\nREEL",
+      "style": [
+        "font": "Helvetica-Bold", "sizePx": 20, "color": "#FFFFFF", "align": "center",
+        "background": ["color": "#FF0000", "paddingPx": 10, "cornerRadiusPx": 0],
+      ],
+      "placement": ["xPx": x, "yPx": y, "rotationDeg": rotation, "anchor": "top-left"],
+      "animation": ["in": "none", "out": "none", "inDurationUs": 0, "outDurationUs": 0],
+    ]
   }
 
   private func time(_ us: Int64) -> CMTime {

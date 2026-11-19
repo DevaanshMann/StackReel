@@ -29,7 +29,7 @@ Use `result.timelineDuration` for the full timeline, which may extend past the l
 The instructions cover the full timeline and carry layers in draw order, active transitions, and the track
 IDs that supply source frames. Held inputs identify the clip whose last playable frame the compositor needs.
 
-For a video plan with cuts, crossfades, and slides, create the paired asset and video composition:
+For a video plan with cuts, crossfades, slides, and styled text, create the paired asset and video composition:
 
 ```swift
 let render = try result.makeRenderComposition()
@@ -43,7 +43,13 @@ crop and transform, clip fades, and linear-light crossfades. See the [sampled te
 Slides move both clips together by one canvas width or height over the transition interval. The direction
 defaults to left. A slide from the background moves only the incoming clip, and other tracks stay in place.
 See [sampled frames for all four directions](../../docs/ios-slide.png).
-Still images, text, stickers, held frames, whip-pans, zoom punches, and spins return an unsupported-feature error.
+
+Core Text draws multiline and wrapped text with alignment, stroke, shadow, and rounded backgrounds.
+The compositor caches the rendered text by content and style, then applies its anchor, rotation, and
+fade, pop, scale, slide, or bounce animation on each frame. If the requested PostScript font is unavailable,
+Core Text uses the system font. See [sampled text frames](../../docs/ios-text.png).
+Still images, stickers, held frames, typewriter animations, whip-pans, zoom punches, and spins return an
+unsupported-feature error. Rendering requires a video track.
 
 `result.audioMix` applies the plan's gain, fades, and music ducking to embedded clip sound, standalone audio,
 and music. Audio uses the resolved trims, playback rates, and loops. A video without an audio track and

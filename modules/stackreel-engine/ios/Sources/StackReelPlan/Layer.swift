@@ -164,24 +164,24 @@ public struct Layer: Codable, Sendable {
     public let outDurationUs: Int64
   }
 
-  public struct TextStyle: Codable, Sendable {
+  public struct TextStyle: Codable, Sendable, Hashable {
     public enum Alignment: String, Codable, Sendable {
       case left, center, right
     }
 
-    public struct Stroke: Codable, Sendable {
+    public struct Stroke: Codable, Sendable, Hashable {
       public let color: String
       public let widthPx: Double
     }
 
-    public struct Shadow: Codable, Sendable {
+    public struct Shadow: Codable, Sendable, Hashable {
       public let color: String
       public let blurPx: Double
       public let offsetXPx: Double
       public let offsetYPx: Double
     }
 
-    public struct Background: Codable, Sendable {
+    public struct Background: Codable, Sendable, Hashable {
       public let color: String
       public let paddingPx: Double
       public let cornerRadiusPx: Double

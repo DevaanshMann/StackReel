@@ -10,12 +10,14 @@ extension VideoComposition {
     case noVideoLayers
     case unsupportedLayer(layerID: String)
     case unsupportedHold(layerID: String)
+    case unsupportedTextAnimation(layerID: String)
+    case unableToRasterizeText(layerID: String)
     case unsupportedTransition(transitionID: String)
     case unableToCopyAsset
     case unableToExtendAsset
   }
 
-  /// Creates the paired AVFoundation asset and video composition for video cuts, crossfades and slides.
+  /// Creates the paired AVFoundation asset and video composition for video and text overlays.
   public func makeRenderComposition() throws -> (
     asset: AVComposition, videoComposition: AVVideoComposition
   ) {
@@ -24,10 +26,19 @@ extension VideoComposition {
       StackReelVideoCompositor.backgroundColor(canvas.background) != nil
     else { throw RenderError.invalidCanvas }
     for layer in renderPlan.layers {
-      guard case .video = layer.content
-      else { throw RenderError.unsupportedLayer(layerID: layer.timing.id) }
-      if clipsByLayerID[layer.timing.id]?.holdTimeRange != nil {
-        throw RenderError.unsupportedHold(layerID: layer.timing.id)
+      switch layer.content {
+      case .video:
+        if clipsByLayerID[layer.timing.id]?.holdTimeRange != nil {
+          throw RenderError.unsupportedHold(layerID: layer.timing.id)
+        }
+      case .text(let text):
+        if (text.animation.in == .typewriter && text.animation.inDurationUs > 0)
+          || (text.animation.out == .typewriter && text.animation.outDurationUs > 0)
+        {
+          throw RenderError.unsupportedTextAnimation(layerID: layer.timing.id)
+        }
+      case .image, .sticker:
+        throw RenderError.unsupportedLayer(layerID: layer.timing.id)
       }
     }
     guard !clipsByLayerID.isEmpty else { throw RenderError.noVideoLayers }
@@ -38,7 +49,9 @@ extension VideoComposition {
     }
 
     let video = AVMutableVideoComposition()
-    video.instructions = try makeVideoInstructions()
+    video.instructions = try StackReelVideoInstruction.schedule(
+      renderPlan, clipsByLayerID: clipsByLayerID,
+      textTexturesByLayerID: TextRasterizer.textures(for: renderPlan))
     video.customVideoCompositorClass = StackReelVideoCompositor.self
     video.renderSize = CGSize(width: canvas.width, height: canvas.height)
     video.frameDuration = CMTime(value: 1, timescale: fps)
@@ -83,7 +96,7 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
     case unableToAllocateOutput
   }
 
-  private static let sRGB = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+  static let sRGB = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
   private let context: CIContext = {
     let options: [CIContextOption: Any] = [
       .cacheIntermediates: false,
@@ -125,6 +138,15 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
 
       for layer in instruction.layers {
         let id = layer.timing.id
+        if case .text(let text) = layer.content {
+          if let texture = instruction.textTexturesByLayerID[id],
+            let overlay = texture.image(
+              for: text, timing: layer.timing, canvas: instruction.canvas, at: timeUs)
+          {
+            result = overlay.composited(over: result)
+          }
+          continue
+        }
         if instruction.transitions.contains(where: { $0.fromLayerId == id }) { continue }
         let incoming = try image(for: layer, in: instruction, request: request, timeUs: timeUs)
         if let transition = instruction.transitions.first(where: { $0.toLayerId == id }) {
@@ -234,13 +256,16 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
   }
 
   static func backgroundColor(_ hex: String) -> CIColor? {
+    rgbaColor(hex).map { CIColor(cgColor: $0) }
+  }
+
+  static func rgbaColor(_ hex: String) -> CGColor? {
     let digits = hex.dropFirst()
     guard hex.hasPrefix("#"), digits.count == 6 || digits.count == 8,
       let parsed = UInt32(digits, radix: 16)
     else { return nil }
     let rgba = digits.count == 6 ? (parsed << 8) | 0xFF : parsed
     let components = [24, 16, 8, 0].map { CGFloat((rgba >> $0) & 0xFF) / 255 }
-    guard let color = CGColor(colorSpace: sRGB, components: components) else { return nil }
-    return CIColor(cgColor: color)
+    return CGColor(colorSpace: sRGB, components: components)
   }
 }
