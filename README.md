@@ -348,7 +348,7 @@ This phase has no video code. It is pure, fully tested TypeScript.
 
 - 100% of sample templates validate and resolve
 - At least 90% line coverage on `core` and `template-schema`
-- JSON Schema is published as a build artifact for the native teams
+- JSON Schema is published as a [CI build artifact](packages/template-schema/README.md#ci-artifact) for the native teams
 
 ---
 
