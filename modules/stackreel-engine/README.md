@@ -28,7 +28,19 @@ playable time range. Overlapping clips have separate track IDs, and loop segment
 Use `result.timelineDuration` for the full timeline, which may extend past the last video sample.
 The instructions cover the full timeline and carry layers in draw order, active transitions, and the track
 IDs that supply source frames. Held inputs identify the clip whose last playable frame the compositor needs.
-The Metal compositor will consume these instructions to draw each frame.
+
+For a video plan with cuts and crossfades, create the paired asset and video composition:
+
+```swift
+let render = try result.makeRenderComposition()
+let item = AVPlayerItem(asset: render.asset)
+item.videoComposition = render.videoComposition
+```
+
+The custom compositor uses Metal-backed Core Image when available. It applies source orientation, the plan's
+crop and transform, clip fades, and linear-light crossfades. See the [sampled test frames](../../docs/ios-crossfade.png).
+Still images, text, stickers, held frames, and other transition effects return an unsupported-feature error.
+Audio mixing is a separate engine step.
 
 Run the Swift tests on macOS with Xcode 16 or newer:
 
@@ -38,5 +50,5 @@ swift test --package-path modules/stackreel-engine/ios
 
 The tests read the plans from the [shared fixture manifest](../../fixtures/README.md), verify their hashes,
 and check that encoding the decoded plans preserves the JSON values. The composition tests verify source and
-timeline ranges using a local video. See **Phases 2 and 3** in the [root README](../../README.md) for the
-remaining engine milestones.
+timeline ranges using local videos and check the rendered pixels through `AVAssetReader`. See **Phases 2 and 3**
+in the [root README](../../README.md) for the remaining engine milestones.

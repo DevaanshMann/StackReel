@@ -17,7 +17,7 @@ public struct VideoComposition {
   /// Includes any time after the last video sample, such as a final overlay or held frame.
   public let timelineDuration: CMTime
   public let clipsByLayerID: [String: Clip]
-  fileprivate let renderPlan: RenderPlan
+  let renderPlan: RenderPlan
 
   /// Builds the instructions for a custom compositor using the same plan as the source tracks.
   public func makeVideoInstructions() throws -> [StackReelVideoInstruction] {

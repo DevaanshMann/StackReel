@@ -48,8 +48,9 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
     sourceTrackIDs = Set(
       videoInputsByLayerID.values.filter { !$0.usesHeldFrame }.map(\.clip.trackID)
     ).sorted()
+    // Request a frame at every output tick in gaps, even when the background remains constant.
     containsTweening =
-      !transitions.isEmpty
+      layers.isEmpty || !transitions.isEmpty
       || layers.contains { layer in
         switch layer.content {
         case .video(let media, _), .image(let media, _):
