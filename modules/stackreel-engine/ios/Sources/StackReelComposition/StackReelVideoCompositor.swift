@@ -1,5 +1,6 @@
 import AVFoundation
-import CoreImage
+// Older SDKs omit Sendable on CIContext, which supports concurrent renders.
+@preconcurrency import CoreImage
 import Metal
 import StackReelPlan
 
