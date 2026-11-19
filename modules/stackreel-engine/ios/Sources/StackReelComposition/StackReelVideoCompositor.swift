@@ -46,17 +46,19 @@ extension VideoComposition {
 
     guard let asset = composition.mutableCopy() as? AVMutableComposition
     else { throw RenderError.unableToCopyAsset }
-    if asset.duration < timelineDuration {
-      try extendAsset(asset, frameDuration: video.frameDuration)
-    }
+    try extendVideoTrack(asset, frameDuration: video.frameDuration)
     guard let snapshot = asset.copy() as? AVComposition else { throw RenderError.unableToCopyAsset }
     return (asset: snapshot, videoComposition: video)
   }
 
-  private func extendAsset(_ asset: AVMutableComposition, frameDuration: CMTime) throws {
-    let end = asset.duration
+  private func extendVideoTrack(_ asset: AVMutableComposition, frameDuration: CMTime) throws {
     guard
-      let track = asset.tracks.first(where: { $0.mediaType == .video && $0.timeRange.end == end }),
+      let track = asset.tracks.filter({ $0.mediaType == .video })
+        .max(by: { $0.timeRange.end < $1.timeRange.end })
+    else { throw RenderError.unableToExtendAsset }
+    let end = track.timeRange.end
+    guard end < timelineDuration else { return }
+    guard
       let last = track.segments.last, let sourceURL = last.sourceURL
     else { throw RenderError.unableToExtendAsset }
 

@@ -2,7 +2,7 @@
 @preconcurrency import AVFoundation
 import StackReelPlan
 
-/// The video tracks and timing a compositor needs to look up frames by render-plan layer ID.
+/// An AVFoundation composition and the timing needed to render the plan.
 public struct VideoComposition {
   public struct Clip: Sendable {
     public let trackID: CMPersistentTrackID
@@ -17,6 +17,8 @@ public struct VideoComposition {
   /// Includes any time after the last video sample, such as a final overlay or held frame.
   public let timelineDuration: CMTime
   public let clipsByLayerID: [String: Clip]
+  /// Apply this mix to the player or reader using the render asset's audio tracks.
+  public let audioMix: AVAudioMix?
   let renderPlan: RenderPlan
 
   /// Builds the instructions for a custom compositor using the same plan as the source tracks.
@@ -33,16 +35,18 @@ public enum VideoCompositionBuilder {
     case invalidSourceTiming(layerID: String)
     case nonFileURL(assetURI: String)
     case missingVideoTrack(assetURI: String)
+    case missingAudioTrack(assetURI: String)
     case sourceRangeOutsideTrack(layerID: String)
     case tooManyOverlappingClips(trackID: String)
     case unableToAddVideoTrack
+    case invalidAudioEntry(id: String)
+    case unableToAddAudioTrack
+    case unableToCreateGainTap(OSStatus)
   }
 
   static let timescale: CMTimeScale = 1_000_000
 
   private struct SourceVideo {
-    // AVAssetTrack holds a weak reference to its asset.
-    let asset: AVURLAsset
     let track: AVAssetTrack
     let timeRange: CMTimeRange
     let preferredTransform: CGAffineTransform
@@ -53,7 +57,7 @@ public enum VideoCompositionBuilder {
     var endUs: Int64
   }
 
-  /// Resolves the plan's video asset identifiers to local files. Each logical track owns up to two
+  /// Resolves the plan's media asset identifiers to local files. Each logical video track owns up to two
   /// composition tracks so an outgoing and incoming clip can be decoded at the same time.
   public static func build(
     _ plan: RenderPlan,
@@ -62,6 +66,8 @@ public enum VideoCompositionBuilder {
   ) async throws -> VideoComposition {
     guard plan.durationUs > 0 else { throw BuildError.invalidPlanDuration }
     let composition = AVMutableComposition()
+    // Keep assets alive while inserting edits from their tracks.
+    var assets: [String: AVURLAsset] = [:]
     var lanesByTrack: [String: [Lane]] = [:]
     var sources: [String: SourceVideo] = [:]
     var clips: [String: VideoComposition.Clip] = [:]
@@ -76,9 +82,7 @@ public enum VideoCompositionBuilder {
         throw BuildError.invalidLayerTiming(layerID: timing.id)
       }
       guard clips[timing.id] == nil else { throw BuildError.duplicateLayer(layerID: timing.id) }
-      guard source.sourceStartUs >= 0, source.sourceStartUs < source.sourceEndUs,
-        source.rate.isFinite, source.rate > 0
-      else {
+      guard valid(source) else {
         throw BuildError.invalidSourceTiming(layerID: timing.id)
       }
 
@@ -86,16 +90,13 @@ public enum VideoCompositionBuilder {
       if let cached = sources[source.assetUri] {
         media = cached
       } else {
-        let url = try assetURL(source.assetUri)
-        guard url.isFileURL else { throw BuildError.nonFileURL(assetURI: source.assetUri) }
-        let asset = AVURLAsset(
-          url: url, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
+        let asset = try localAsset(source.assetUri, assets: &assets, assetURL: assetURL)
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
           throw BuildError.missingVideoTrack(assetURI: source.assetUri)
         }
         let (timeRange, preferredTransform) = try await track.load(.timeRange, .preferredTransform)
         media = SourceVideo(
-          asset: asset, track: track, timeRange: timeRange, preferredTransform: preferredTransform)
+          track: track, timeRange: timeRange, preferredTransform: preferredTransform)
         sources[source.assetUri] = media
       }
 
@@ -125,9 +126,11 @@ public enum VideoCompositionBuilder {
       lanesByTrack[timing.trackId] = lanes
     }
 
+    let mix = try await AudioCompositionBuilder.build(
+      plan, into: composition, assets: &assets, assetURL: assetURL)
     return VideoComposition(
       composition: composition, timelineDuration: time(plan.durationUs), clipsByLayerID: clips,
-      renderPlan: plan)
+      audioMix: mix, renderPlan: plan)
   }
 
   private static func insert(
@@ -150,33 +153,69 @@ public enum VideoCompositionBuilder {
       throw BuildError.sourceRangeOutsideTrack(layerID: timing.id)
     }
 
-    let availableUs = source.sourceEndUs - source.sourceStartUs
-    let passDurationUs = (Double(availableUs) / source.rate).rounded()
-    var cursorUs = timing.startUs
-    repeat {
-      try Task.checkCancellation()
-      let remainingUs = timing.endUs - cursorUs
-      let playedUs = boundedDuration(passDurationUs, limit: remainingUs)
-      let consumedUs =
-        passDurationUs <= Double(remainingUs)
-        ? availableUs : boundedDuration(Double(playedUs) * source.rate, limit: availableUs)
+    let cursorUs = try forEachSourceEdit(source, startUs: timing.startUs, endUs: timing.endUs) {
+      edit in
       let range = CMTimeRange(
-        start: insertStart, end: min(insertEnd, time(source.sourceStartUs + consumedUs)))
-      let destination = time(cursorUs)
-      try lane.insertTimeRange(range, of: media.track, at: destination)
-      let playedDuration = time(playedUs)
-      if range.duration != playedDuration {
-        lane.scaleTimeRange(
-          CMTimeRange(start: destination, duration: range.duration), toDuration: playedDuration)
-      }
-      cursorUs += playedUs
-    } while cursorUs < timing.endUs && source.afterEnd == .loop
+        start: insertStart, end: min(insertEnd, edit.source.end))
+      try insert(range, of: media.track, into: lane, at: edit.target)
+    }
 
     return VideoComposition.Clip(
       trackID: lane.trackID, preferredTransform: media.preferredTransform,
       playableTimeRange: CMTimeRange(start: time(timing.startUs), end: time(cursorUs)),
       holdTimeRange: cursorUs < timing.endUs
         ? CMTimeRange(start: time(cursorUs), end: time(timing.endUs)) : nil)
+  }
+
+  static func localAsset(
+    _ uri: String, assets: inout [String: AVURLAsset], assetURL: (String) throws -> URL
+  ) throws -> AVURLAsset {
+    if let asset = assets[uri] { return asset }
+    let url = try assetURL(uri)
+    guard url.isFileURL else { throw BuildError.nonFileURL(assetURI: uri) }
+    let asset = AVURLAsset(
+      url: url, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
+    assets[uri] = asset
+    return asset
+  }
+
+  static func valid(_ source: SourceTiming) -> Bool {
+    source.sourceStartUs >= 0 && source.sourceStartUs < source.sourceEndUs
+      && source.rate.isFinite && source.rate > 0
+  }
+
+  static func insert(
+    _ source: CMTimeRange, of track: AVAssetTrack, into lane: AVMutableCompositionTrack,
+    at target: CMTimeRange
+  ) throws {
+    try lane.insertTimeRange(source, of: track, at: target.start)
+    if source.duration != target.duration {
+      lane.scaleTimeRange(
+        CMTimeRange(start: target.start, duration: source.duration), toDuration: target.duration)
+    }
+  }
+
+  @discardableResult
+  static func forEachSourceEdit(
+    _ source: SourceTiming, startUs: Int64, endUs: Int64, _ insert: (CMTimeMapping) throws -> Void
+  ) throws -> Int64 {
+    let availableUs = source.sourceEndUs - source.sourceStartUs
+    let passDurationUs = (Double(availableUs) / source.rate).rounded()
+    var cursorUs = startUs
+    repeat {
+      try Task.checkCancellation()
+      let remainingUs = endUs - cursorUs
+      let playedUs = boundedDuration(passDurationUs, limit: remainingUs)
+      let consumedUs =
+        passDurationUs <= Double(remainingUs)
+        ? availableUs : boundedDuration(Double(playedUs) * source.rate, limit: availableUs)
+      try insert(
+        CMTimeMapping(
+          source: CMTimeRange(start: time(source.sourceStartUs), duration: time(consumedUs)),
+          target: CMTimeRange(start: time(cursorUs), duration: time(playedUs))))
+      cursorUs += playedUs
+    } while cursorUs < endUs && source.afterEnd == .loop
+    return cursorUs
   }
 
   static func time(_ us: Int64) -> CMTime {
