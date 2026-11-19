@@ -20,13 +20,15 @@ The `StackReelComposition` library uses that plan to build an `AVMutableComposit
 let result = try await VideoCompositionBuilder.build(plan) { assetURI in
   try localFileURL(for: assetURI)
 }
+let instructions = try result.makeVideoInstructions()
 ```
 
 `result.clipsByLayerID` maps each video layer to a composition track and carries the source rotation and
 playable time range. Overlapping clips have separate track IDs, and loop segments repeat at their resolved rate.
 Use `result.timelineDuration` for the full timeline, which may extend past the last video sample.
-The compositor uses `holdTimeRange` to draw the last frame during a freeze. Audio mixing, visual effects and
-overlays are separate engine steps.
+The instructions cover the full timeline and carry layers in draw order, active transitions, and the track
+IDs that supply source frames. Held inputs identify the clip whose last playable frame the compositor needs.
+The Metal compositor will consume these instructions to draw each frame.
 
 Run the Swift tests on macOS with Xcode 16 or newer:
 
