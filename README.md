@@ -316,10 +316,10 @@ This phase has no video code. It is pure, fully tested TypeScript.
 **Steps**
 
 1. **Write the spec first**
-   - [ ] `docs/template-format.md`: every field, its units, defaults, and an example
+   - [x] Write the [template format reference](docs/template-format.md), including field units, defaults, and an example
    - [x] Decide the [v1 feature set](docs/template-format.md#v1-feature-set)
-   - [ ] Write ADR 0002: _integer microseconds for all time values_
-   - [ ] Write ADR 0003: _normalized coordinates and anchor points_
+   - [x] Write [ADR 0002: integer microseconds for all time values](docs/adr/0002-integer-microseconds.md)
+   - [x] Write [ADR 0003: normalized coordinates and anchor points](docs/adr/0003-normalized-coordinates-and-anchors.md)
 2. **Implement `@stackreel/template-schema`**
    - [x] Zod schema for `Template`, `Slot`, `Track`, `Item` (`MediaItem`, `TextItem`, `StickerItem`), `Transition`, `Animation`, `Style`
    - [x] Strong types exported via `z.infer`
