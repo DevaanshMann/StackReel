@@ -30,19 +30,19 @@ public struct RenderPlan: Codable {
   }
 }
 
-public struct Canvas: Codable {
+public struct Canvas: Codable, Sendable {
   public let width: Int
   public let height: Int
   public let fps: Int
   public let background: String
 }
 
-public struct SourceTiming: Codable {
-  public enum AfterEnd: String, Codable {
+public struct SourceTiming: Codable, Sendable {
+  public enum AfterEnd: String, Codable, Sendable {
     case hold, loop
   }
 
-  public enum FitMode: String, Codable {
+  public enum FitMode: String, Codable, Sendable {
     case trim, freeze, slow, loop
   }
 
@@ -54,14 +54,14 @@ public struct SourceTiming: Codable {
   public let fitMode: FitMode
 }
 
-public struct Transition: Codable {
-  public enum Kind: String, Codable {
+public struct Transition: Codable, Sendable {
+  public enum Kind: String, Codable, Sendable {
     case crossfade, slide, spin
     case whipPan = "whip-pan"
     case zoomPunch = "zoom-punch"
   }
 
-  public enum Direction: String, Codable {
+  public enum Direction: String, Codable, Sendable {
     case left, right, up, down
   }
 

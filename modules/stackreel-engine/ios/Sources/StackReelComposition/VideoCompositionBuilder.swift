@@ -4,7 +4,7 @@ import StackReelPlan
 
 /// The video tracks and timing a compositor needs to look up frames by render-plan layer ID.
 public struct VideoComposition {
-  public struct Clip {
+  public struct Clip: Sendable {
     public let trackID: CMPersistentTrackID
     /// Rotation and translation from the source track, applied before the plan's media transform.
     public let preferredTransform: CGAffineTransform
@@ -17,6 +17,12 @@ public struct VideoComposition {
   /// Includes any time after the last video sample, such as a final overlay or held frame.
   public let timelineDuration: CMTime
   public let clipsByLayerID: [String: Clip]
+  fileprivate let renderPlan: RenderPlan
+
+  /// Builds the instructions for a custom compositor using the same plan as the source tracks.
+  public func makeVideoInstructions() throws -> [StackReelVideoInstruction] {
+    try StackReelVideoInstruction.schedule(renderPlan, clipsByLayerID: clipsByLayerID)
+  }
 }
 
 public enum VideoCompositionBuilder {
@@ -32,7 +38,7 @@ public enum VideoCompositionBuilder {
     case unableToAddVideoTrack
   }
 
-  private static let timescale: CMTimeScale = 1_000_000
+  static let timescale: CMTimeScale = 1_000_000
 
   private struct SourceVideo {
     // AVAssetTrack holds a weak reference to its asset.
@@ -120,7 +126,8 @@ public enum VideoCompositionBuilder {
     }
 
     return VideoComposition(
-      composition: composition, timelineDuration: time(plan.durationUs), clipsByLayerID: clips)
+      composition: composition, timelineDuration: time(plan.durationUs), clipsByLayerID: clips,
+      renderPlan: plan)
   }
 
   private static func insert(
@@ -172,7 +179,7 @@ public enum VideoCompositionBuilder {
         ? CMTimeRange(start: time(cursorUs), end: time(timing.endUs)) : nil)
   }
 
-  private static func time(_ us: Int64) -> CMTime {
+  static func time(_ us: Int64) -> CMTime {
     CMTime(value: us, timescale: timescale)
   }
 

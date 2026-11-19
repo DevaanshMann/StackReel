@@ -370,7 +370,8 @@ _Runs in parallel with Phase 3._
    - [x] Apply video playback rates via `scaleTimeRange`
    - [x] Preserve each clip's `preferredTransform` so the compositor can apply portrait rotation
 3. **Metal compositor**
-   - [ ] Implement `AVVideoCompositing` with a custom `AVVideoCompositionInstruction` carrying the layers active in each time range
+   - [x] Schedule custom AVFoundation video composition instructions with the layers and transitions active in each time range
+   - [ ] Implement `AVVideoCompositing` to render frames from those instructions
    - [ ] Metal pipeline: YUV → RGB conversion, per-layer transform (fit/crop/scale/rotate), opacity, blend
    - [ ] Transitions as Metal fragment shaders (crossfade, whip-pan blur, zoom-punch, slide, spin)
    - [ ] Pool `CVPixelBuffer`s and textures. Allocate nothing per frame.

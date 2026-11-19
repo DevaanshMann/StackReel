@@ -1,5 +1,5 @@
-public struct Layer: Codable {
-  public struct Timing: Codable {
+public struct Layer: Codable, Sendable {
+  public struct Timing: Codable, Sendable {
     public let id: String
     public let trackId: String
     public let itemIndex: Int
@@ -9,7 +9,7 @@ public struct Layer: Codable {
     public let opacity: Double
   }
 
-  public enum Content {
+  public enum Content: Sendable {
     case video(Media, Video)
     case image(Media, Image)
     case text(Text)
@@ -65,24 +65,24 @@ public struct Layer: Codable {
     }
   }
 
-  public struct Media: Codable {
-    public enum Fit: String, Codable {
+  public struct Media: Codable, Sendable {
+    public enum Fit: String, Codable, Sendable {
       case cover, contain, fill
     }
 
-    public struct Size: Codable {
+    public struct Size: Codable, Sendable {
       public let width: Double
       public let height: Double
     }
 
-    public struct Rect: Codable {
+    public struct Rect: Codable, Sendable {
       public let x: Double
       public let y: Double
       public let width: Double
       public let height: Double
     }
 
-    public struct Transform: Codable {
+    public struct Transform: Codable, Sendable {
       /// Row-major 3×3 matrix mapping source pixels to canvas pixels.
       public let elements: [Double]
 
@@ -111,31 +111,31 @@ public struct Layer: Codable {
     public let fadeOutUs: Int64
   }
 
-  public struct Video: Codable {
+  public struct Video: Codable, Sendable {
     public let source: SourceTiming
     public let gainDb: Double
   }
 
-  public struct Image: Codable {
+  public struct Image: Codable, Sendable {
     public let assetUri: String
   }
 
-  public struct Text: Codable {
+  public struct Text: Codable, Sendable {
     public let text: String
     public let style: TextStyle
     public let placement: Placement
     public let animation: Animation
   }
 
-  public struct Sticker: Codable {
+  public struct Sticker: Codable, Sendable {
     public let asset: String
     public let widthPx: Double
     public let placement: Placement
     public let animation: Animation
   }
 
-  public struct Placement: Codable {
-    public enum Anchor: String, Codable {
+  public struct Placement: Codable, Sendable {
+    public enum Anchor: String, Codable, Sendable {
       case top, left, center, right, bottom
       case topLeft = "top-left"
       case topRight = "top-right"
@@ -149,8 +149,8 @@ public struct Layer: Codable {
     public let rotationDeg: Double
   }
 
-  public struct Animation: Codable {
-    public enum Name: String, Codable {
+  public struct Animation: Codable, Sendable {
+    public enum Name: String, Codable, Sendable {
       case none, fade, pop, scale, typewriter, bounce
       case slideUp = "slide-up"
       case slideDown = "slide-down"
@@ -164,24 +164,24 @@ public struct Layer: Codable {
     public let outDurationUs: Int64
   }
 
-  public struct TextStyle: Codable {
-    public enum Alignment: String, Codable {
+  public struct TextStyle: Codable, Sendable {
+    public enum Alignment: String, Codable, Sendable {
       case left, center, right
     }
 
-    public struct Stroke: Codable {
+    public struct Stroke: Codable, Sendable {
       public let color: String
       public let widthPx: Double
     }
 
-    public struct Shadow: Codable {
+    public struct Shadow: Codable, Sendable {
       public let color: String
       public let blurPx: Double
       public let offsetXPx: Double
       public let offsetYPx: Double
     }
 
-    public struct Background: Codable {
+    public struct Background: Codable, Sendable {
       public let color: String
       public let paddingPx: Double
       public let cornerRadiusPx: Double
