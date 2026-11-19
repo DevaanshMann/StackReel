@@ -132,7 +132,12 @@ export const Transition = z
       default: TEMPLATE_DEFAULTS.transition.direction,
     }),
   })
-  .meta({ id: "Transition", description: "Plays across the cut at the start of the item that owns it." });
+  .meta({
+    id: "Transition",
+    description:
+      "Starts at the incoming item's cut and runs inside that item. See the transition alignment rules at " +
+      "https://github.com/DevaanshMann/StackReel/blob/main/docs/template-format.md#transitions",
+  });
 
 export const AnimationName = z
   .enum(["none", "fade", "pop", "slide-up", "slide-down", "slide-left", "slide-right", "scale", "typewriter", "bounce"])

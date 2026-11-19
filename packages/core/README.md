@@ -247,6 +247,8 @@ on a frame.
 A transition plays across a cut on one video track. Its window starts at the cut, `[startUs, endUs)`, and lies inside
 the incoming layer (the schema keeps a transition no longer than its item). The outgoing layer is **extended** to
 `endUs`, and plays its source on through the window, so both are on screen during it.
+See the [template format's transition rules](../../docs/template-format.md#transitions) for the timeline diagram and
+worked examples of trims and playback speed.
 
 ```ts
 { id, trackId, z, type, direction?, startUs, endUs, fromLayerId: string | null, toLayerId }

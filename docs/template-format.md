@@ -114,10 +114,43 @@ Video and audio tracks share the same item shape. Core uses `fit` and `transitio
 | `durationUs` | Window length in µs, at most the incoming item's length.          | Required                           |
 | `direction`  | `left`, `right`, `up`, or `down`. Used by `slide` and `whip-pan`. | `left` for directional transitions |
 
-The transition starts at the incoming item's cut and runs inside that item. Core extends the adjacent outgoing
-layer on the same track to the end of the window and fits its source to the extended interval. For a missing or unplayable
-predecessor, the plan uses `fromLayerId: null` and the incoming layer transitions from the background. A `cut`
-or a window whose boundaries snap to the same frame produces no transition entry.
+The incoming item owns `transitionIn`. Its cut is its authored `startUs`, and the authored transition window is
+`[cut, cut + transitionIn.durationUs)`. Core snaps both boundaries to the output frame grid and caps the window at
+the incoming layer's end. An adjacent outgoing layer on the same video track extends through the window. The
+incoming layer starts at the snapped cut, and the outgoing layer is present up to the window's exclusive end.
+
+For example, at 30 fps a cut at `2000000` µs with a `400000` µs crossfade produces `[2000000, 2400000)`.
+Clips A and B touch in the template. They overlap for 400 ms in the render plan.
+
+```text
+time (s)    0                   2   2.4             4
+            |                   |   |               |
+A authored  [-------------------)
+B                               [-------------------)
+A resolved  [-----------------------)
+transition                      [---)
+```
+
+Core omits the transition entry when `transitionIn` is absent, its type is `cut`, or its window has zero length
+after snapping. If the incoming layer can't be resolved, core omits its transition entry too.
+
+**Transition from background.** The plan uses `fromLayerId: null` when the incoming layer has no playable
+predecessor that ends at its snapped cut. This can happen for the first clip on a track, after a gap, or when the
+previous slot is empty or has an unplayable trim. The incoming layer transitions from the background over the same window.
+
+**Source trims and speed.** Core fits the outgoing source to its full extended timeline interval using its trim
+and playback rate. The incoming source is fitted independently and starts playing at the snapped cut. In the diagram,
+if A has `speed: 2` and a source trim of `[1000000, 6000000)` µs, core needs 4.8 seconds of source for A's
+2.4-second resolved length. With the default trim picker, A reaches source time `5000000` µs at the cut and
+continues through the transition up to `5800000` µs, exclusive.
+
+If A's trim ends at `5200000` µs instead, the slot's short-clip policy determines the result:
+
+| Policy   | Playback in the example                                                                                                                                                                                               |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `freeze` | A plays at 2× until timeline time `2100000` µs, then holds the last available frame for the remaining 300 ms.                                                                                                         |
+| `loop`   | A plays at 2× and wraps to source time `1000000` µs at timeline time `2100000` µs.                                                                                                                                    |
+| `slow`   | A plays the 4.2 seconds of available source over its full 2.4-second interval at 1.75×, assuming `minSpeed` is at most 1.75. A higher `minSpeed` sets the rate and leaves the last frame held for any remaining time. |
 
 ### Text items
 

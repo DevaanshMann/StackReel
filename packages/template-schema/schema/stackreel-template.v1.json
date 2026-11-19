@@ -254,7 +254,7 @@
       },
       "required": ["type", "durationUs"],
       "additionalProperties": false,
-      "description": "Plays across the cut at the start of the item that owns it."
+      "description": "Starts at the incoming item's cut and runs inside that item. See the transition alignment rules at https://github.com/DevaanshMann/StackReel/blob/main/docs/template-format.md#transitions"
     },
     "TransitionType": { "type": "string", "enum": ["cut", "crossfade", "whip-pan", "zoom-punch", "slide", "spin"] },
     "Direction": { "type": "string", "enum": ["left", "right", "up", "down"] },
