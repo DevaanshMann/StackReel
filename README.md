@@ -366,7 +366,7 @@ _Runs in parallel with Phase 3._
    - [x] Decode RenderPlan v1 in Swift and test the shared plans in macOS CI
 2. **Composition builder**
    - [x] Map the render plan to `AVMutableComposition`: insert trimmed video on separate A/B tracks when transitions overlap
-   - [ ] Audio: `AVMutableAudioMix` with volume ramps for fades and ducking
+   - [x] Audio: `AVMutableAudioMix` with clip and music gain, fades, and ducking
    - [x] Apply video playback rates via `scaleTimeRange`
    - [x] Preserve each clip's `preferredTransform` so the compositor can apply portrait rotation
 3. **Metal compositor**

@@ -178,6 +178,66 @@ final class VideoCompositionBuilderTests: XCTestCase {
   }
 
   @MainActor
+  func testEmbeddedAudioAndTrailingMusicPreserveVideoOutput() async throws {
+    let video = try await makeMovie { _, _ in (255, 0, 0) }
+    let tone = try makeTestTone(frequency: 440)
+    let source = AVMutableComposition()
+    let videoAsset = AVURLAsset(url: video)
+    let toneAsset = AVURLAsset(url: tone)
+    let videoTrack = try XCTUnwrap(videoAsset.tracks(withMediaType: .video).first)
+    let toneTrack = try XCTUnwrap(toneAsset.tracks(withMediaType: .audio).first)
+    let picture = try XCTUnwrap(
+      source.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid))
+    let sound = try XCTUnwrap(
+      source.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid))
+    try picture.insertTimeRange(range(0, 1_500_000), of: videoTrack, at: .zero)
+    try sound.insertTimeRange(range(0, 700_000), of: toneTrack, at: time(300_000))
+    let embedded = video.deletingLastPathComponent().appendingPathComponent("with-audio.mov")
+    let export = try XCTUnwrap(
+      AVAssetExportSession(asset: source, presetName: AVAssetExportPresetPassthrough))
+    export.outputURL = embedded
+    export.outputFileType = .mov
+    await withCheckedContinuation { continuation in
+      export.exportAsynchronously { continuation.resume() }
+    }
+    XCTAssertEqual(export.status, .completed, String(describing: export.error))
+
+    let embeddedURI = "fixture://embedded.mov"
+    let silentURI = "fixture://silence.mov"
+    let plan = try decodePlan(
+      duration: 2_500_000,
+      layers: [
+        clip(
+          0, start: 0, end: 1_500_000, sourceStart: 0, sourceEnd: 1_500_000, assetURI: embeddedURI),
+        clip(
+          1, start: 1_500_000, end: 1_800_000, sourceStart: 0, sourceEnd: 300_000,
+          assetURI: silentURI),
+      ],
+      audio: [
+        audioEntry(embeddedURI, start: 0, end: 1_500_000, sourceEnd: 1_500_000, kind: "video"),
+        audioEntry(silentURI, start: 1_500_000, end: 1_800_000, sourceEnd: 300_000, kind: "video"),
+        audioEntry("music", start: 200_000, end: 2_300_000, sourceEnd: 2_100_000, kind: "music"),
+      ])
+    let assets = [embeddedURI: embedded, silentURI: video, "music": tone]
+    var resolved: [String] = []
+    let result = try await VideoCompositionBuilder.build(plan) { uri in
+      resolved.append(uri)
+      return try XCTUnwrap(assets[uri])
+    }
+    XCTAssertEqual(resolved, [embeddedURI, silentURI, "music"])
+    let render = try result.makeRenderComposition()
+    let tracks = render.asset.tracks(withMediaType: .audio)
+    XCTAssertEqual(tracks.count, 2)
+    XCTAssertEqual(result.audioMix?.inputParameters.map(\.trackID), tracks.map(\.trackID).sorted())
+    XCTAssertEqual(tracks.first?.segments.last?.timeMapping.target.end, time(1_000_000))
+    XCTAssertEqual(render.asset.duration, time(2_500_000))
+    let frames = try readFrames(render, at: [10, 60, 74])
+    assertPixel(try pixel(frames[10]), near: [245, 0, 0])
+    XCTAssertEqual(try pixel(frames[60]), [0, 0, 0])
+    XCTAssertEqual(try pixel(frames[74]), [0, 0, 0])
+  }
+
+  @MainActor
   func testRendersCrossfadesAndTrailingBackgroundThroughAVFoundation() async throws {
     let red = try await makeMovie { _, _ in (255, 0, 0) }
     let blue = try await makeMovie { _, _ in (0, 0, 255) }
@@ -433,12 +493,12 @@ final class VideoCompositionBuilderTests: XCTestCase {
 
   private func decodePlan(
     duration: Int64, layers: [[String: Any]], transitions: [[String: Any]] = [],
-    background: String = "#000000"
+    background: String = "#000000", audio: [[String: Any]] = []
   ) throws -> RenderPlan {
     let json: [String: Any] = [
       "renderPlanVersion": 1, "templateId": "composition-test", "durationUs": duration,
       "canvas": ["width": 32, "height": 48, "fps": 30, "background": background],
-      "layers": layers, "transitions": transitions, "audio": [], "warnings": [],
+      "layers": layers, "transitions": transitions, "audio": audio, "warnings": [],
     ]
     return try JSONDecoder().decode(
       RenderPlan.self, from: JSONSerialization.data(withJSONObject: json))

@@ -14,7 +14,7 @@ Both engines take the same **render plan** (from `@stackreel/core`) and must pas
 The Swift package in [`ios/`](ios/) exposes `StackReelPlan`. The
 [RenderPlan v1 contract](../../packages/core/README.md#renderplan-format-v1) defines the JSON fields.
 Use `JSONDecoder().decode(RenderPlan.self, from: data)` to load a plan.
-The `StackReelComposition` library uses that plan to build an `AVMutableComposition` from local video files:
+The `StackReelComposition` library uses that plan to build an `AVMutableComposition` from local media files:
 
 ```swift
 let result = try await VideoCompositionBuilder.build(plan) { assetURI in
@@ -35,6 +35,7 @@ For a video plan with cuts, crossfades, and slides, create the paired asset and 
 let render = try result.makeRenderComposition()
 let item = AVPlayerItem(asset: render.asset)
 item.videoComposition = render.videoComposition
+item.audioMix = result.audioMix
 ```
 
 The custom compositor uses Metal-backed Core Image when available. It applies source orientation, the plan's
@@ -43,7 +44,11 @@ Slides move both clips together by one canvas width or height over the transitio
 defaults to left. A slide from the background moves only the incoming clip, and other tracks stay in place.
 See [sampled frames for all four directions](../../docs/ios-slide.png).
 Still images, text, stickers, held frames, whip-pans, zoom punches, and spins return an unsupported-feature error.
-Audio mixing is a separate engine step.
+
+`result.audioMix` applies the plan's gain, fades, and music ducking to embedded clip sound, standalone audio,
+and music. Audio uses the resolved trims, playback rates, and loops. A video without an audio track and
+the unused tail of a held audio entry contribute silence. To read mixed samples, pass the render asset's
+audio tracks and the same mix to `AVAssetReaderAudioMixOutput`.
 
 Run the Swift tests on macOS with Xcode 16 or newer:
 
