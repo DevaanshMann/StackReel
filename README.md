@@ -365,10 +365,10 @@ _Runs in parallel with Phase 3._
    - [ ] Generate Swift `Codable` types from `stackreel-template.v1.json` (quicktype) and check them in CI
    - [x] Decode RenderPlan v1 in Swift and test the shared plans in macOS CI
 2. **Composition builder**
-   - [ ] Map the render plan to `AVMutableComposition`: insert each clip's source range on alternating A/B video tracks so transitions can overlap
+   - [x] Map the render plan to `AVMutableComposition`: insert trimmed video on separate A/B tracks when transitions overlap
    - [ ] Audio: `AVMutableAudioMix` with volume ramps for fades and ducking
-   - [ ] Speed changes via `scaleTimeRange`
-   - [ ] Handle rotation and `preferredTransform` for portrait iPhone footage (a common bug source)
+   - [x] Apply video playback rates via `scaleTimeRange`
+   - [x] Preserve each clip's `preferredTransform` so the compositor can apply portrait rotation
 3. **Metal compositor**
    - [ ] Implement `AVVideoCompositing` with a custom `AVVideoCompositionInstruction` carrying the layers active in each time range
    - [ ] Metal pipeline: YUV → RGB conversion, per-layer transform (fit/crop/scale/rotate), opacity, blend
