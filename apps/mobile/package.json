@@ -1,0 +1,38 @@
+{
+  "name": "@stackreel/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "build:shared": "pnpm -w exec turbo run build --filter='@stackreel/mobile^...'",
+    "dev": "pnpm start",
+    "start": "pnpm build:shared && expo start --dev-client",
+    "ios": "pnpm build:shared && expo run:ios",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~58.0.17",
+    "@react-native-community/slider": "5.2.1",
+    "@stackreel/core": "workspace:*",
+    "@stackreel/engine": "workspace:*",
+    "@stackreel/ui": "workspace:*",
+    "expo": "58.0.26",
+    "expo-crypto": "~58.0.8",
+    "expo-dev-client": "~58.0.21",
+    "expo-document-picker": "~58.0.5",
+    "expo-file-system": "~58.0.14",
+    "expo-sharing": "~58.0.23",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-web": "~0.21.4"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}
