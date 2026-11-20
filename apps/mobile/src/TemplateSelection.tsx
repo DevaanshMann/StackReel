@@ -159,10 +159,14 @@ export function TemplateVideoSlots({
   importingSlotId,
   importingFrom,
   importError,
+  swapError,
   onSelect,
   onSelectOrdered,
   onTrim,
   onReframe,
+  onChooseSwap,
+  onSwap,
+  onCancelSwap,
 }: {
   slots: readonly TemplateVideoSlot[];
   clips: Readonly<Record<string, TemplateClip>>;
@@ -171,18 +175,46 @@ export function TemplateVideoSlots({
   importingSlotId: string | undefined;
   importingFrom: VideoPickerSource | undefined;
   importError: { slotId?: string; message: string } | null;
+  swapError: string | undefined;
   onSelect: (slot: TemplateVideoSlot, source: VideoPickerSource) => void;
   onSelectOrdered: (slots: TemplateVideoSlot[]) => void;
   onTrim: (slot: TemplateVideoSlot) => void;
   onReframe: (slot: TemplateVideoSlot) => void;
+  onChooseSwap: () => void;
+  onSwap: (first: TemplateVideoSlot, second: TemplateVideoSlot) => void;
+  onCancelSwap: (() => void) | undefined;
 }) {
   const emptySlots = getEmptyVideoSlots(slots, clips, missingSlots);
   const nextSlot = slots.find((slot) => !clips[slot.id]);
+  const filledSlots = slots.filter(({ id }) => Object.hasOwn(clips, id));
+  const swapPairs = filledSlots.flatMap((first, index) =>
+    filledSlots.slice(index + 1).map((second) => ({ first, second })),
+  );
+  const choosingSwap = onCancelSwap !== undefined;
+  const visibleSwapPairs = choosingSwap || swapPairs.length === 1 ? swapPairs : [];
   return (
     <View style={styles.list}>
       <Text accessibilityRole="header" style={styles.cardTitle}>
         Required videos
       </Text>
+      {swapPairs.length > 1 && !choosingSwap && (
+        <Action label="Swap clips" testID="swap-video-slots" onPress={onChooseSwap} disabled={busy} />
+      )}
+      {visibleSwapPairs.map(({ first, second }) => (
+        <Action
+          key={`${first.id}-${second.id}`}
+          label={`Swap ${first.label} and ${second.label}`}
+          testID={`swap-${first.id}-${second.id}`}
+          onPress={() => onSwap(first, second)}
+          disabled={busy && !choosingSwap}
+        />
+      ))}
+      {choosingSwap && <Action label="Cancel" testID="cancel-swap" onPress={onCancelSwap} />}
+      {swapError && (
+        <Text accessibilityRole="alert" style={textStyles.error}>
+          {swapError}
+        </Text>
+      )}
       {emptySlots.length >= 2 && (
         <View style={[styles.panel, styles.slot]}>
           <Text style={textStyles.body}>

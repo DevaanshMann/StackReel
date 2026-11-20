@@ -19,6 +19,7 @@ import {
   setTemplateClipReframe,
   setTemplateClipTrim,
   setTemplateText,
+  swapTemplateClips,
 } from "../src/template-editor";
 
 import type { TemplateClip } from "../src/template-editor";
@@ -169,6 +170,67 @@ describe("template draft storage", () => {
     expect(restored.missingMusic).toBe(false);
     const updated = createTemplateSource(beforeAfter, restored.clips, restored.textOverrides, restored.music);
     expect(updated?.replaceAll(newRoot, oldRoot)).toBe(original);
+  });
+
+  it("reopens swapped media references in a partial draft and keeps its recoverable media settings", () => {
+    const slots = getVideoSlots(hook);
+    const [hookShot, bRoll, reveal] = slots;
+    const files = slots.map(({ id }) => createDraftMediaFile(hook, `${id}.mov`));
+    const clips = Object.fromEntries(
+      slots.map((slot, index) => {
+        const file = files[index]!;
+        file.writeSync(slot.id);
+        return [slot.id, createTemplateClip(slot, file.uri, `${slot.id}.mov`, metadata)];
+      }),
+    );
+    const framedHook = setTemplateClipReframe(setTemplateClipTrim(hookShot!, clips[hookShot!.id]!, 30), hook.canvas, {
+      zoom: 2,
+      x: 1,
+      y: 0.5,
+    });
+    clips[hookShot!.id] = framedHook;
+    const musicFile = createDraftMediaFile(hook, "Track.m4a");
+    musicFile.writeSync("soundtrack");
+    const music = createTemplateMusic(musicFile.uri, "Track.m4a", { startUs: 0, durationUs: 2_000_000 });
+    const edits = { name: "Weekend cut", clips, textOverrides: { "text/0": "Watch this" }, music };
+    saveTemplateDraft(hook, edits);
+
+    const bRollFile = files[1]!;
+    bRollFile.delete();
+    musicFile.delete();
+    const draft = loadTemplateDraft(hook)!;
+    expect(draft).toMatchObject({ missingSlots: [bRoll!.id], missingMusic: true });
+    const swapped = { ...draft, clips: swapTemplateClips(draft.clips, hookShot!, reveal!) };
+    expect(createTemplateSource(hook, swapped.clips)).toBeNull();
+    saveTemplateDraft(hook, swapped);
+
+    const folder = `${storage.document}/StackReelDrafts/${hook.id}`;
+    expect([...storage.files.keys()].sort()).toEqual([files[0]!.uri, files[2]!.uri, `${folder}/draft-2.json`].sort());
+    expect(files[0]!.textSync()).toBe(hookShot!.id);
+    expect(files[2]!.textSync()).toBe(reveal!.id);
+    expect(loadTemplateDraft(hook)).toEqual(swapped);
+
+    bRollFile.writeSync(bRoll!.id);
+    musicFile.writeSync("soundtrack");
+    const reopened = loadTemplateDraft(hook)!;
+    expect(reopened).toEqual({
+      ...edits,
+      clips: {
+        [hookShot!.id]: { ...clips[reveal!.id], trimOutUs: hookShot!.minDurationUs },
+        [bRoll!.id]: clips[bRoll!.id],
+        [reveal!.id]: { ...framedHook, trimOutUs: 5_000_000 },
+      },
+      missingSlots: [],
+      missingMusic: false,
+    });
+    expect(
+      JSON.parse(createTemplateSource(hook, reopened.clips, reopened.textOverrides, reopened.music)!).assets,
+    ).toEqual({
+      [`slot:${hookShot!.id}`]: files[2]!.uri,
+      [`slot:${bRoll!.id}`]: bRollFile.uri,
+      [`slot:${reveal!.id}`]: files[0]!.uri,
+      "slot:music": musicFile.uri,
+    });
   });
 
   it("keeps drafts independent and prunes media only after committing a change", () => {

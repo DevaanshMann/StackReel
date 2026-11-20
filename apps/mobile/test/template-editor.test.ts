@@ -16,6 +16,7 @@ import {
   setTemplateClipReframe,
   setTemplateClipTrim,
   setTemplateText,
+  swapTemplateClips,
 } from "../src/template-editor";
 import type { MobileTemplate, TemplateClip, TemplateTextOverrides } from "../src/template-editor";
 
@@ -57,6 +58,91 @@ describe("mobile template catalog", () => {
       { id: "clip2", label: "B-roll", minDurationUs: 2_200_000 },
       { id: "clip3", label: "The reveal", minDurationUs: 4_000_000 },
     ]);
+  });
+});
+
+describe("template clip swapping", () => {
+  it("resizes windows on the source frame grid and backs up only the clip that would overrun", () => {
+    const [beforeSlot, afterSlot] = getVideoSlots(beforeAfter);
+    const landscape = createTemplateClip(beforeSlot!, "file:///first.mov", "first.mov", {
+      width: 1920,
+      height: 1080,
+      startUs: 33_334,
+      durationUs: 5_333_334,
+    });
+    const portrait = createTemplateClip(afterSlot!, "file:///second.mov", "second.mov", {
+      ...videoSize,
+      startUs: 0,
+      durationUs: 7_000_000,
+    });
+    const before = setTemplateClipReframe(setTemplateClipTrim(beforeSlot!, landscape, 37), beforeAfter.canvas, {
+      zoom: 2,
+      x: 0.7,
+      y: 0.25,
+    });
+    const after = setTemplateClipTrim(afterSlot!, portrait, 31);
+    const swapped = swapTemplateClips({ before, after }, beforeSlot!, afterSlot!);
+
+    expect(swapped).toEqual({
+      before: { ...after, trimInUs: after.trimInUs, trimOutUs: 4_833_333 },
+      after: { ...before, trimInUs: 866_667, trimOutUs: 5_366_667 },
+    });
+    expect(getTemplateTrimWindow(beforeSlot!, swapped.before!)).toMatchObject({ startFrame: 31, durationFrames: 114 });
+    expect(getTemplateTrimWindow(afterSlot!, swapped.after!)).toMatchObject({
+      startFrame: 26,
+      lastStartFrame: 26,
+      durationFrames: 135,
+    });
+
+    const { assets, plan } = parseSource(createTemplateSource(beforeAfter, swapped));
+    expect(assets).toEqual({ "slot:before": after.uri, "slot:after": before.uri });
+    expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
+  it.each([
+    [0, 1],
+    [0, 2],
+    [1, 2],
+  ])(
+    "swaps Hook & Reveal slots %i and %i while preserving both starts and the third clip",
+    (firstIndex, secondIndex) => {
+      const slots = getVideoSlots(hookAndReveal);
+      const first = slots[firstIndex]!;
+      const second = slots[secondIndex]!;
+      const third = slots.find((slot) => slot !== first && slot !== second)!;
+      const clips = Object.fromEntries(
+        slots.map((slot, index) => {
+          const clip = createTemplateClip(slot, `file:///${slot.id}.mov`, `${slot.id}.mov`, {
+            ...videoSize,
+            startUs: 50_000,
+            durationUs: 7_000_000,
+          });
+          return [slot.id, setTemplateClipTrim(slot, clip, 31 + index)];
+        }),
+      );
+
+      const swapped = swapTemplateClips(clips, first, second);
+      expect(swapped[third.id]).toBe(clips[third.id]);
+      expect(swapped[first.id]).toMatchObject({ uri: clips[second.id]!.uri, trimInUs: clips[second.id]!.trimInUs });
+      expect(swapped[second.id]).toMatchObject({ uri: clips[first.id]!.uri, trimInUs: clips[first.id]!.trimInUs });
+      expect(checkPlanInvariants(parseSource(createTemplateSource(hookAndReveal, swapped)).plan)).toEqual([]);
+    },
+  );
+
+  it.each([
+    { startUs: 0, durationUs: 3_800_000 },
+    { startUs: 33_334, durationUs: 4_500_000 },
+  ])("rejects an incompatible swap in either order without changing the clips (%o)", (timing) => {
+    const [beforeSlot, afterSlot] = getVideoSlots(beforeAfter);
+    const before = createTemplateClip(beforeSlot!, "file:///short.mov", "short.mov", { ...videoSize, ...timing });
+    const after = fillSlots(beforeAfter).after!;
+    const clips = Object.freeze({ before: Object.freeze(before), after: Object.freeze(after) });
+    const original = createTemplateSource(beforeAfter, clips);
+
+    expect(() => swapTemplateClips(clips, beforeSlot!, afterSlot!)).toThrow('"After" needs at least 4.50 seconds');
+    expect(() => swapTemplateClips(clips, afterSlot!, beforeSlot!)).toThrow('"After" needs at least 4.50 seconds');
+    expect(clips).toEqual({ before, after });
+    expect(createTemplateSource(beforeAfter, clips)).toBe(original);
   });
 });
 
