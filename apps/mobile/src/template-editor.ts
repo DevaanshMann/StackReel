@@ -10,6 +10,8 @@ export type TemplateVideoSlot = { id: string; label: string; minDurationUs: numb
 export type TemplateClip = {
   uri: string;
   name: string;
+  readonly sourceStartUs: number;
+  readonly sourceEndUs: number;
   trimInUs: number;
   trimOutUs: number;
   width: number;
@@ -17,6 +19,7 @@ export type TemplateClip = {
 };
 
 const fps = 30;
+const invalidVideo = "This video has invalid dimensions or timing.";
 
 function iosTransition(transition: Transition | undefined): Transition | undefined {
   if (transition?.type === "whip-pan") return { type: "crossfade", durationUs: transition.durationUs };
@@ -82,24 +85,70 @@ export function getVideoSlots(template: MobileTemplate): TemplateVideoSlot[] {
     });
 }
 
-function validateClip(slot: TemplateVideoSlot, clip: TemplateClip): void {
-  const { uri, width, height, trimInUs, trimOutUs } = clip;
+function shortClipError(slot: TemplateVideoSlot): Error {
+  return new Error(
+    `"${slot.label}" needs at least ${(slot.minDurationUs / US_PER_SECOND).toFixed(2)} seconds of playable video.`,
+  );
+}
+
+function getTrimBounds(
+  slot: TemplateVideoSlot,
+  { uri, width, height, sourceStartUs, sourceEndUs }: Omit<TemplateClip, "trimInUs" | "trimOutUs">,
+) {
+  // A video track can begin before the asset timeline. Keep the probe value, but trim from zero or later.
+  const playableStartUs = Math.max(0, sourceStartUs);
   if (
     !uri ||
     !(width >= 1 && width <= Number.MAX_SAFE_INTEGER && height >= 1 && height <= Number.MAX_SAFE_INTEGER) ||
-    checkTrim(trimInUs, trimOutUs)
+    !Number.isSafeInteger(sourceStartUs) ||
+    checkTrim(playableStartUs, sourceEndUs)
   ) {
-    throw new Error("This video has invalid dimensions or timing.");
+    throw new Error(invalidVideo);
   }
 
-  const firstFrame = usToFrame(trimInUs, fps, "ceil");
-  const endFrame = usToFrame(trimOutUs, fps, "floor");
-  const requiredFrames = Math.max(1, usToFrame(slot.minDurationUs, fps, "ceil"));
-  if (endFrame - firstFrame < requiredFrames) {
-    throw new Error(
-      `"${slot.label}" needs at least ${(slot.minDurationUs / US_PER_SECOND).toFixed(2)} seconds of playable video.`,
-    );
+  const firstFrame = usToFrame(playableStartUs, fps, "ceil");
+  const sourceEndFrame = usToFrame(sourceEndUs, fps, "floor");
+  const durationFrames = Math.max(1, usToFrame(slot.minDurationUs, fps, "ceil"));
+  const lastStartFrame = sourceEndFrame - durationFrames;
+  if (lastStartFrame < firstFrame) throw shortClipError(slot);
+  return { firstFrame, lastStartFrame, sourceEndFrame, durationFrames };
+}
+
+/** Absolute positions on the 30 fps source grid. The source and selected ends are exclusive. */
+export function getTemplateTrimWindow(
+  slot: TemplateVideoSlot,
+  clip: TemplateClip,
+): { firstFrame: number; lastStartFrame: number; sourceEndFrame: number; startFrame: number; durationFrames: number } {
+  const bounds = getTrimBounds(slot, clip);
+  const { trimInUs, trimOutUs } = clip;
+  if (checkTrim(trimInUs, trimOutUs) || trimInUs < clip.sourceStartUs || trimOutUs > clip.sourceEndUs) {
+    throw new Error(invalidVideo);
   }
+
+  const startFrame = usToFrame(trimInUs, fps, "ceil");
+  const endFrame = usToFrame(trimOutUs, fps, "floor");
+  if (endFrame - startFrame < bounds.durationFrames) throw shortClipError(slot);
+  if (
+    endFrame - startFrame !== bounds.durationFrames ||
+    trimInUs !== frameToUs(startFrame, fps) ||
+    trimOutUs !== frameToUs(endFrame, fps)
+  ) {
+    throw new Error(invalidVideo);
+  }
+  return { ...bounds, startFrame };
+}
+
+export function setTemplateClipTrim(slot: TemplateVideoSlot, clip: TemplateClip, startFrame: number): TemplateClip {
+  const window = getTemplateTrimWindow(slot, clip);
+  if (!Number.isInteger(startFrame) || startFrame < window.firstFrame || startFrame > window.lastStartFrame) {
+    throw new RangeError(`Trim start must be a whole frame from ${window.firstFrame} to ${window.lastStartFrame}.`);
+  }
+  if (startFrame === window.startFrame) return clip;
+  return {
+    ...clip,
+    trimInUs: frameToUs(startFrame, fps),
+    trimOutUs: frameToUs(startFrame + window.durationFrames, fps),
+  };
 }
 
 export function createTemplateClip(
@@ -109,11 +158,11 @@ export function createTemplateClip(
   { width, height, startUs, durationUs }: { width: number; height: number; startUs: number; durationUs: number },
 ): TemplateClip {
   if (!Number.isSafeInteger(startUs) || !Number.isSafeInteger(durationUs) || durationUs <= 0) {
-    throw new Error("This video has invalid dimensions or timing.");
+    throw new Error(invalidVideo);
   }
-  const clip = { uri, name, trimInUs: Math.max(0, startUs), trimOutUs: startUs + durationUs, width, height };
-  validateClip(slot, clip);
-  return clip;
+  const source = { uri, name, sourceStartUs: startUs, sourceEndUs: startUs + durationUs, width, height };
+  const { firstFrame, durationFrames } = getTrimBounds(slot, source);
+  return { ...source, trimInUs: frameToUs(firstFrame, fps), trimOutUs: frameToUs(firstFrame + durationFrames, fps) };
 }
 
 function alignSourceRate<T extends VideoLayer | AudioEntry>(entry: T): T {
@@ -137,18 +186,20 @@ export function createTemplateSource(
   for (const slot of getVideoSlots(template)) {
     const clip = clipFor(slot.id);
     if (!clip) continue;
-    validateClip(slot, clip);
+    getTemplateTrimWindow(slot, clip);
     const assetUri = `slot:${slot.id}`;
     project.bindings[slot.id] = { assetUri, trimInUs: clip.trimInUs, trimOutUs: clip.trimOutUs };
     assets[assetUri] = clip.uri;
     assetInfo[assetUri] = { width: clip.width, height: clip.height };
   }
 
-  const plan = resolve(project, { assets: assetInfo });
-  // Clip validation counts whole frames. The resolver compares durations in microseconds and
-  // can report a one-microsecond shortfall even when the clip has every required frame.
+  // Clip validation rejects short media in frames. Check the resolver for genuine frame shortfalls
+  // too, since its microsecond calculation can differ slightly with frame position and speed.
+  const plan = resolve(project, { assets: assetInfo, shortClipPolicy: "freeze" });
   const issue = plan.warnings.find(
-    (warning) => warning.type !== "clip-too-short" || warning.neededUs - warning.availableUs !== 1,
+    (warning) =>
+      warning.type !== "clip-too-short" ||
+      usToFrame(warning.neededUs, fps, "round") !== usToFrame(warning.availableUs, fps, "round"),
   );
   if (issue) throw new Error(issue.message);
   plan.warnings = [];
