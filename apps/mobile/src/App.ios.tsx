@@ -10,20 +10,23 @@ import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { TemplateReframe } from "./TemplateReframe";
 import { TemplateGallery, TemplateVideoSlots } from "./TemplateSelection";
+import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
 import {
   createTemplateClip,
   createTemplateSource,
+  getTemplateTextFields,
   setTemplateClipReframe,
   setTemplateClipTrim,
 } from "./template-editor";
-import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
+import type { MobileTemplate, TemplateClip, TemplateTextOverrides, TemplateVideoSlot } from "./template-editor";
 
 type Clip = { name: string; uri: string; source: string };
 type SingleDraft = { clip: Clip | null; outputUri: string | null };
 type TemplateDraft = {
   clips: Readonly<Record<string, TemplateClip>>;
+  textOverrides: TemplateTextOverrides;
   source: string | null;
   outputUri: string | null;
 };
@@ -31,12 +34,13 @@ type Editor = { kind: "single" } | { kind: "template"; template: MobileTemplate;
 type ImportTarget = { kind: "single" } | { kind: "template"; template: MobileTemplate; slot: TemplateVideoSlot };
 type ImportOperation = { kind: "import"; slotId?: string };
 type SlotEdit = { kind: "trim" | "reframe"; template: MobileTemplate; slot: TemplateVideoSlot; clip: TemplateClip };
+type TextEdit = { kind: "text"; template: MobileTemplate; textOverrides: TemplateTextOverrides };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
-type Operation = ImportOperation | SlotEdit | { kind: "share" } | ExportJob;
+type Operation = ImportOperation | SlotEdit | TextEdit | { kind: "share" } | ExportJob;
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
 type Feedback = { kind: "error" | "status"; message: string; slotId?: string };
 
-const emptyTemplateDraft: TemplateDraft = { clips: {}, source: null, outputUri: null };
+const emptyTemplateDraft: TemplateDraft = { clips: {}, textOverrides: {}, source: null, outputUri: null };
 
 export default function App() {
   const activeOperation = useRef<Operation | null>(null);
@@ -47,6 +51,7 @@ export default function App() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   const template = editor?.kind === "template" ? editor.template : null;
+  const textFields = template ? getTemplateTextFields(template) : [];
   const templateDraft = template ? (templateDrafts[template.id] ?? emptyTemplateDraft) : emptyTemplateDraft;
   const source = template ? templateDraft.source : (singleDraft.clip?.source ?? null);
   const outputUri = template ? templateDraft.outputUri : singleDraft.outputUri;
@@ -92,6 +97,13 @@ export default function App() {
     setEditor(next);
   }
 
+  function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft) {
+    // Resolve before committing so a failed edit leaves the draft and export intact.
+    const source = createTemplateSource(template, draft.clips, draft.textOverrides);
+    setTemplateDrafts((drafts) => ({ ...drafts, [template.id]: { ...draft, source, outputUri: null } }));
+    removeCachedFile(draft.outputUri);
+  }
+
   function openSlotEdit(kind: SlotEdit["kind"], slot: TemplateVideoSlot) {
     const clip = templateDraft.clips[slot.id];
     if (template && clip) begin({ kind, template, slot, clip });
@@ -108,10 +120,20 @@ export default function App() {
     const updated = update(clip);
     if (updated !== clip) {
       const clips = { ...draft.clips, [slot.id]: updated };
-      const source = createTemplateSource(template, clips);
-      setTemplateDrafts((drafts) => ({ ...drafts, [template.id]: { clips, source, outputUri: null } }));
-      removeCachedFile(draft.outputUri);
+      updateTemplateDraft(template, { ...draft, clips });
     }
+    finish(operation);
+  }
+
+  function applyTextEdit(operation: TextEdit, textOverrides: TemplateTextOverrides) {
+    if (activeOperation.current !== operation) return;
+    const { template } = operation;
+    const draft = templateDrafts[template.id] ?? emptyTemplateDraft;
+    if (draft.textOverrides !== operation.textOverrides) {
+      throw new Error("This template text changed. Close the editor and open it again.");
+    }
+
+    if (textOverrides !== draft.textOverrides) updateTemplateDraft(template, { ...draft, textOverrides });
     finish(operation);
   }
 
@@ -137,19 +159,17 @@ export default function App() {
         const draft = templateDrafts[template.id] ?? emptyTemplateDraft;
         const clip = createTemplateClip(slot, pickedUri, asset.name, metadata);
         const clips = { ...draft.clips, [slot.id]: clip };
-        // Resolve before committing so a failed replacement leaves the draft and export intact.
-        const source = createTemplateSource(template, clips);
-        setTemplateDrafts((drafts) => ({ ...drafts, [template.id]: { clips, source, outputUri: null } }));
+        updateTemplateDraft(template, { ...draft, clips });
         previousUri = draft.clips[slot.id]?.uri;
       } else {
         const source = createClipSource(pickedUri, metadata);
         setSingleDraft({ clip: { name: asset.name, uri: pickedUri, source }, outputUri: null });
         previousUri = singleDraft.clip?.uri;
+        removeCachedFile(outputUri);
       }
 
       if (previousUri !== pickedUri) removeCachedFile(previousUri);
       pickedUri = undefined;
-      removeCachedFile(outputUri);
     } catch (cause) {
       if (activeOperation.current === operation) {
         const message = errorMessage("Couldn’t import the video.", cause);
@@ -234,6 +254,7 @@ export default function App() {
   const exporting = activity?.kind === "export";
   const trimming = activity?.kind === "trim";
   const reframing = activity?.kind === "reframe";
+  const editingText = activity?.kind === "text";
   const clip = singleDraft.clip;
   return (
     <Screen page={template?.id ?? "single-clip"}>
@@ -258,6 +279,14 @@ export default function App() {
           onCancel={() => finish(activity)}
         />
       )}
+      {editingText && (
+        <TemplateTextEditor
+          fields={textFields}
+          overrides={activity.textOverrides}
+          onApply={(overrides) => applyTextEdit(activity, overrides)}
+          onCancel={() => finish(activity)}
+        />
+      )}
       <View style={styles.navigation}>
         <Action label="Back to templates" onPress={() => navigate(null)} disabled={busy} />
       </View>
@@ -274,6 +303,16 @@ export default function App() {
           </Text>
         )}
       </View>
+      {template && textFields.length > 0 && (
+        <View style={styles.navigation}>
+          <Action
+            label="Edit text"
+            testID="edit-template-text"
+            onPress={() => begin({ kind: "text", template, textOverrides: templateDraft.textOverrides })}
+            disabled={busy}
+          />
+        </View>
+      )}
       {editor.kind === "template" && (
         <TemplateVideoSlots
           slots={editor.slots}
