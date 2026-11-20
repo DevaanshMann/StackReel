@@ -9,6 +9,7 @@ import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template
 const choices = mobileTemplates.map((template) => ({ template, slots: getVideoSlots(template) }));
 type SelectTemplate = (template: MobileTemplate, slots: TemplateVideoSlot[]) => void;
 type ProjectDraft = {
+  name?: string | null;
   clips: Readonly<Record<string, TemplateClip>>;
   missingSlots: readonly string[];
   missingMusic: boolean;
@@ -46,11 +47,13 @@ export function TemplateGallery({
 export function TemplateProjects({
   drafts,
   onSelectTemplate,
+  onRenameDraft,
   onDeleteDraft,
   onBrowseTemplates,
 }: {
   drafts: Readonly<Record<string, ProjectDraft>>;
   onSelectTemplate: SelectTemplate;
+  onRenameDraft: (template: MobileTemplate) => void;
   onDeleteDraft: (template: MobileTemplate) => void;
   onBrowseTemplates: () => void;
 }) {
@@ -73,22 +76,33 @@ export function TemplateProjects({
       ) : (
         <View style={styles.list}>
           {projects.map(({ template, slots, draft }) => {
+            const name = draft.name ?? template.name;
             const filled = slots.filter(({ id }) => draft.clips[id]).length;
             const missingMedia = draft.missingSlots.length > 0 || draft.missingMusic;
             const progress = `${filled} of ${slots.length} videos`;
+            const details = name === template.name ? progress : `${template.name} · ${progress}`;
             return (
               <GalleryCard
                 key={template.id}
-                label={template.name}
-                details={draft.loadError ? "Couldn’t load draft" : progress}
+                label={name}
+                details={draft.loadError ? "Couldn’t load draft" : details}
                 description={missingMedia ? "Missing media" : undefined}
                 onPress={() => onSelectTemplate(template, slots)}
-                action={
-                  <Action
-                    label="Delete"
-                    accessibilityLabel={`Delete ${template.name} draft`}
-                    onPress={() => onDeleteDraft(template)}
-                  />
+                actions={
+                  <>
+                    {!draft.loadError && (
+                      <Action
+                        label="Rename"
+                        accessibilityLabel={`Rename ${name} draft`}
+                        onPress={() => onRenameDraft(template)}
+                      />
+                    )}
+                    <Action
+                      label="Delete"
+                      accessibilityLabel={`Delete ${name} draft`}
+                      onPress={() => onDeleteDraft(template)}
+                    />
+                  </>
                 }
               />
             );
@@ -104,16 +118,16 @@ function GalleryCard({
   details,
   description,
   onPress,
-  action,
+  actions,
 }: {
   label: string;
   details: string;
   description?: string | undefined;
   onPress: () => void;
-  action?: ReactNode;
+  actions?: ReactNode;
 }) {
   return (
-    <View style={[styles.panel, styles.cardRow]}>
+    <View style={[styles.panel, styles.cardPanel]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -130,7 +144,7 @@ function GalleryCard({
           ›
         </Text>
       </Pressable>
-      {action && <View style={styles.cardAction}>{action}</View>}
+      {actions && <View style={styles.cardActions}>{actions}</View>}
     </View>
   );
 }
@@ -239,16 +253,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.lg,
   },
-  cardRow: { flexDirection: "row", alignItems: "center", overflow: "hidden" },
+  cardPanel: { overflow: "hidden" },
   card: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: space[3],
     padding: space[4],
   },
   cardCopy: { flex: 1, gap: space[1] },
-  cardAction: { paddingRight: space[3] },
+  cardActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: space[2],
+    borderTopColor: darkColors.border,
+    borderTopWidth: 1,
+    padding: space[2],
+  },
   emptyProjects: { padding: space[4], gap: space[3] },
   cardTitle: { color: darkColors.text, fontSize: fontSize.lg, fontWeight: "700" },
   cardDetails: { color: darkColors.accent, fontSize: fontSize.sm, fontWeight: "600" },
