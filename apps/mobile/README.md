@@ -1,7 +1,13 @@
 # StackReel mobile
 
-Choose one local video from Files, preview and scrub it, then export and share a 720 × 1280 H.264 MP4 at 30 fps.
+StackReel opens to the iOS template gallery. **Before / After** takes two videos, and **Hook & Reveal** takes three.
+Each required slot shows its minimum clip duration. Select or replace videos from Files, then play, scrub, export,
+and share the assembled H.264 MP4 once every required slot is filled. Each template supplies its own canvas,
+timing, and captions.
+
+Choose **Single-clip editor** from the gallery to preview and export one local video at 720 × 1280 and 30 fps.
 The video fits inside the vertical frame without cropping, and the export includes the clip’s audio when present.
+You can return to the gallery and reopen a draft during the same app session.
 
 ## Run on iOS
 
@@ -23,13 +29,20 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
 
 ## Smoke test
 
-1. On the Simulator, use `xcrun simctl addmedia booted /path/to/clip.mp4` to seed Photos. In Photos, share the video and use **Save to Files**.
-2. In StackReel, tap **Choose video** and select the clip. Check that **Play** and **Pause** work, the playhead advances,
-   and dragging or tapping **Video position** seeks the preview. A landscape clip should show bars above and below the image.
-3. Tap **Export MP4** and check that progress appears. For cancellation, use a longer clip and tap **Cancel export**
-   while it is encoding. The screen should report cancellation and allow another export.
-4. Export again, tap **Share MP4**, then use **Save to Files** in the native share sheet. Open the saved MP4 and verify
-   the picture and audio. Use **Replace video** to choose another clip and repeat the flow. Imported and exported
-   files live in app storage until shared or saved elsewhere.
+1. On the Simulator, use `xcrun simctl addmedia booted /path/to/clip.mp4` to seed Photos. In Photos, share the videos and
+   use **Save to Files**. Prepare clips long enough for all slots and a clip shorter than the minimum.
+2. Open **Before / After**. Check the **Before** and **After** duration guidance and verify **Export MP4** is disabled
+   until both videos are added. Fill both slots and confirm that **Play**, **Pause**, and **Video position** preview
+   the edit across the cut.
+3. Tap **Export MP4** and check the progress indicator. Tap **Share MP4** and save the video from the share sheet. Return
+   to the draft and cancel a replacement in Files, then try replacing a slot with the short clip. Confirm the previous
+   selection and export are still available after both attempts. Replace the slot with a valid clip and verify that
+   the preview starts over and sharing requires a new export.
+4. Tap **Back to templates** and open **Hook & Reveal**. Fill all three slots, check the canvas metadata and preview,
+   then export and share. Open the saved MP4s to check picture and audio.
+5. Open **Single-clip editor** and select a landscape video. Check for bars above and below it. To test cancellation,
+   start exporting a longer video and tap **Cancel export** while it is encoding. Confirm cancellation is reported
+   and another export is available. Imported and exported copies are kept in the app cache. Use **Save to Files**
+   in the share sheet to keep an MP4 outside the app.
 
 Run the app’s checks from the root with `pnpm exec turbo run lint typecheck test --filter=@stackreel/mobile`.

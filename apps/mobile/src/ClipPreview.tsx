@@ -6,13 +6,22 @@ import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
-import { canvas } from "./clip-source";
 
-export function PreviewFrame({ children }: { children: ReactNode }) {
-  return <View style={styles.frame}>{children}</View>;
+type PreviewCanvas = { width: number; height: number };
+
+export function PreviewFrame({ canvas, children }: { canvas: PreviewCanvas; children: ReactNode }) {
+  return <View style={[styles.frame, { aspectRatio: canvas.width / canvas.height }]}>{children}</View>;
 }
 
-export function ClipPreview({ source, suspended }: { source: string; suspended: boolean }) {
+export function ClipPreview({
+  canvas,
+  source,
+  suspended,
+}: {
+  canvas: PreviewCanvas;
+  source: string;
+  suspended: boolean;
+}) {
   const preview = useRef<StackReelPreviewViewRef>(null);
   const dragging = useRef(false);
   const pendingSeek = useRef<object | null>(null);
@@ -52,7 +61,7 @@ export function ClipPreview({ source, suspended }: { source: string; suspended: 
   const visiblePosition = scrubPosition ?? position;
   return (
     <View style={styles.controls}>
-      <PreviewFrame>
+      <PreviewFrame canvas={canvas}>
         <StackReelPreviewView
           ref={preview}
           style={StyleSheet.absoluteFill}
@@ -134,7 +143,6 @@ const styles = StyleSheet.create({
   frame: {
     width: "100%",
     maxWidth: 224,
-    aspectRatio: canvas.width / canvas.height,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
