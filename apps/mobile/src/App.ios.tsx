@@ -14,30 +14,27 @@ import { TemplateGallery, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
+import { createDraftMediaFile, loadTemplateDraft, removeDraftFile, saveTemplateDraft } from "./template-drafts";
+import type { TemplateDraftEdits } from "./template-drafts";
 import {
   createTemplateClip,
   createTemplateMusic,
   createTemplateSource,
   getTemplateTextFields,
+  mobileTemplates,
   setTemplateClipReframe,
   setTemplateClipTrim,
 } from "./template-editor";
-import type {
-  MobileTemplate,
-  TemplateClip,
-  TemplateMusic,
-  TemplateTextOverrides,
-  TemplateVideoSlot,
-} from "./template-editor";
+import type { MobileTemplate, TemplateClip, TemplateTextOverrides, TemplateVideoSlot } from "./template-editor";
 
 type Clip = { name: string; uri: string; source: string };
 type SingleDraft = { clip: Clip | null; outputUri: string | null };
-type TemplateDraft = {
-  clips: Readonly<Record<string, TemplateClip>>;
-  textOverrides: TemplateTextOverrides;
-  music: TemplateMusic | null;
+type TemplateDraft = TemplateDraftEdits & {
   source: string | null;
   outputUri: string | null;
+  missingSlots: readonly string[];
+  missingMusic: boolean;
+  loadError?: string;
 };
 type Editor = { kind: "single" } | { kind: "template"; template: MobileTemplate; slots: TemplateVideoSlot[] };
 type ImportTarget = { kind: "single" } | { kind: "template"; template: MobileTemplate; slot: TemplateVideoSlot };
@@ -50,23 +47,47 @@ type Operation =
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
 type Feedback = { kind: "error" | "status"; message: string; slotId?: string; scope?: "music" };
 
-const emptyTemplateDraft: TemplateDraft = { clips: {}, textOverrides: {}, music: null, source: null, outputUri: null };
+const emptyTemplateDraft: TemplateDraft = {
+  clips: {},
+  textOverrides: {},
+  music: null,
+  source: null,
+  outputUri: null,
+  missingSlots: [],
+  missingMusic: false,
+};
 
 export default function App() {
   const activeOperation = useRef<Operation | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [singleDraft, setSingleDraft] = useState<SingleDraft>({ clip: null, outputUri: null });
-  const [templateDrafts, setTemplateDrafts] = useState<Readonly<Record<string, TemplateDraft>>>({});
+  const [templateDrafts, setTemplateDrafts] = useState<Readonly<Record<string, TemplateDraft>> | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   const template = editor?.kind === "template" ? editor.template : null;
   const textFields = template ? getTemplateTextFields(template) : [];
-  const templateDraft = template ? (templateDrafts[template.id] ?? emptyTemplateDraft) : emptyTemplateDraft;
+  const templateDraft = template ? (templateDrafts?.[template.id] ?? emptyTemplateDraft) : emptyTemplateDraft;
   const source = template ? templateDraft.source : (singleDraft.clip?.source ?? null);
   const outputUri = template ? templateDraft.outputUri : singleDraft.outputUri;
   const canvas = template?.canvas ?? singleClipCanvas;
   const busy = activity !== null;
+
+  useEffect(() => {
+    const drafts: Record<string, TemplateDraft> = {};
+    for (const template of mobileTemplates) {
+      try {
+        const saved = loadTemplateDraft(template);
+        if (saved) {
+          const source = createTemplateSource(template, saved.clips, saved.textOverrides, saved.music);
+          drafts[template.id] = { ...saved, source, outputUri: null };
+        }
+      } catch {
+        drafts[template.id] = { ...emptyTemplateDraft, loadError: "Couldn’t reopen the saved draft." };
+      }
+    }
+    setTemplateDrafts(drafts);
+  }, []);
 
   useEffect(() => {
     const subscription = addExportProgressListener(({ exportId, progress }) => {
@@ -107,23 +128,15 @@ export default function App() {
     setEditor(next);
   }
 
-  function removeUnusedCachedFile(uri: string | null | undefined, drafts = templateDrafts) {
-    if (!uri || uri === singleDraft.clip?.uri || uri === singleDraft.outputUri) return;
-    const inUse = Object.values(drafts).some(
-      ({ clips, music, outputUri }) =>
-        uri === music?.uri || uri === outputUri || Object.values(clips).some((clip) => uri === clip.uri),
-    );
-    if (!inUse) removeCachedFile(uri);
-  }
-
-  function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft, previousInputUri?: string) {
-    // Resolve before committing so a failed edit leaves the draft and export intact.
+  function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft) {
     const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
     const outputUri = source === draft.source ? draft.outputUri : null;
-    const drafts = { ...templateDrafts, [template.id]: { ...draft, source, outputUri } };
-    setTemplateDrafts(drafts);
-    removeUnusedCachedFile(draft.outputUri, drafts);
-    removeUnusedCachedFile(previousInputUri, drafts);
+    saveTemplateDraft(template, draft);
+    setTemplateDrafts((drafts) => {
+      const { loadError: _loadError, ...updated } = draft;
+      return { ...drafts, [template.id]: { ...updated, source, outputUri } };
+    });
+    if (outputUri !== draft.outputUri) removeCachedFile(draft.outputUri);
   }
 
   function openSlotEdit(kind: SlotEdit["kind"], slot: TemplateVideoSlot) {
@@ -134,7 +147,7 @@ export default function App() {
   function applySlotEdit(operation: SlotEdit, update: (clip: TemplateClip) => TemplateClip) {
     if (activeOperation.current !== operation) return;
     const { template, slot, clip } = operation;
-    const draft = templateDrafts[template.id];
+    const draft = templateDrafts?.[template.id];
     if (!draft || draft.clips[slot.id] !== clip) {
       throw new Error("This slot changed. Close the editor and open it again.");
     }
@@ -150,7 +163,7 @@ export default function App() {
   function applyTextEdit(operation: TextEdit, textOverrides: TemplateTextOverrides) {
     if (activeOperation.current !== operation) return;
     const { template } = operation;
-    const draft = templateDrafts[template.id] ?? emptyTemplateDraft;
+    const draft = templateDrafts?.[template.id] ?? emptyTemplateDraft;
     if (draft.textOverrides !== operation.textOverrides) {
       throw new Error("This template text changed. Close the editor and open it again.");
     }
@@ -164,6 +177,7 @@ export default function App() {
       target.kind === "template" ? { kind: "import", slotId: target.slot.id } : { kind: "import" };
     if (!begin(operation)) return;
     let pickedUri: string | undefined;
+    let draftMedia: File | undefined;
     try {
       const result = await getDocumentAsync({ type: "video/*", copyToCacheDirectory: true });
       if (result.canceled) return;
@@ -177,10 +191,15 @@ export default function App() {
 
       if (target.kind === "template") {
         const { template, slot } = target;
-        const draft = templateDrafts[template.id] ?? emptyTemplateDraft;
+        const draft = templateDrafts?.[template.id] ?? emptyTemplateDraft;
         const clip = createTemplateClip(slot, pickedUri, asset.name, metadata);
-        const clips = { ...draft.clips, [slot.id]: clip };
-        updateTemplateDraft(template, { ...draft, clips }, draft.clips[slot.id]?.uri);
+        draftMedia = createDraftMediaFile(template, asset.name);
+        await new File(pickedUri).move(draftMedia);
+        if (activeOperation.current !== operation) return;
+        const clips = { ...draft.clips, [slot.id]: { ...clip, uri: draftMedia.uri } };
+        const missingSlots = draft.missingSlots.filter((id) => id !== slot.id);
+        updateTemplateDraft(template, { ...draft, clips, missingSlots });
+        draftMedia = undefined;
       } else {
         const source = createClipSource(pickedUri, metadata);
         setSingleDraft({ clip: { name: asset.name, uri: pickedUri, source }, outputUri: null });
@@ -195,7 +214,8 @@ export default function App() {
         setFeedback({ ...operation, kind: "error", message });
       }
     } finally {
-      removeUnusedCachedFile(pickedUri);
+      if (draftMedia) removeDraftFile(draftMedia);
+      if (pickedUri !== singleDraft.clip?.uri) removeCachedFile(pickedUri);
       finish(operation);
     }
   }
@@ -204,6 +224,7 @@ export default function App() {
     const operation = { kind: "import-music" } as const;
     if (!begin(operation)) return;
     let pickedUri: string | undefined;
+    let draftMedia: File | undefined;
     try {
       const result = await getDocumentAsync({ type: "audio/*", copyToCacheDirectory: true });
       if (result.canceled) return;
@@ -215,26 +236,30 @@ export default function App() {
       const metadata = await probeAudio(pickedUri);
       if (activeOperation.current !== operation) return;
 
-      const draft = templateDrafts[template.id] ?? emptyTemplateDraft;
+      const draft = templateDrafts?.[template.id] ?? emptyTemplateDraft;
       const music = createTemplateMusic(pickedUri, asset.name, metadata);
-      updateTemplateDraft(template, { ...draft, music }, draft.music?.uri);
-      pickedUri = undefined;
+      draftMedia = createDraftMediaFile(template, asset.name);
+      await new File(pickedUri).move(draftMedia);
+      if (activeOperation.current !== operation) return;
+      updateTemplateDraft(template, { ...draft, music: { ...music, uri: draftMedia.uri }, missingMusic: false });
+      draftMedia = undefined;
     } catch (cause) {
       if (activeOperation.current === operation) {
         setFeedback({ kind: "error", scope: "music", message: errorMessage("Couldn’t import the music.", cause) });
       }
     } finally {
-      removeUnusedCachedFile(pickedUri);
+      if (draftMedia) removeDraftFile(draftMedia);
+      removeCachedFile(pickedUri);
       finish(operation);
     }
   }
 
   function removeMusic(template: MobileTemplate) {
-    const draft = templateDrafts[template.id];
+    const draft = templateDrafts?.[template.id];
     const operation = { kind: "remove-music" } as const;
     if (!draft?.music || !begin(operation)) return;
     try {
-      updateTemplateDraft(template, { ...draft, music: null }, draft.music.uri);
+      updateTemplateDraft(template, { ...draft, music: null });
     } catch (cause) {
       setFeedback({ kind: "error", scope: "music", message: errorMessage("Couldn’t remove the music.", cause) });
     } finally {
@@ -303,10 +328,14 @@ export default function App() {
   if (!editor) {
     return (
       <Screen page="gallery">
-        <TemplateGallery
-          onSelectTemplate={(template, slots) => navigate({ kind: "template", template, slots })}
-          onSelectSingleClip={() => navigate({ kind: "single" })}
-        />
+        {templateDrafts ? (
+          <TemplateGallery
+            onSelectTemplate={(template, slots) => navigate({ kind: "template", template, slots })}
+            onSelectSingleClip={() => navigate({ kind: "single" })}
+          />
+        ) : (
+          <Text style={textStyles.muted}>Opening saved drafts…</Text>
+        )}
       </Screen>
     );
   }
@@ -356,6 +385,11 @@ export default function App() {
           </Text>
         )}
       </View>
+      {template && templateDraft.loadError && (
+        <Text accessibilityRole="alert" style={textStyles.error}>
+          {templateDraft.loadError}
+        </Text>
+      )}
       {template && textFields.length > 0 && (
         <View style={styles.navigation}>
           <Action
@@ -370,6 +404,7 @@ export default function App() {
         <TemplateVideoSlots
           slots={editor.slots}
           clips={templateDraft.clips}
+          missingSlots={templateDraft.missingSlots}
           busy={busy}
           importingSlotId={importing ? activity.slotId : undefined}
           importError={feedback?.kind === "error" && feedback.slotId !== undefined ? feedback : null}
@@ -392,7 +427,13 @@ export default function App() {
           music={templateDraft.music}
           busy={busy}
           importing={activity?.kind === "import-music"}
-          error={feedback?.scope === "music" ? feedback.message : undefined}
+          error={
+            feedback?.scope === "music"
+              ? feedback.message
+              : templateDraft.missingMusic
+                ? "Saved music is missing. Choose a replacement from Files."
+                : undefined
+          }
           onSelect={() => selectMusic(editor.template)}
           onRemove={() => removeMusic(editor.template)}
         />

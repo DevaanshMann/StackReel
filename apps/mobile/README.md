@@ -29,7 +29,10 @@ changes. If you apply a different framing, export the template again before shar
 
 Choose **Single-clip editor** from the gallery to preview and export one local video at 720 × 1280 and 30 fps.
 The video fits inside the vertical frame without cropping, and the export includes the clip’s audio when present.
-You can return to the gallery and reopen a draft during the same app session.
+
+StackReel automatically saves a separate draft for each template. Reopen the template after quitting the app to resume
+with its imported videos, trims, framing, edited text, and music. If an imported copy is missing, use the editor’s
+Files picker to replace it. Export again after relaunch, or use **Save to Files** in the share sheet to keep a finished MP4.
 
 ## Run on iOS
 
@@ -89,5 +92,9 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
    start exporting a longer video and tap **Cancel export** while it is encoding. Confirm cancellation is reported
    and another export is available. Imported and exported copies are kept in the app cache. Use **Save to Files**
    in the share sheet to keep an MP4 outside the app.
+10. Make different edits in each template, then quit and relaunch StackReel. Reopen both templates and verify
+    that selected clips, trims, framing, text, and music are restored independently. Preview and export a restored
+    template. In a test installation, remove one imported copy from the app’s `StackReelDrafts` documents folder.
+    Relaunch and confirm the affected slot prompts for a replacement while the other edits remain available.
 
 Run the app’s checks from the root with `pnpm exec turbo run lint typecheck test --filter=@stackreel/mobile`.

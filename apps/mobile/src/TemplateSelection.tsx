@@ -69,6 +69,7 @@ function GalleryCard({
 export function TemplateVideoSlots({
   slots,
   clips,
+  missingSlots,
   busy,
   importingSlotId,
   importError,
@@ -78,6 +79,7 @@ export function TemplateVideoSlots({
 }: {
   slots: readonly TemplateVideoSlot[];
   clips: Readonly<Record<string, TemplateClip>>;
+  missingSlots: readonly string[];
   busy: boolean;
   importingSlotId: string | undefined;
   importError: { slotId?: string; message: string } | null;
@@ -111,6 +113,11 @@ export function TemplateVideoSlots({
                     Source {trimTimeLabel(clip.trimInUs)} to {trimTimeLabel(clip.trimOutUs)}
                   </Text>
                 </>
+              )}
+              {missingSlots.includes(slot.id) && (
+                <Text accessibilityRole="alert" style={textStyles.error}>
+                  Saved video is missing. Choose a replacement from Files.
+                </Text>
               )}
             </View>
             <View style={styles.slotAction}>
