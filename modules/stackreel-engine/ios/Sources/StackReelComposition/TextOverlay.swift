@@ -4,11 +4,14 @@ import StackReelPlan
 
 extension TextTexture {
   func image(for text: Layer.Text, timing: Layer.Timing, canvas: Canvas, at timeUs: Double)
-    -> CIImage?
+    throws -> CIImage?
   {
     let animation = TextFrame(text.animation, timing: timing, at: timeUs, size: bounds.size)
     let opacity = max(0, min(1, timing.opacity * animation.opacity))
     guard animation.scale > 0, opacity > 0 else { return nil }
+    guard let bitmap = bitmap(reveal: animation.reveal) else {
+      throw VideoComposition.RenderError.unableToRasterizeText(layerID: timing.id)
+    }
     let fraction = anchorFraction(text.placement.anchor)
     let anchor = CGPoint(
       x: bounds.minX + fraction.x * bounds.width,
@@ -22,7 +25,7 @@ extension TextTexture {
         CGAffineTransform(
           translationX: CGFloat(text.placement.xPx) + animation.offset.x,
           y: CGFloat(canvas.height) - CGFloat(text.placement.yPx) + animation.offset.y))
-    let image = CIImage(cgImage: image).transformed(by: transform)
+    let image = CIImage(cgImage: bitmap).transformed(by: transform)
     if opacity >= 1 { return image }
     return image.applyingFilter(
       "CIColorMatrix", parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: opacity)])
@@ -47,6 +50,7 @@ private struct TextFrame {
   var opacity: CGFloat = 1
   var scale: CGFloat = 1
   var offset: CGPoint = .zero
+  var reveal: CGFloat = 1
 
   init(_ animation: Layer.Animation, timing: Layer.Timing, at timeUs: Double, size: CGSize) {
     let elapsed = timeUs - Double(timing.startUs)
@@ -65,7 +69,8 @@ private struct TextFrame {
   ) {
     let travel = slideSign * (1 - progress)
     switch name {
-    case .none, .typewriter: break
+    case .none: break
+    case .typewriter: reveal = progress
     case .fade: opacity = progress
     case .scale: scale = progress
     case .pop:

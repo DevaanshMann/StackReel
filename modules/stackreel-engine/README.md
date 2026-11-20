@@ -48,7 +48,11 @@ Core Text draws multiline and wrapped text with alignment, stroke, shadow, and r
 The compositor caches the rendered text by content and style, then applies its anchor, rotation, and
 fade, pop, scale, slide, or bounce animation on each frame. If the requested PostScript font is unavailable,
 Core Text uses the system font. See [sampled text frames](../../docs/ios-text.png).
-Still images, stickers, held frames, typewriter animations, whip-pans, zoom punches, and spins return an
+The typewriter animation reveals grapheme clusters in text order on entry and removes them in reverse on
+exit. Whitespace and line breaks count toward progress. The final wrapping, alignment, anchor, and
+background stay fixed throughout. See [sampled typewriter frames](../../docs/ios-typewriter.png).
+
+Still images, stickers, held frames, whip-pans, zoom punches, and spins return an
 unsupported-feature error. Rendering requires a video track.
 
 `result.audioMix` applies the plan's gain, fades, and music ducking to embedded clip sound, standalone audio,

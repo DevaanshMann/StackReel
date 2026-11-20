@@ -379,7 +379,7 @@ _Runs in parallel with Phase 3._
 4. **Text & overlays**
    - [x] Render text to textures with Core Text (stroke, shadow, background pill), cached per text and style
    - [x] Evaluate pop, fade, scale, slide, and bounce animations per frame in the compositor
-   - [ ] Add typewriter animation
+   - [x] Reveal and remove text by grapheme cluster with the typewriter animation
    - [ ] Bundle fonts with the app (Inter, Montserrat, Bebas Neue, Poppins, all under the OFL license)
 5. **Preview**
    - [ ] `AVPlayer` + `AVPlayerItem` with `videoComposition`, shown in a native `StackReelPreviewView` exposed to React Native
