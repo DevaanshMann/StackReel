@@ -876,9 +876,6 @@ final class VideoCompositionBuilderTests: XCTestCase {
 
   private enum TestError: Error {
     case unexpectedAsset
-    case cannotAllocateFrame(OSStatus)
-    case cannotWriteMovie
-    case writerTimedOut
     case cannotReadComposition
     case cannotWriteImage
   }
@@ -913,80 +910,6 @@ final class VideoCompositionBuilderTests: XCTestCase {
       CGImageDestinationAddImage(destination, image, properties)
     }
     guard CGImageDestinationFinalize(destination) else { throw TestError.cannotWriteImage }
-  }
-
-  @MainActor
-  private func makeMovie(
-    transform: CGAffineTransform = .identity,
-    pixel: (Int, Int) -> (red: UInt8, green: UInt8, blue: UInt8) = { _, _ in (128, 128, 128) }
-  ) async throws -> URL {
-    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
-    addTeardownBlock { try FileManager.default.removeItem(at: directory) }
-
-    let url = directory.appendingPathComponent("clip.mov")
-    let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
-    // Photo JPEG keeps the test independent of hardware H.264 encoding.
-    let input = AVAssetWriterInput(
-      mediaType: .video,
-      outputSettings: [
-        AVVideoCodecKey: AVVideoCodecType.jpeg, AVVideoWidthKey: 32, AVVideoHeightKey: 48,
-        AVVideoColorPropertiesKey: [
-          AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-          AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
-          AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
-        ],
-      ])
-    input.transform = transform
-    let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input)
-    guard writer.canAdd(input) else { throw TestError.cannotWriteMovie }
-    writer.add(input)
-    guard writer.startWriting() else { throw writer.error ?? TestError.cannotWriteMovie }
-    writer.startSession(atSourceTime: .zero)
-    defer {
-      if writer.status == .writing { writer.cancelWriting() }
-    }
-
-    var buffer: CVPixelBuffer?
-    let status = CVPixelBufferCreate(nil, 32, 48, kCVPixelFormatType_32BGRA, nil, &buffer)
-    guard status == kCVReturnSuccess, let buffer else {
-      throw TestError.cannotAllocateFrame(status)
-    }
-    CVPixelBufferLockBaseAddress(buffer, [])
-    if let address = CVPixelBufferGetBaseAddress(buffer) {
-      let base = address.assumingMemoryBound(to: UInt8.self)
-      for y in 0..<CVPixelBufferGetHeight(buffer) {
-        let row = base + y * CVPixelBufferGetBytesPerRow(buffer)
-        for x in 0..<CVPixelBufferGetWidth(buffer) {
-          let color = pixel(x, y)
-          row[4 * x] = color.blue
-          row[4 * x + 1] = color.green
-          row[4 * x + 2] = color.red
-          row[4 * x + 3] = 255
-        }
-      }
-    }
-    CVPixelBufferUnlockBaseAddress(buffer, [])
-
-    for frame in 0..<90 {
-      let deadline = DispatchTime.now() + .seconds(5)
-      while !input.isReadyForMoreMediaData {
-        guard writer.status == .writing else { throw writer.error ?? TestError.cannotWriteMovie }
-        guard DispatchTime.now() < deadline else { throw TestError.writerTimedOut }
-        try await Task.sleep(nanoseconds: 1_000_000)
-      }
-      guard adaptor.append(buffer, withPresentationTime: CMTime(value: Int64(frame), timescale: 30))
-      else {
-        throw writer.error ?? TestError.cannotWriteMovie
-      }
-    }
-    writer.endSession(atSourceTime: CMTime(value: 3, timescale: 1))
-    input.markAsFinished()
-    await withCheckedContinuation { continuation in
-      writer.finishWriting { continuation.resume() }
-    }
-    guard writer.status == .completed else { throw writer.error ?? TestError.cannotWriteMovie }
-    return url
   }
 
   private func readFrames(
@@ -1025,7 +948,7 @@ final class VideoCompositionBuilderTests: XCTestCase {
   private func assertPixel(
     _ pixel: [Int], near expected: [Int], file: StaticString = #filePath, line: UInt = #line
   ) {
-    // The source frames use JPEG, so allow a small RGB-channel tolerance.
+    // The source frames are compressed, so allow a small RGB-channel tolerance.
     XCTAssertTrue(
       zip(pixel, expected).allSatisfy { abs($0 - $1) <= 15 },
       "Expected \(expected), got \(pixel)", file: file, line: line)
@@ -1041,5 +964,96 @@ final class VideoCompositionBuilderTests: XCTestCase {
       let sRGB = value <= 0.0031308 ? value * 12.92 : 1.055 * pow(value, 1 / 2.4) - 0.055
       return Int((sRGB * 255).rounded())
     }
+  }
+}
+
+extension XCTestCase {
+  private enum MovieFixtureError: Error {
+    case cannotAllocateFrame(OSStatus)
+    case cannotWriteMovie
+    case writerTimedOut
+  }
+
+  @MainActor
+  func makeMovie(
+    transform: CGAffineTransform = .identity,
+    pixel: (Int, Int) -> (red: UInt8, green: UInt8, blue: UInt8) = { _, _ in (128, 128, 128) }
+  ) async throws -> URL {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+    addTeardownBlock { try FileManager.default.removeItem(at: directory) }
+
+    let url = directory.appendingPathComponent("clip.mov")
+    let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+    #if os(iOS)
+      let codec = AVVideoCodecType.h264
+    #else
+      // Photo JPEG keeps macOS tests independent of hardware H.264 encoding.
+      let codec = AVVideoCodecType.jpeg
+    #endif
+    let input = AVAssetWriterInput(
+      mediaType: .video,
+      outputSettings: [
+        AVVideoCodecKey: codec, AVVideoWidthKey: 32, AVVideoHeightKey: 48,
+        AVVideoColorPropertiesKey: [
+          AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+          AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+          AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
+        ],
+      ])
+    input.transform = transform
+    let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input)
+    guard writer.canAdd(input) else { throw MovieFixtureError.cannotWriteMovie }
+    writer.add(input)
+    guard writer.startWriting() else { throw writer.error ?? MovieFixtureError.cannotWriteMovie }
+    writer.startSession(atSourceTime: .zero)
+    defer {
+      if writer.status == .writing { writer.cancelWriting() }
+    }
+
+    var buffer: CVPixelBuffer?
+    let status = CVPixelBufferCreate(nil, 32, 48, kCVPixelFormatType_32BGRA, nil, &buffer)
+    guard status == kCVReturnSuccess, let buffer else {
+      throw MovieFixtureError.cannotAllocateFrame(status)
+    }
+    CVPixelBufferLockBaseAddress(buffer, [])
+    if let address = CVPixelBufferGetBaseAddress(buffer) {
+      let base = address.assumingMemoryBound(to: UInt8.self)
+      for y in 0..<CVPixelBufferGetHeight(buffer) {
+        let row = base + y * CVPixelBufferGetBytesPerRow(buffer)
+        for x in 0..<CVPixelBufferGetWidth(buffer) {
+          let color = pixel(x, y)
+          row[4 * x] = color.blue
+          row[4 * x + 1] = color.green
+          row[4 * x + 2] = color.red
+          row[4 * x + 3] = 255
+        }
+      }
+    }
+    CVPixelBufferUnlockBaseAddress(buffer, [])
+
+    for frame in 0..<90 {
+      let deadline = DispatchTime.now() + .seconds(5)
+      while !input.isReadyForMoreMediaData {
+        guard writer.status == .writing else {
+          throw writer.error ?? MovieFixtureError.cannotWriteMovie
+        }
+        guard DispatchTime.now() < deadline else { throw MovieFixtureError.writerTimedOut }
+        try await Task.sleep(nanoseconds: 1_000_000)
+      }
+      guard adaptor.append(buffer, withPresentationTime: CMTime(value: Int64(frame), timescale: 30))
+      else {
+        throw writer.error ?? MovieFixtureError.cannotWriteMovie
+      }
+    }
+    writer.endSession(atSourceTime: CMTime(value: 3, timescale: 1))
+    input.markAsFinished()
+    await withCheckedContinuation { continuation in
+      writer.finishWriting { continuation.resume() }
+    }
+    guard writer.status == .completed else {
+      throw writer.error ?? MovieFixtureError.cannotWriteMovie
+    }
+    return url
   }
 }

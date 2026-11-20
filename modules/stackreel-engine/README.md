@@ -29,14 +29,23 @@ Use `result.timelineDuration` for the full timeline, which may extend past the l
 The instructions cover the full timeline and carry layers in draw order, active transitions, and the track
 IDs that supply source frames. Held inputs identify the clip whose last playable frame the compositor needs.
 
-For a video plan with cuts, crossfades, slides, and styled text, create the paired asset and video composition:
+On the main actor, create a `StackReelPreviewPlayer` from the composition result. It plays the render
+asset with the custom video composition and the plan's audio mix. On iOS, attach it to a
+`StackReelPreviewView` and add the view to your UIKit layout:
 
 ```swift
-let render = try result.makeRenderComposition()
-let item = AVPlayerItem(asset: render.asset)
-item.videoComposition = render.videoComposition
-item.audioMix = result.audioMix
+let preview = try StackReelPreviewPlayer(composition: result)
+let view = StackReelPreviewView(frame: .zero)
+view.preview = preview
+preview.isLooping = true
+preview.onPositionChange = { time in updateScrubber(seconds: time.seconds) }
+preview.play()
 ```
+
+Use `pause()` to stop playback and `seek(to:completion:)` to scrub within `0...duration`.
+Seeking to the end pauses playback. If a seek supersedes an earlier request, the earlier completion
+receives `false`. Use `currentTime` for a position snapshot and set `onPositionChange` to `nil` to stop
+receiving updates. The UIKit view displays the video. The surrounding UI supplies the controls.
 
 The custom compositor uses Metal-backed Core Image when available. It applies source orientation, the plan's
 crop and transform, clip fades, and linear-light crossfades. See the [sampled test frames](../../docs/ios-crossfade.png).
