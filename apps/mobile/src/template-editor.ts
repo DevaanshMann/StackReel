@@ -21,12 +21,19 @@ export type TemplateClip = {
   height: number;
   reframe?: TemplateReframe;
 };
+export type TemplateMusic = {
+  uri: string;
+  name: string;
+  readonly sourceStartUs: number;
+  readonly sourceEndUs: number;
+};
 
 export const defaultTemplateReframe: Readonly<TemplateReframe> = Object.freeze({ zoom: 1, x: 0.5, y: 0.5 });
 export const maxTemplateReframeZoom = 3;
 
 const fps = 30;
 const invalidVideo = "This video has invalid dimensions or timing.";
+const invalidMusic = "This audio has invalid timing or no playable frames.";
 
 function isValidSize({ width, height }: Size): boolean {
   return [width, height].every(
@@ -267,6 +274,27 @@ export function createTemplateClip(
   return { ...source, trimInUs: frameToUs(firstFrame, fps), trimOutUs: frameToUs(firstFrame + durationFrames, fps) };
 }
 
+function validateTemplateMusic({ uri, sourceStartUs, sourceEndUs }: TemplateMusic): void {
+  if (!uri || checkTrim(sourceStartUs, sourceEndUs)) throw new Error(invalidMusic);
+  if (usToFrame(sourceStartUs, fps, "ceil") >= usToFrame(sourceEndUs, fps, "floor")) {
+    throw new Error(invalidMusic);
+  }
+}
+
+/** Absolute playable track bounds, with an exclusive end. The resolver fits whole frames within this range. */
+export function createTemplateMusic(
+  uri: string,
+  name: string,
+  { startUs, durationUs }: { startUs: number; durationUs: number },
+): TemplateMusic {
+  if (!Number.isSafeInteger(startUs) || !Number.isSafeInteger(durationUs) || durationUs <= 0) {
+    throw new Error(invalidMusic);
+  }
+  const music = { uri, name, sourceStartUs: Math.max(0, startUs), sourceEndUs: startUs + durationUs };
+  validateTemplateMusic(music);
+  return music;
+}
+
 function alignSourceRate<T extends VideoLayer | AudioEntry>(entry: T): T {
   const { source } = entry;
   // Two equal frame counts can differ by one microsecond depending on the start frame.
@@ -279,6 +307,7 @@ export function createTemplateSource(
   template: MobileTemplate,
   clips: Readonly<Record<string, TemplateClip>>,
   textOverrides: TemplateTextOverrides = {},
+  music?: TemplateMusic | null,
 ): string | null {
   const text: Project["overrides"]["text"] = {};
   const entries = Object.entries(textOverrides);
@@ -290,11 +319,20 @@ export function createTemplateSource(
       text[id] = normalizeTemplateText(field, value);
     }
   }
+  if (music) validateTemplateMusic(music);
 
   const clipFor = (id: string) => (Object.hasOwn(clips, id) ? clips[id] : undefined);
   if (template.slots.some((slot) => slot.kind === "video" && slot.optional !== true && !clipFor(slot.id))) return null;
 
-  const project = createProject(template);
+  const musicSlotId = music ? template.audio?.music?.slot : undefined;
+  // Keep the editor's freeze policy for other slots while allowing the resolver to loop music.
+  const project = createProject({
+    ...template,
+    slots: template.slots.map((slot) => {
+      if (slot.kind !== "audio" && slot.kind !== "video") return slot;
+      return { ...slot, shortClipPolicy: slot.id === musicSlotId ? "loop" : "freeze" };
+    }),
+  });
   project.overrides.text = text;
   const assets: Record<string, string> = {};
   const assetInfo: Record<string, AssetInfo> = {};
@@ -312,18 +350,24 @@ export function createTemplateSource(
     assets[assetUri] = clip.uri;
     assetInfo[assetUri] = { width: clip.width, height: clip.height };
   }
+  if (music && musicSlotId !== undefined) {
+    const assetUri = `slot:${musicSlotId}`;
+    project.bindings[musicSlotId] = { assetUri, trimInUs: music.sourceStartUs, trimOutUs: music.sourceEndUs };
+    assets[assetUri] = music.uri;
+    assetInfo[assetUri] = { durationUs: music.sourceEndUs };
+  }
 
   // Clip validation rejects short media in frames. Check the resolver for genuine frame shortfalls
   // too, since its microsecond calculation can differ slightly with frame position and speed.
-  const plan = resolve(project, { assets: assetInfo, shortClipPolicy: "freeze" });
-  const issue = plan.warnings.find(
-    (warning) =>
-      warning.type !== "clip-too-short" ||
-      usToFrame(warning.neededUs, fps, "round") !== usToFrame(warning.availableUs, fps, "round"),
-  );
+  const plan = resolve(project, { assets: assetInfo });
+  const issue = plan.warnings.find((warning) => {
+    if (warning.type !== "clip-too-short") return true;
+    if (warning.layerId === "music" && warning.slotId === musicSlotId && warning.policy === "loop") return false;
+    return usToFrame(warning.neededUs, fps, "round") !== usToFrame(warning.availableUs, fps, "round");
+  });
   if (issue) throw new Error(issue.message);
   plan.warnings = [];
   plan.layers = plan.layers.map((layer) => (layer.kind === "video" ? alignSourceRate(layer) : layer));
-  plan.audio = plan.audio.map(alignSourceRate);
+  plan.audio = plan.audio.map((entry) => (entry.kind === "music" ? entry : alignSourceRate(entry)));
   return JSON.stringify({ plan, assets });
 }

@@ -5,6 +5,12 @@ Each required slot shows its minimum clip duration. Select or replace videos fro
 and share the assembled H.264 MP4 once every required slot is filled. Each template supplies its own canvas,
 timing, and captions.
 
+Under **Background music**, tap **Choose music from Files** to add an optional audio file, even before adding videos.
+The selected filename stays with that template’s draft. Use **Replace music** to choose another file or **Remove music**
+to clear it. StackReel trims longer music to fit or loops shorter music and applies the template’s volume, fades, and
+ducking where specified. Preview and export use the same mix. After adding, replacing, or removing music in a completed
+draft, export a new MP4 before sharing.
+
 Tap **Edit text** to change a template’s captions and labels, even before adding videos. The editor shows the current
 wording, the template defaults, and character counts for fields with limits. Clear a field to hide that overlay.
 Tap **Apply text** to save the wording, **Cancel** to discard your changes, or **Reset** followed by **Apply text**
@@ -73,7 +79,13 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
    the edits are still there. Reset and apply, then verify that the original text returns and sharing requires a new export.
 7. Open **Hook & Reveal** and edit **Hook text**. Fill all three slots, check the canvas metadata and preview,
    then export and share. Open the saved MP4s to check picture and audio.
-8. Open **Single-clip editor** and select a landscape video. Check for bars above and below it. To test cancellation,
+8. Open **Before / After** or **Hook & Reveal** with no videos selected and choose a short audio file under
+   **Background music**. Fill the video slots, check that the track loops in the preview, then listen to the exported
+   MP4. Cancel **Replace music** in Files, then try a damaged audio file and check that the previous filename and
+   **Share MP4** are still available. Replace the track with a longer file and check that the preview starts over and
+   sharing requires a new export. Switch templates to check that their music choices are independent. Remove the music,
+   check that the preview plays the clips’ own audio, and export again before sharing.
+9. Open **Single-clip editor** and select a landscape video. Check for bars above and below it. To test cancellation,
    start exporting a longer video and tap **Cancel export** while it is encoding. Confirm cancellation is reported
    and another export is available. Imported and exported copies are kept in the app cache. Use **Save to Files**
    in the share sheet to keep an MP4 outside the app.
