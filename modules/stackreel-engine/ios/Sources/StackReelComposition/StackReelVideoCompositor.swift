@@ -31,12 +31,8 @@ extension VideoComposition {
         if clipsByLayerID[layer.timing.id]?.holdTimeRange != nil {
           throw RenderError.unsupportedHold(layerID: layer.timing.id)
         }
-      case .text(let text):
-        if (text.animation.in == .typewriter && text.animation.inDurationUs > 0)
-          || (text.animation.out == .typewriter && text.animation.outDurationUs > 0)
-        {
-          throw RenderError.unsupportedTextAnimation(layerID: layer.timing.id)
-        }
+      case .text:
+        break
       case .image, .sticker:
         throw RenderError.unsupportedLayer(layerID: layer.timing.id)
       }
@@ -140,7 +136,7 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
         let id = layer.timing.id
         if case .text(let text) = layer.content {
           if let texture = instruction.textTexturesByLayerID[id],
-            let overlay = texture.image(
+            let overlay = try texture.image(
               for: text, timing: layer.timing, canvas: instruction.canvas, at: timeUs)
           {
             result = overlay.composited(over: result)

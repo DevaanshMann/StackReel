@@ -437,6 +437,61 @@ final class VideoCompositionBuilderTests: XCTestCase {
   }
 
   @MainActor
+  func testTypewriterRevealsGraphemesAndReversesWithoutMovingTheLayout() async throws {
+    let url = try await makeMovie { _, _ in (0, 0, 0) }
+    var video = clip(0, start: 0, end: 2_400_000, sourceStart: 0, sourceEnd: 2_400_000)
+    video["transform"] = [5, 0, 0, 0, 5, 0, 0, 0, 1]
+    var overlay = textLayer(0, start: 200_000, end: 2_400_000, x: 20, y: 20)
+    overlay["text"] = "A👩🏽‍🚀\r\nZ"
+    overlay["style"] = [
+      "font": "Helvetica-Bold", "sizePx": 28, "color": "#FFFFFF", "align": "center",
+      "stroke": ["color": "#00FF00", "widthPx": 1],
+      "shadow": ["color": "#0000FF", "blurPx": 0, "offsetXPx": 2, "offsetYPx": 2],
+      "background": ["color": "#C00000", "paddingPx": 10, "cornerRadiusPx": 8],
+    ]
+    overlay["animation"] = [
+      "in": "typewriter", "out": "typewriter", "inDurationUs": 800_000, "outDurationUs": 800_000,
+    ]
+    let plan = try decodePlan(
+      duration: 2_600_000, layers: [video, overlay], canvas: CGSize(width: 160, height: 240))
+    let result = try await VideoCompositionBuilder.build(plan) { _ in url }
+    let render = try result.makeRenderComposition()
+    let frames = try readFrames(render, at: [5, 6, 14, 17, 20, 26, 35, 58, 64, 71, 72])
+    let pill = try pixel(frames[6], x: 27, y: 28)
+    assertPixel(pill, near: [192, 0, 0])
+    for frame in [14, 17, 20, 26, 35, 58, 64, 71] {
+      XCTAssertEqual(try pixel(frames[frame], x: 27, y: 28), pill)
+    }
+    for frame in [5, 72] {
+      XCTAssertEqual(try pixel(frames[frame], x: 27, y: 28), [0, 0, 0])
+    }
+
+    func visiblePixels(_ frame: Int) throws -> Set<Int> {
+      var pixels: Set<Int> = []
+      for y in 20..<100 {
+        for x in 20..<100 {
+          if try pixel(frames[frame], x: x, y: y) != pixel(frames[6], x: x, y: y) {
+            pixels.insert(y * 160 + x)
+          }
+        }
+      }
+      return pixels
+    }
+
+    let firstLetter = try visiblePixels(14)
+    let firstLine = try visiblePixels(20)
+    let fullText = try visiblePixels(35)
+    XCTAssertFalse(firstLetter.isEmpty)
+    XCTAssertTrue(firstLetter.isStrictSubset(of: firstLine))
+    XCTAssertTrue(firstLine.isStrictSubset(of: fullText))
+    XCTAssertEqual(try visiblePixels(17), firstLetter)
+    XCTAssertEqual(try visiblePixels(26), firstLine)
+    XCTAssertEqual(try visiblePixels(58), firstLine)
+    XCTAssertEqual(try visiblePixels(64), firstLetter)
+    XCTAssertTrue(try visiblePixels(71).isEmpty)
+  }
+
+  @MainActor
   func testReusesTextTextureAcrossPlacementsAndRotatesAboutAnchor() async throws {
     let url = try await makeMovie { _, _ in (0, 0, 0) }
     var video = clip(0, start: 0, end: 1_200_000, sourceStart: 0, sourceEnd: 1_200_000)
