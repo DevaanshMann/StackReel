@@ -1,9 +1,10 @@
 # StackReel mobile
 
 StackReel opens to the iOS template gallery. **Before / After** takes two videos, and **Hook & Reveal** takes three.
-Each required slot shows its minimum clip duration. Select or replace videos from Files, then play, scrub, export,
-and share the assembled H.264 MP4 once every required slot is filled. Each template supplies its own canvas,
-timing, and captions.
+Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
+video. Use **Replace from Photos** or **Replace from Files** to swap it. The iOS Photos picker gives StackReel access
+to the selected video. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
+MP4. Each template supplies its own canvas, timing, and captions.
 
 Under **Background music**, tap **Choose music from Files** to add an optional audio file, even before adding videos.
 The selected filename stays with that template’s draft. Use **Replace music** to choose another file or **Remove music**
@@ -27,8 +28,9 @@ pinch to zoom up to 3×. The **Zoom**, **Horizontal position**, and **Vertical p
 **Reset** restores the centered framing. Tap **Apply** to save the framing for that slot, or **Cancel** to discard your
 changes. If you apply a different framing, export the template again before sharing.
 
-Choose **Single-clip editor** from the gallery to preview and export one local video at 720 × 1280 and 30 fps.
-The video fits inside the vertical frame without cropping, and the export includes the clip’s audio when present.
+Choose **Single-clip editor** from the gallery to select or replace a video from Photos or Files, then preview and
+export it at 720 × 1280 and 30 fps. The video fits inside the vertical frame without cropping, and the export includes
+the clip’s audio when present.
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
@@ -38,7 +40,7 @@ how many videos each one has. Tap a draft to resume with its videos, trims, fram
 Tap **Rename** to give a saved draft a name you can recognize in Projects. The template name is shown below it.
 Tap **Delete** beside a draft and confirm to remove its edits and imported media copies. Your original files stay in
 place, and the next time you open that template it starts fresh.
-If an imported copy is missing, use the editor’s Files picker to replace it. Export again after relaunch, or use
+If an imported copy is missing, choose a replacement from Photos or Files. Export again after relaunch, or use
 **Save to Files** in the share sheet to keep a finished MP4.
 If StackReel can’t reopen a draft, the recovery screen preserves its saved edits and media copies. To start fresh,
 delete the draft from **Projects** and open the template again.
@@ -63,20 +65,22 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
 
 ## Smoke test
 
-1. On the Simulator, use `xcrun simctl addmedia booted /path/to/clip.mp4` to seed Photos. In Photos, share the videos and
-   use **Save to Files**. Prepare clips long enough for all slots and a clip shorter than the minimum.
+1. On the Simulator, use `xcrun simctl addmedia booted /path/to/clip.mp4` to seed Photos. Prepare videos long enough
+   for all slots and a video shorter than the minimum. Use **Save to Files** from the Photos share sheet to make a
+   video available in Files too.
 2. Open **Before / After**. Check the **Before** and **After** duration guidance and verify **Export MP4** is disabled
    until both videos are added. Open **Edit text** and check that all three fields show their defaults and limits.
    Use emoji to reach a field’s limit, then go one character past it and verify that **Apply text** is disabled.
    Enter a new **Before label** and **Caption**, clear the **After label**, and apply.
-   Fill **Before**, open **Trim**, and move the slider. Play the selected segment and check
-   its audio, then apply and confirm the slot shows the new source times. Fill **After** and confirm that **Play**,
-   **Pause**, and **Video position** preview the edit across the cut.
+   Fill **Before** using **Choose from Photos**. Check that the picker offers videos and iOS does not request library
+   access. Open **Trim** and move the slider. Play the selected segment and check its audio, then apply and confirm that
+   the slot shows the new source times. Fill **After** using **Choose from Files** and confirm that **Play**, **Pause**,
+   and **Video position** preview the edit across the cut.
 3. Tap **Export MP4** and check the progress indicator. Tap **Save to Photos**, grant add-only access, and play the
    exported video in Photos. Repeat with Photos access denied and confirm **Share MP4** still opens the share sheet.
-   Return to the draft and cancel a replacement in Files, then try replacing a slot with the short clip. Confirm the previous
-   selection and export are still available after both attempts. Replace the slot with a valid clip and verify that
-   the preview starts over and sharing requires a new export.
+   Return to the draft and cancel **Replace from Files**. Use **Replace from Photos** to select the short video. Confirm
+   that the previous selection and export are still available after both attempts. Replace the slot with a valid video
+   from Photos and verify that the preview starts over and sharing requires a new export.
 4. Export the draft and reopen **Trim**. Move the slider and cancel, then reopen and apply the existing window. Check
    that **Share MP4** is still available after each action. Apply a different window and confirm the template preview
    returns to the beginning and sharing requires another export. Try **Trim** on a video that has exactly the required
@@ -98,13 +102,15 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
    **Share MP4** are still available. Replace the track with a longer file and check that the preview starts over and
    sharing requires a new export. Switch templates to check that their music choices are independent. Remove the music,
    check that the preview plays the clips’ own audio, and export again before sharing.
-9. Open **Single-clip editor** and select a landscape video. Check for bars above and below it. To test cancellation,
-   start exporting a longer video and tap **Cancel export** while it is encoding. Confirm cancellation is reported
-   and another export is available. Imported and exported copies are kept in the app cache. Use **Save to Files**
-   in the share sheet to keep an MP4 outside the app.
+9. Open **Single-clip editor** and select a landscape video from Photos. Check for bars above and below it and export
+   an MP4. Cancel **Replace from Photos** and confirm that the clip and export are still available. Use **Replace from Files**
+   to select another video and confirm that sharing requires a new export. Start exporting a longer video and tap
+   **Cancel export** while it is encoding. Confirm cancellation is reported and another export is available. Imported
+   and exported copies are kept in the app cache. Use **Save to Files** in the share sheet to keep an MP4 outside the app.
 10. On a fresh installation, open **Projects** and check that **Browse templates** opens **Templates**. Make
-    different edits in each template, including one with text only, then quit and relaunch StackReel. Reopen both
-    drafts from **Projects** and verify their edits are restored independently. Check that **Back to projects**
+    different edits in each template, including a video from Photos in one draft and text only in the other. Quit and
+    relaunch StackReel. Reopen both drafts from **Projects** and verify that their videos and edits are restored
+    independently. Check that **Back to projects**
     returns to the list. Preview and export a restored template. In a test installation, remove one imported copy
     from the app’s `StackReelDrafts` documents folder. Relaunch, check that **Projects** marks the draft as missing
     media, and confirm the editor prompts for a replacement while the other edits remain available.

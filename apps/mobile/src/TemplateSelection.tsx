@@ -3,8 +3,10 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
 import { trimTimeLabel } from "./TemplateTrim";
+import { VideoImportActions } from "./VideoImportActions";
 import { getVideoSlots, mobileTemplates } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
+import type { VideoPickerSource } from "./video-picker";
 
 const choices = mobileTemplates.map((template) => ({ template, slots: getVideoSlots(template) }));
 type SelectTemplate = (template: MobileTemplate, slots: TemplateVideoSlot[]) => void;
@@ -155,6 +157,7 @@ export function TemplateVideoSlots({
   missingSlots,
   busy,
   importingSlotId,
+  importingFrom,
   importError,
   onSelect,
   onTrim,
@@ -165,8 +168,9 @@ export function TemplateVideoSlots({
   missingSlots: readonly string[];
   busy: boolean;
   importingSlotId: string | undefined;
+  importingFrom: VideoPickerSource | undefined;
   importError: { slotId?: string; message: string } | null;
-  onSelect: (slot: TemplateVideoSlot) => void;
+  onSelect: (slot: TemplateVideoSlot, source: VideoPickerSource) => void;
   onTrim: (slot: TemplateVideoSlot) => void;
   onReframe: (slot: TemplateVideoSlot) => void;
 }) {
@@ -178,8 +182,7 @@ export function TemplateVideoSlots({
       </Text>
       {slots.map((slot) => {
         const clip = clips[slot.id];
-        const importing = importingSlotId === slot.id;
-        const label = clip ? "Replace video" : "Choose video";
+        const missing = missingSlots.includes(slot.id);
         return (
           <View key={slot.id} style={[styles.panel, styles.slot]}>
             <View style={styles.slotCopy}>
@@ -197,38 +200,37 @@ export function TemplateVideoSlots({
                   </Text>
                 </>
               )}
-              {missingSlots.includes(slot.id) && (
+              {missing && (
                 <Text accessibilityRole="alert" style={textStyles.error}>
-                  Saved video is missing. Choose a replacement from Files.
+                  Saved video is missing. Choose a replacement from Photos or Files.
                 </Text>
               )}
             </View>
-            <View style={styles.slotAction}>
-              <Action
-                label={importing ? "Opening video…" : label}
-                accessibilityLabel={`${importing ? "Opening Files" : label} for ${slot.label}`}
-                onPress={() => onSelect(slot)}
-                disabled={busy}
-                primary={slot === nextSlot}
-              />
-              {clip && (
-                <>
-                  <Action
-                    label="Trim"
-                    accessibilityLabel={`Trim ${slot.label}`}
-                    onPress={() => onTrim(slot)}
-                    disabled={busy}
-                  />
-                  <Action
-                    label="Reframe"
-                    accessibilityLabel={`Reframe ${slot.label}`}
-                    testID={`reframe-${slot.id}`}
-                    onPress={() => onReframe(slot)}
-                    disabled={busy}
-                  />
-                </>
-              )}
-            </View>
+            <VideoImportActions
+              replace={!!clip || missing}
+              importingFrom={importingSlotId === slot.id ? importingFrom : undefined}
+              busy={busy}
+              primary={slot === nextSlot}
+              slotLabel={slot.label}
+              onSelect={(source) => onSelect(slot, source)}
+            />
+            {clip && (
+              <View style={styles.slotAction}>
+                <Action
+                  label="Trim"
+                  accessibilityLabel={`Trim ${slot.label}`}
+                  onPress={() => onTrim(slot)}
+                  disabled={busy}
+                />
+                <Action
+                  label="Reframe"
+                  accessibilityLabel={`Reframe ${slot.label}`}
+                  testID={`reframe-${slot.id}`}
+                  onPress={() => onReframe(slot)}
+                  disabled={busy}
+                />
+              </View>
+            )}
             {importError?.slotId === slot.id && (
               <Text accessibilityRole="alert" style={textStyles.error}>
                 {importError.message}

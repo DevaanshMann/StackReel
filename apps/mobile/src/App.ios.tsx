@@ -14,6 +14,7 @@ import { TemplateReframe } from "./TemplateReframe";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
+import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
 import {
   createDraftMediaFile,
@@ -34,6 +35,8 @@ import {
   setTemplateClipTrim,
 } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateTextOverrides, TemplateVideoSlot } from "./template-editor";
+import { pickVideo } from "./video-picker";
+import type { VideoPickerSource } from "./video-picker";
 
 type Clip = { name: string; uri: string; source: string };
 type SingleDraft = { clip: Clip | null; outputUri: string | null };
@@ -46,7 +49,7 @@ type TemplateDraft = TemplateDraftEdits & {
 };
 type Editor = { kind: "single" } | { kind: "template"; template: MobileTemplate; slots: TemplateVideoSlot[] };
 type ImportTarget = { kind: "single" } | { kind: "template"; template: MobileTemplate; slot: TemplateVideoSlot };
-type ImportOperation = { kind: "import"; slotId?: string };
+type ImportOperation = { kind: "import"; source: VideoPickerSource; slotId?: string };
 type SlotEdit = { kind: "trim" | "reframe"; template: MobileTemplate; slot: TemplateVideoSlot; clip: TemplateClip };
 type TextEdit = { kind: "text"; template: MobileTemplate; textOverrides: TemplateTextOverrides };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
@@ -256,17 +259,17 @@ export default function App() {
     finish(operation);
   }
 
-  async function selectVideo(target: ImportTarget) {
+  async function selectVideo(target: ImportTarget, pickerSource: VideoPickerSource) {
     const operation: ImportOperation =
-      target.kind === "template" ? { kind: "import", slotId: target.slot.id } : { kind: "import" };
+      target.kind === "template"
+        ? { kind: "import", source: pickerSource, slotId: target.slot.id }
+        : { kind: "import", source: pickerSource };
     if (!begin(operation)) return;
     let pickedUri: string | undefined;
     let draftMedia: File | undefined;
     try {
-      const result = await getDocumentAsync({ type: "video/*", copyToCacheDirectory: true });
-      if (result.canceled) return;
-      const [asset] = result.assets;
-      if (!asset) throw new Error("Files did not return a video.");
+      const asset = await pickVideo(pickerSource);
+      if (!asset) return;
       pickedUri = asset.uri;
       if (activeOperation.current !== operation) return;
 
@@ -277,7 +280,7 @@ export default function App() {
         const { template, slot } = target;
         const draft = templateDrafts?.[template.id] ?? emptyTemplateDraft;
         const clip = createTemplateClip(slot, pickedUri, asset.name, metadata);
-        draftMedia = createDraftMediaFile(template, asset.name);
+        draftMedia = createDraftMediaFile(template, asset.draftFileName);
         await new File(pickedUri).move(draftMedia);
         if (activeOperation.current !== operation) return;
         const clips = { ...draft.clips, [slot.id]: { ...clip, uri: draftMedia.uri } };
@@ -551,16 +554,26 @@ export default function App() {
           missingSlots={templateDraft.missingSlots}
           busy={busy}
           importingSlotId={importing ? activity.slotId : undefined}
+          importingFrom={importing ? activity.source : undefined}
           importError={feedback?.kind === "error" && feedback.slotId !== undefined ? feedback : null}
-          onSelect={(slot) => selectVideo({ kind: "template", template: editor.template, slot })}
+          onSelect={(slot, source) => selectVideo({ kind: "template", template: editor.template, slot }, source)}
           onTrim={(slot) => openSlotEdit("trim", slot)}
           onReframe={(slot) => openSlotEdit("reframe", slot)}
+        />
+      )}
+      {editor.kind === "single" && (
+        <VideoImportActions
+          replace={clip !== null}
+          importingFrom={importing ? activity.source : undefined}
+          busy={busy}
+          primary={clip === null}
+          onSelect={(source) => selectVideo({ kind: "single" }, source)}
         />
       )}
       {source && <ClipPreview key={source} canvas={canvas} source={source} suspended={busy && !exporting} />}
       {editor.kind === "single" && !source && (
         <PreviewFrame canvas={canvas}>
-          <Text style={textStyles.muted}>Choose a clip from Files</Text>
+          <Text style={textStyles.muted}>Choose a video to preview.</Text>
         </PreviewFrame>
       )}
       {editor.kind === "template" && !source && (
@@ -619,14 +632,6 @@ export default function App() {
             onPress={startExport}
             disabled={busy || !source}
             primary={!!source && !outputUri}
-          />
-        )}
-        {editor.kind === "single" && (
-          <Action
-            label={importing ? "Opening video…" : clip ? "Replace video" : "Choose video"}
-            onPress={() => selectVideo({ kind: "single" })}
-            disabled={busy}
-            primary={clip === null}
           />
         )}
       </View>
