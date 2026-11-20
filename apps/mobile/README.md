@@ -6,11 +6,16 @@ video. Use **Replace from Photos** or **Replace from Files** to choose a differe
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
 MP4. Each template supplies its own canvas, timing, and captions.
 
+Tap **Clear video** on a filled slot or a slot with a missing saved video, then confirm using the slot name shown.
+This empties the slot in the saved draft and keeps your original video and other edits. Fill the slot again to
+restore preview and export, then export a new MP4 before sharing.
+
 When at least two video slots are empty, tap **Choose videos from Photos**. Pick videos in the numbered slot order
 shown above the button. You can choose fewer videos and fill the remaining slots later. Slots with a saved video
-or a missing-media warning are skipped. Once Photos returns the videos, StackReel checks each one against its
-slot. If a video is too short or fails to import, the error names that slot. If Photos can’t return the selection,
-you’ll see an error for the group. StackReel saves the videos together only after every selected video is ready.
+or a missing-media warning are skipped until you clear them. Once Photos returns the videos, StackReel checks each
+one against its slot. If a video is too short or fails to import, the error names that slot. If Photos can’t return
+the selection, you’ll see an error for the group. StackReel saves the videos together only after every selected
+video is ready.
 
 Under **Required videos**, tap **Swap Before and After** to exchange those two clips. In **Hook & Reveal**, the swap
 button names the two filled slots. If all three are filled, tap **Swap clips**, then choose a named pair or tap **Cancel**.
@@ -140,5 +145,16 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     for both slots and use **Swap Your hook shot and The reveal** while **B-roll** is empty. Fill **B-roll**, open
     **Swap clips**, and check that **Cancel** keeps the slot order. Reopen the chooser, select a named pair, and
     relaunch and reopen the draft from **Projects** to verify the saved order.
+13. Export a completed **Before / After** draft with edited text, music, and a trimmed or reframed **Before** clip.
+    Tap **Clear video** on **After** and check that the confirmation names **After**. Cancel and verify both clips,
+    the preview, and **Share MP4** are still available. Confirm on a second attempt and check that **After** is
+    empty, preview and sharing disappear, and **Export MP4** is disabled. Relaunch and reopen from **Projects**.
+    Verify that **After** is still empty, the other edits are present, and the original video is still available
+    in Photos or Files. Fill **After** and check that preview returns and a new export enables sharing.
+14. In a test installation with **Hook & Reveal**, leave **Your hook shot** empty and fill **B-roll** and
+    **The reveal**. Remove B-roll’s imported copy from the app’s `StackReelDrafts` documents folder and relaunch.
+    Confirm that the missing **B-roll** slot offers **Clear video** and that the ordered Photos button is absent.
+    Clear **B-roll**, reopen the draft from **Projects**, and verify that the warning is gone. Check that
+    **Choose videos from Photos** lists **Your hook shot** followed by **B-roll** and leaves **The reveal** filled.
 
 Run the app’s checks from the root with `pnpm exec turbo run lint typecheck test --filter=@stackreel/mobile`.

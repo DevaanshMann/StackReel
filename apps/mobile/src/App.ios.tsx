@@ -17,12 +17,13 @@ import { TemplateTrim } from "./TemplateTrim";
 import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
 import {
+  clearTemplateVideoSlot,
+  commitTemplateDraftUpdate,
   createDraftMediaFile,
   deleteTemplateDraft,
   loadTemplateDraft,
   removeDraftFile,
   renameTemplateDraft,
-  saveTemplateDraft,
 } from "./template-drafts";
 import type { TemplateDraftEdits } from "./template-drafts";
 import {
@@ -61,7 +62,7 @@ type Operation =
   | SlotEdit
   | SlotSwap
   | TextEdit
-  | { kind: "import-music" | "remove-music" | "share" | "save-photos" }
+  | { kind: "clear-video" | "import-music" | "remove-music" | "share" | "save-photos" }
   | ExportJob;
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
 type Feedback = { kind: "error" | "status"; message: string; slotId?: string; scope?: "music" | "swap" };
@@ -240,11 +241,45 @@ export default function App() {
 
   function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft) {
     if (draft.loadError) throw new Error(draft.loadError);
-    const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
-    const outputUri = source === draft.source ? draft.outputUri : null;
-    saveTemplateDraft(template, draft);
+    const { source, outputUri } = commitTemplateDraftUpdate(template, draft);
     storeTemplateDraft(template, { ...draft, source, outputUri });
     if (outputUri !== draft.outputUri) removeCachedFile(draft.outputUri);
+  }
+
+  function confirmClearVideo(slot: TemplateVideoSlot) {
+    if (editor?.kind !== "template") return;
+    if (!Object.hasOwn(templateDraft.clips, slot.id) && !templateDraft.missingSlots.includes(slot.id)) return;
+    const operation = { kind: "clear-video" } as const;
+    if (!begin(operation)) return;
+    const { template } = editor;
+
+    Alert.alert(
+      `Clear video for ${slot.label}?`,
+      "This empties the slot in this draft. Your original video stays in place.",
+      [
+        { text: "Cancel", style: "cancel", onPress: () => finish(operation) },
+        {
+          text: "Clear video",
+          style: "destructive",
+          onPress: () => {
+            if (activeOperation.current !== operation) return;
+            try {
+              if (currentEditor.current !== editor || currentTemplateDrafts.current?.[template.id] !== templateDraft)
+                return;
+              updateTemplateDraft(template, { ...templateDraft, ...clearTemplateVideoSlot(templateDraft, slot.id) });
+            } catch (cause) {
+              setFeedback({
+                kind: "error",
+                slotId: slot.id,
+                message: errorMessage(`Couldn’t clear the video for ${slot.label}.`, cause),
+              });
+            } finally {
+              finish(operation);
+            }
+          },
+        },
+      ],
+    );
   }
 
   function openSlotEdit(kind: SlotEdit["kind"], slot: TemplateVideoSlot) {
@@ -611,12 +646,13 @@ export default function App() {
           busy={busy}
           importingSlotId={importing ? activity.slotId : undefined}
           importingFrom={importing ? activity.source : undefined}
-          importError={feedback?.kind === "error" && feedback.slotId !== undefined ? feedback : null}
+          slotError={feedback?.kind === "error" && feedback.slotId !== undefined ? feedback : null}
           swapError={feedback?.scope === "swap" ? feedback.message : undefined}
           onSelectOrdered={(slots) => selectTemplateVideos(slots, "Photos")}
           onSelect={(slot, source) => selectTemplateVideos([slot], source)}
           onTrim={(slot) => openSlotEdit("trim", slot)}
           onReframe={(slot) => openSlotEdit("reframe", slot)}
+          onClear={confirmClearVideo}
           onChooseSwap={() => startSlotSwap()}
           onSwap={(first, second) =>
             swapping ? applySlotSwap(activity, first, second) : startSlotSwap([first, second])

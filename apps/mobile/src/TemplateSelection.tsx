@@ -158,12 +158,13 @@ export function TemplateVideoSlots({
   busy,
   importingSlotId,
   importingFrom,
-  importError,
+  slotError,
   swapError,
   onSelect,
   onSelectOrdered,
   onTrim,
   onReframe,
+  onClear,
   onChooseSwap,
   onSwap,
   onCancelSwap,
@@ -174,12 +175,13 @@ export function TemplateVideoSlots({
   busy: boolean;
   importingSlotId: string | undefined;
   importingFrom: VideoPickerSource | undefined;
-  importError: { slotId?: string; message: string } | null;
+  slotError: { slotId?: string; message: string } | null;
   swapError: string | undefined;
   onSelect: (slot: TemplateVideoSlot, source: VideoPickerSource) => void;
   onSelectOrdered: (slots: TemplateVideoSlot[]) => void;
   onTrim: (slot: TemplateVideoSlot) => void;
   onReframe: (slot: TemplateVideoSlot) => void;
+  onClear: (slot: TemplateVideoSlot) => void;
   onChooseSwap: () => void;
   onSwap: (first: TemplateVideoSlot, second: TemplateVideoSlot) => void;
   onCancelSwap: (() => void) | undefined;
@@ -254,7 +256,7 @@ export function TemplateVideoSlots({
               )}
               {missing && (
                 <Text accessibilityRole="alert" style={textStyles.error}>
-                  Saved video is missing. Choose a replacement from Photos or Files.
+                  Saved video is missing. Replace it or clear this slot.
                 </Text>
               )}
             </View>
@@ -266,26 +268,37 @@ export function TemplateVideoSlots({
               slotLabel={slot.label}
               onSelect={(source) => onSelect(slot, source)}
             />
-            {clip && (
+            {(clip || missing) && (
               <View style={styles.slotAction}>
+                {clip && (
+                  <>
+                    <Action
+                      label="Trim"
+                      accessibilityLabel={`Trim ${slot.label}`}
+                      onPress={() => onTrim(slot)}
+                      disabled={busy}
+                    />
+                    <Action
+                      label="Reframe"
+                      accessibilityLabel={`Reframe ${slot.label}`}
+                      testID={`reframe-${slot.id}`}
+                      onPress={() => onReframe(slot)}
+                      disabled={busy}
+                    />
+                  </>
+                )}
                 <Action
-                  label="Trim"
-                  accessibilityLabel={`Trim ${slot.label}`}
-                  onPress={() => onTrim(slot)}
-                  disabled={busy}
-                />
-                <Action
-                  label="Reframe"
-                  accessibilityLabel={`Reframe ${slot.label}`}
-                  testID={`reframe-${slot.id}`}
-                  onPress={() => onReframe(slot)}
+                  label="Clear video"
+                  accessibilityLabel={`Clear video for ${slot.label}`}
+                  testID={`clear-video-${slot.id}`}
+                  onPress={() => onClear(slot)}
                   disabled={busy}
                 />
               </View>
             )}
-            {importError?.slotId === slot.id && (
+            {slotError?.slotId === slot.id && (
               <Text accessibilityRole="alert" style={textStyles.error}>
-                {importError.message}
+                {slotError.message}
               </Text>
             )}
           </View>
