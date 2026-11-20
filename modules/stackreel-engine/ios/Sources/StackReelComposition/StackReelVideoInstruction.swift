@@ -29,6 +29,7 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
   public let enablePostProcessing = false
   public let passthroughTrackID = kCMPersistentTrackID_Invalid
   let textTexturesByLayerID: [String: TextTexture]
+  let imageTexturesByLayerID: [String: ImageTexture]
 
   /// An empty array requests no video frames, for example during an overlay-only interval.
   public var requiredSourceTrackIDs: [NSValue]? {
@@ -39,7 +40,8 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
 
   private init(
     timeRange: CMTimeRange, canvas: Canvas, layers: [Layer], transitions: [Transition],
-    videoInputsByLayerID: [String: VideoInput], textTexturesByLayerID: [String: TextTexture]
+    videoInputsByLayerID: [String: VideoInput], textTexturesByLayerID: [String: TextTexture],
+    imageTexturesByLayerID: [String: ImageTexture]
   ) {
     self.timeRange = timeRange
     self.canvas = canvas
@@ -47,6 +49,7 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
     self.transitions = transitions
     self.videoInputsByLayerID = videoInputsByLayerID
     self.textTexturesByLayerID = textTexturesByLayerID
+    self.imageTexturesByLayerID = imageTexturesByLayerID
     sourceTrackIDs = Set(
       videoInputsByLayerID.values.filter { !$0.usesHeldFrame }.map(\.clip.trackID)
     ).sorted()
@@ -59,8 +62,8 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
           return media.fadeInUs > 0 || media.fadeOutUs > 0
         case .text(let text):
           return text.animation.inDurationUs > 0 || text.animation.outDurationUs > 0
-        case .sticker:
-          return false
+        case .sticker(let sticker):
+          return sticker.animation.inDurationUs > 0 || sticker.animation.outDurationUs > 0
         }
       }
   }
@@ -74,7 +77,8 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
 
   static func schedule(
     _ plan: RenderPlan, clipsByLayerID: [String: VideoComposition.Clip],
-    textTexturesByLayerID: [String: TextTexture] = [:]
+    textTexturesByLayerID: [String: TextTexture] = [:],
+    imageTexturesByLayerID: [String: ImageTexture] = [:]
   ) throws -> [StackReelVideoInstruction] {
     guard plan.durationUs > 0 else { throw ScheduleError.invalidPlanDuration }
     var events: [Int64: [Event]] = [0: [], plan.durationUs: []]
@@ -151,7 +155,8 @@ public final class StackReelVideoInstruction: NSObject, AVVideoCompositionInstru
           timeRange: CMTimeRange(start: start, end: VideoCompositionBuilder.time(endUs)),
           canvas: plan.canvas, layers: visibleLayers,
           transitions: activeTransitions.sorted().map { transitions[$0] },
-          videoInputsByLayerID: videoInputs, textTexturesByLayerID: textTexturesByLayerID))
+          videoInputsByLayerID: videoInputs, textTexturesByLayerID: textTexturesByLayerID,
+          imageTexturesByLayerID: imageTexturesByLayerID))
     }
     return instructions
   }

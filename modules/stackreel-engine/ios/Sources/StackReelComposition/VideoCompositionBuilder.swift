@@ -20,10 +20,12 @@ public struct VideoComposition {
   /// Apply this mix to the player or reader using the render asset's audio tracks.
   public let audioMix: AVAudioMix?
   let renderPlan: RenderPlan
+  let imageTexturesByLayerID: [String: ImageTexture]
 
   /// Builds the instructions for a custom compositor using the same plan as the source tracks.
   public func makeVideoInstructions() throws -> [StackReelVideoInstruction] {
-    try StackReelVideoInstruction.schedule(renderPlan, clipsByLayerID: clipsByLayerID)
+    try StackReelVideoInstruction.schedule(
+      renderPlan, clipsByLayerID: clipsByLayerID, imageTexturesByLayerID: imageTexturesByLayerID)
   }
 }
 
@@ -36,6 +38,8 @@ public enum VideoCompositionBuilder {
     case nonFileURL(assetURI: String)
     case missingVideoTrack(assetURI: String)
     case missingAudioTrack(assetURI: String)
+    case unableToDecodeImage(assetURI: String)
+    case unsupportedMultiImageAsset(assetURI: String)
     case sourceRangeOutsideTrack(layerID: String)
     case tooManyOverlappingClips(trackID: String)
     case unableToAddVideoTrack
@@ -57,7 +61,7 @@ public enum VideoCompositionBuilder {
     var endUs: Int64
   }
 
-  /// Resolves the plan's media asset identifiers to local files. Each logical video track owns up to two
+  /// Resolves media and sticker identifiers to local files. Each logical video track owns up to two
   /// composition tracks so an outgoing and incoming clip can be decoded at the same time.
   public static func build(
     _ plan: RenderPlan,
@@ -128,9 +132,11 @@ public enum VideoCompositionBuilder {
 
     let mix = try await AudioCompositionBuilder.build(
       plan, into: composition, assets: &assets, assetURL: assetURL)
+    let imageTextures =
+      clips.isEmpty ? [:] : try ImageTexture.loadLayers(plan.layers, assetURL: assetURL)
     return VideoComposition(
       composition: composition, timelineDuration: time(plan.durationUs), clipsByLayerID: clips,
-      audioMix: mix, renderPlan: plan)
+      audioMix: mix, renderPlan: plan, imageTexturesByLayerID: imageTextures)
   }
 
   private static func insert(

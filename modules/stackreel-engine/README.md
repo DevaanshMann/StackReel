@@ -55,8 +55,11 @@ The typewriter animation reveals grapheme clusters in text order on entry and re
 exit. Whitespace and line breaks count toward progress. The final wrapping, alignment, anchor, and
 background stay fixed throughout. See [sampled typewriter frames](../../docs/ios-typewriter.png).
 
-Still images, stickers, held frames, whip-pans, zoom punches, and spins return an
-unsupported-feature error. Rendering requires a video track.
+In video-backed plans, the asset resolver loads local still images and sticker assets with alpha and
+orientation preserved. Stills use the plan's crop, transform, and fades. Stickers use their resolved
+width, anchor, rotation, and overlay animations. Rendering requires a video track. Multi-image files,
+sticker typewriter animation, held frames, whip-pans, zoom punches, and spins are unsupported.
+See the [sampled still-image and sticker frames](../../docs/ios-image-overlays.png).
 
 `result.audioMix` applies the plan's gain, fades, and music ducking to embedded clip sound, standalone audio,
 and music. Audio uses the resolved trims, playback rates, and loops. A video without an audio track and
