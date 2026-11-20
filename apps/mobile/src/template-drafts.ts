@@ -24,12 +24,12 @@ function draftDirectory(template: MobileTemplate) {
   return new Directory(Paths.document, "StackReelDrafts", template.id);
 }
 
-function latestSnapshot(directory: Directory) {
+function draftSnapshots(directory: Directory) {
   const snapshots = directory.list().flatMap((entry) => {
     const revision = entry instanceof File ? snapshotName.exec(entry.name)?.[1] : undefined;
     return revision === undefined ? [] : [{ file: entry as File, revision: Number(revision) }];
   });
-  return snapshots.sort((a, b) => b.revision - a.revision)[0];
+  return snapshots.sort((a, b) => a.revision - b.revision);
 }
 
 export function removeDraftFile(file: File) {
@@ -60,10 +60,19 @@ export function createDraftMediaFile(template: MobileTemplate, importedName: str
   return new File(directory, `${randomUUID()}${extension.toLowerCase()}`);
 }
 
+export function deleteTemplateDraft(template: MobileTemplate) {
+  const directory = draftDirectory(template);
+  if (!directory.exists) return;
+
+  // Delete the current snapshot last so an interrupted deletion cannot restore an older revision.
+  for (const { file } of draftSnapshots(directory)) file.delete();
+  pruneDraftFiles(directory, new Set());
+}
+
 export function saveTemplateDraft(template: MobileTemplate, { clips, textOverrides, music }: TemplateDraftEdits) {
   const directory = draftDirectory(template);
   directory.create({ intermediates: true, idempotent: true });
-  const next = new File(directory, `draft-${(latestSnapshot(directory)?.revision ?? 0) + 1}.json`);
+  const next = new File(directory, `draft-${(draftSnapshots(directory).at(-1)?.revision ?? 0) + 1}.json`);
   const keep = new Set([next.name]);
   function storeAsset<T extends TemplateClip | TemplateMusic>({ uri, ...settings }: T) {
     const file = new File(uri).name;
@@ -117,7 +126,7 @@ function readAsset(value: unknown, directory: Directory, keep: Set<string>) {
 export function loadTemplateDraft(template: MobileTemplate) {
   const directory = draftDirectory(template);
   if (!directory.exists) return null;
-  const snapshot = latestSnapshot(directory);
+  const snapshot = draftSnapshots(directory).at(-1);
   const keep = new Set<string>();
   if (!snapshot) {
     pruneDraftFiles(directory, keep);

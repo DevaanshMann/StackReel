@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createDraftMediaFile, loadTemplateDraft, saveTemplateDraft } from "../src/template-drafts";
+import {
+  createDraftMediaFile,
+  deleteTemplateDraft,
+  loadTemplateDraft,
+  saveTemplateDraft,
+} from "../src/template-drafts";
 import {
   createTemplateClip,
   createTemplateMusic,
@@ -17,6 +22,7 @@ const storage = vi.hoisted(() => ({
   files: new Map<string, string>(),
   directories: new Set<string>(),
   interruptMove: false,
+  blockedDeletion: "",
   nextMedia: 0,
 }));
 
@@ -43,6 +49,7 @@ vi.mock("expo-file-system", () => {
     }
 
     delete() {
+      if (this.uri === storage.blockedDeletion) throw new Error("Couldn’t delete file");
       storage.files.delete(this.uri);
     }
 
@@ -125,6 +132,7 @@ describe("template draft storage", () => {
     storage.files.clear();
     storage.directories.clear();
     storage.interruptMove = false;
+    storage.blockedDeletion = "";
   });
 
   it("restores edited media, trims, framing, and text after the app sandbox moves", () => {
@@ -193,5 +201,52 @@ describe("template draft storage", () => {
       missingSlots: [before.id],
       missingMusic: true,
     });
+  });
+
+  it("deletes an unreadable draft and its imported copies without affecting other files", () => {
+    const { edits, beforeFile, afterFile, musicFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const hookEdits = { clips: {}, textOverrides: { "text/0": "Watch this" }, music: null };
+    saveTemplateDraft(hook, hookEdits);
+    const folder = `${storage.document}/StackReelDrafts/${beforeAfter.id}`;
+    const original = `${storage.document}/Before.mov`;
+    const unrelated = `${folder}/notes.txt`;
+    storage.files.set(original, "original");
+    storage.files.set(unrelated, "keep");
+    storage.files.set(`${folder}/draft-1.json`, "broken snapshot");
+    storage.files.set(`${folder}/pending.json`, "interrupted edit");
+    afterFile.delete();
+
+    deleteTemplateDraft(beforeAfter);
+
+    expect([...storage.files.keys()].filter((uri) => uri.startsWith(`${folder}/`))).toEqual([unrelated]);
+    expect(beforeFile.exists || musicFile.exists).toBe(false);
+    expect(storage.files.get(original)).toBe("original");
+    expect(loadTemplateDraft(hook)).toMatchObject(hookEdits);
+    expect(loadTemplateDraft(beforeAfter)).toBeNull();
+    expect(() => deleteTemplateDraft(beforeAfter)).not.toThrow();
+
+    const freshEdits = { clips: {}, textOverrides: {}, music: null };
+    saveTemplateDraft(beforeAfter, freshEdits);
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject(freshEdits);
+  });
+
+  it("preserves the current draft when deleting its snapshot fails", () => {
+    const { edits, beforeFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    saveTemplateDraft(beforeAfter, edits);
+    const folder = `${storage.document}/StackReelDrafts/${beforeAfter.id}`;
+    const oldSnapshot = `${folder}/draft-1.json`;
+    storage.files.set(oldSnapshot, "older revision");
+    storage.blockedDeletion = `${folder}/draft-2.json`;
+
+    expect(() => deleteTemplateDraft(beforeAfter)).toThrow("Couldn’t delete file");
+    expect(storage.files.has(oldSnapshot)).toBe(false);
+    expect(beforeFile.exists).toBe(true);
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject(edits);
+
+    storage.blockedDeletion = "";
+    deleteTemplateDraft(beforeAfter);
+    expect(loadTemplateDraft(beforeAfter)).toBeNull();
   });
 });

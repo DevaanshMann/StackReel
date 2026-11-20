@@ -32,6 +32,8 @@ The video fits inside the vertical frame without cropping, and the export includ
 
 StackReel automatically saves a separate draft for each template. Open the **Projects** tab to see saved drafts and
 how many videos each one has. Tap a draft to resume with its videos, trims, framing, edited text, and music.
+Tap **Delete** beside a draft and confirm to remove its edits and imported media copies. Your original files stay in
+place, and the next time you open that template it starts fresh.
 If an imported copy is missing, use the editor’s Files picker to replace it. Export again after relaunch, or use
 **Save to Files** in the share sheet to keep a finished MP4.
 
@@ -99,5 +101,8 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     returns to the list. Preview and export a restored template. In a test installation, remove one imported copy
     from the app’s `StackReelDrafts` documents folder. Relaunch, check that **Projects** marks the draft as missing
     media, and confirm the editor prompts for a replacement while the other edits remain available.
+11. In **Projects**, tap **Delete** beside a draft. Cancel and check that the draft still opens. Confirm deletion,
+    relaunch, and verify that the draft is gone, the other draft still opens, and the deleted template starts fresh
+    from **Templates**. Check that the original files are still available in Files.
 
 Run the app’s checks from the root with `pnpm exec turbo run lint typecheck test --filter=@stackreel/mobile`.
