@@ -14,6 +14,10 @@ public final class StackReelEngineModule: Module {
       try await LocalMedia.probeVideo(uri)
     }
 
+    AsyncFunction("probeAudio") { (uri: String) async throws -> [String: Double] in
+      try await LocalMedia.probeAudio(uri)
+    }
+
     AsyncFunction("exportMP4") {
       [exports, weak appContext] (source: String, exportId: String, promise: Promise) in
       MainActor.assumeIsolated {

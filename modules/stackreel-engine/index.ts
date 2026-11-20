@@ -10,6 +10,11 @@ export interface VideoMetadata {
   durationUs: number;
 }
 
+export interface AudioMetadata {
+  startUs: number;
+  durationUs: number;
+}
+
 export interface ExportProgress {
   exportId: string;
   progress: number;
@@ -34,6 +39,7 @@ type EngineEvents = {
 
 interface StackReelEngineModule extends InstanceType<typeof NativeModule<EngineEvents>> {
   probeVideo(uri: string): Promise<VideoMetadata>;
+  probeAudio(uri: string): Promise<AudioMetadata>;
   exportMP4(source: string, exportId: string): Promise<{ uri: string }>;
   cancelExport(exportId: string): Promise<void>;
 }
@@ -42,6 +48,10 @@ const engine = requireNativeModule<StackReelEngineModule>("StackReelEngine");
 
 export function probeVideo(uri: string): Promise<VideoMetadata> {
   return engine.probeVideo(uri);
+}
+
+export function probeAudio(uri: string): Promise<AudioMetadata> {
+  return engine.probeAudio(uri);
 }
 
 export function exportMP4(source: string, exportId: string): Promise<{ uri: string }> {

@@ -39,6 +39,11 @@ try {
 `probeVideo` returns width and height in pixels after applying the first video track's preferred
 transform. `startUs` and `durationUs` describe that track's time range in microseconds.
 
+`probeAudio(uri)` accepts an absolute local `file:` URL and returns `AudioMetadata` with `startUs`
+and `durationUs` for the first audio track. Use `startUs` and `startUs + durationUs` as the source trim
+bounds. They are safe integer microseconds rounded inward, and `startUs` can be greater than zero.
+The promise rejects if the file cannot be opened or its first audio track is missing or unusable.
+
 `StackReelPreviewView` accepts React Native view props, `source`, `playing`, and optional `looping`.
 `onReady` reports `nativeEvent.durationSeconds` when the player is available. `onPositionChange`
 reports `nativeEvent.positionSeconds`. `onError` reports `nativeEvent.message` for source or playback
