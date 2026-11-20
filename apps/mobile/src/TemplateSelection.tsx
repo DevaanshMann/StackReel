@@ -97,49 +97,47 @@ export function TemplateVideoSlots({
         const label = clip ? "Replace video" : "Choose video";
         return (
           <View key={slot.id} style={[styles.panel, styles.slot]}>
-            <View style={styles.slotBody}>
-              <View style={styles.slotCopy}>
-                <Text accessibilityRole="header" style={styles.slotTitle}>
-                  {slot.label}
-                </Text>
-                <Text style={textStyles.muted}>At least {secondsLabel(slot.minDurationUs)}</Text>
-                {clip && (
-                  <>
-                    <Text numberOfLines={1} style={textStyles.body}>
-                      {clip.name}
-                    </Text>
-                    <Text style={textStyles.muted}>
-                      Source {trimTimeLabel(clip.trimInUs)} to {trimTimeLabel(clip.trimOutUs)}
-                    </Text>
-                  </>
-                )}
-              </View>
-              <View style={styles.slotAction}>
-                <Action
-                  label={importing ? "Opening video…" : label}
-                  accessibilityLabel={`${importing ? "Opening Files" : label} for ${slot.label}`}
-                  onPress={() => onSelect(slot)}
-                  disabled={busy}
-                  primary={slot === nextSlot}
-                />
-                {clip && (
-                  <>
-                    <Action
-                      label="Trim"
-                      accessibilityLabel={`Trim ${slot.label}`}
-                      onPress={() => onTrim(slot)}
-                      disabled={busy}
-                    />
-                    <Action
-                      label="Reframe"
-                      accessibilityLabel={`Reframe ${slot.label}`}
-                      testID={`reframe-${slot.id}`}
-                      onPress={() => onReframe(slot)}
-                      disabled={busy}
-                    />
-                  </>
-                )}
-              </View>
+            <View style={styles.slotCopy}>
+              <Text accessibilityRole="header" style={styles.slotTitle}>
+                {slot.label}
+              </Text>
+              <Text style={textStyles.muted}>At least {secondsLabel(slot.minDurationUs)}</Text>
+              {clip && (
+                <>
+                  <Text numberOfLines={1} style={textStyles.body}>
+                    {clip.name}
+                  </Text>
+                  <Text style={textStyles.muted}>
+                    Source {trimTimeLabel(clip.trimInUs)} to {trimTimeLabel(clip.trimOutUs)}
+                  </Text>
+                </>
+              )}
+            </View>
+            <View style={styles.slotAction}>
+              <Action
+                label={importing ? "Opening video…" : label}
+                accessibilityLabel={`${importing ? "Opening Files" : label} for ${slot.label}`}
+                onPress={() => onSelect(slot)}
+                disabled={busy}
+                primary={slot === nextSlot}
+              />
+              {clip && (
+                <>
+                  <Action
+                    label="Trim"
+                    accessibilityLabel={`Trim ${slot.label}`}
+                    onPress={() => onTrim(slot)}
+                    disabled={busy}
+                  />
+                  <Action
+                    label="Reframe"
+                    accessibilityLabel={`Reframe ${slot.label}`}
+                    testID={`reframe-${slot.id}`}
+                    onPress={() => onReframe(slot)}
+                    disabled={busy}
+                  />
+                </>
+              )}
             </View>
             {importError?.slotId === slot.id && (
               <Text accessibilityRole="alert" style={textStyles.error}>
@@ -177,8 +175,7 @@ const styles = StyleSheet.create({
   chevron: { color: darkColors.textMuted, fontSize: fontSize.xl },
   pressed: { backgroundColor: darkColors.elevated },
   slot: { padding: space[3], gap: space[2] },
-  slotBody: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[2] },
-  slotCopy: { flexGrow: 1, flexShrink: 1, flexBasis: 136, gap: space[1] },
-  slotAction: { flexDirection: "row", flexWrap: "wrap", gap: space[2], maxWidth: "100%" },
+  slotCopy: { gap: space[1] },
+  slotAction: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
   slotTitle: { color: darkColors.text, fontSize: fontSize.md, fontWeight: "700" },
 });
