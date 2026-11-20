@@ -65,6 +65,9 @@ importers:
       '@stackreel/engine':
         specifier: workspace:*
         version: link:../../modules/stackreel-engine
+      '@stackreel/template-schema':
+        specifier: workspace:*
+        version: link:../../packages/template-schema
       '@stackreel/ui':
         specifier: workspace:*
         version: link:../../packages/ui
