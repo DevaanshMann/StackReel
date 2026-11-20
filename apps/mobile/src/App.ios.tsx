@@ -256,7 +256,7 @@ export default function App() {
   const reframing = activity?.kind === "reframe";
   const editingText = activity?.kind === "text";
   const clip = singleDraft.clip;
-  return (
+  const editorScreen = (
     <Screen page={template?.id ?? "single-clip"}>
       {trimming && (
         <TemplateTrim
@@ -276,14 +276,6 @@ export default function App() {
           onApply={(reframe) =>
             applySlotEdit(activity, (clip) => setTemplateClipReframe(clip, activity.template.canvas, reframe))
           }
-          onCancel={() => finish(activity)}
-        />
-      )}
-      {editingText && (
-        <TemplateTextEditor
-          fields={textFields}
-          overrides={activity.textOverrides}
-          onApply={(overrides) => applyTextEdit(activity, overrides)}
           onCancel={() => finish(activity)}
         />
       )}
@@ -376,6 +368,20 @@ export default function App() {
         )}
       </View>
     </Screen>
+  );
+
+  return (
+    <>
+      {editorScreen}
+      {editingText && (
+        <TemplateTextEditor
+          fields={textFields}
+          overrides={activity.textOverrides}
+          onApply={(overrides) => applyTextEdit(activity, overrides)}
+          onCancel={() => finish(activity)}
+        />
+      )}
+    </>
   );
 }
 

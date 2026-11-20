@@ -26,7 +26,7 @@ export function Screen({
           scrollEnabled={scrollEnabled}
           automaticallyAdjustKeyboardInsets={adjustForKeyboard}
           keyboardDismissMode={adjustForKeyboard ? "interactive" : "none"}
-          keyboardShouldPersistTaps={adjustForKeyboard ? "handled" : "never"}
+          keyboardShouldPersistTaps={adjustForKeyboard ? "always" : "never"}
         >
           <View style={styles.content}>
             <Text accessibilityRole="header" style={styles.title}>
