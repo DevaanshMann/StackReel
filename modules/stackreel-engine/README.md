@@ -76,3 +76,27 @@ The tests read the plans from the [shared fixture manifest](../../fixtures/READM
 and check that encoding the decoded plans preserves the JSON values. The composition tests verify source and
 timeline ranges using local videos and check the rendered pixels through `AVAssetReader`. See **Phases 2 and 3**
 in the [root README](../../README.md) for the remaining engine milestones.
+
+### MP4 export
+
+Export a built video composition to a local H.264 MP4. The exporter renders the plan at its canvas
+size and frame rate with the custom compositor. It writes one stereo AAC track when the plan has
+audio tracks to mix.
+
+```swift
+let result = try await VideoCompositionBuilder.build(plan) { assetURI in
+  try localFileURL(for: assetURI)
+}
+let exportTask = Task {
+  try await result.exportMP4(to: outputURL) { fraction in
+    // Runs on a background queue. Dispatch UI updates to the main actor.
+    print(fraction)
+  }
+}
+try await exportTask.value
+```
+
+Pass an unused file URL in an existing directory. An export publishes the finished MP4 at that
+URL and then reports progress of `1`. Call `exportTask.cancel()` to cancel an in-progress encode.
+Failure or cancellation removes the staged output. Existing files at the destination are preserved.
+The same plan features supported by the custom compositor are available for export.
