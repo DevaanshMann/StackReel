@@ -5,9 +5,13 @@ import { describe, expect, it } from "vitest";
 import {
   createTemplateClip,
   createTemplateSource,
+  defaultTemplateReframe,
+  getTemplateCrop,
   getTemplateTrimWindow,
   getVideoSlots,
+  maxTemplateReframeZoom,
   mobileTemplates,
+  setTemplateClipReframe,
   setTemplateClipTrim,
 } from "../src/template-editor";
 import type { MobileTemplate, TemplateClip } from "../src/template-editor";
@@ -142,6 +146,127 @@ describe("createTemplateSource", () => {
     const source = { assetUri: "slot:before", sourceStartUs: 100_000, sourceEndUs: 3_900_000, fitMode: "trim" };
     expect(plan.layers[0]).toMatchObject({ id: "main/0", sourceSize: { width: 1920, height: 1080 }, source });
     expect(plan.audio[0]).toMatchObject({ id: "main/0", source });
+  });
+
+  it("changes only the reframed slot's video geometry and restores the default plan on reset", () => {
+    const [slot] = getVideoSlots(beforeAfter);
+    const clip = createTemplateClip(slot!, "file:///landscape.mov", "landscape.mov", {
+      width: 2160,
+      height: 1920,
+      startUs: 50_000,
+      durationUs: 6_000_000,
+    });
+    const before = setTemplateClipTrim(slot!, clip, 5);
+    const clips = { ...fillSlots(beforeAfter), before };
+    const { canvas } = beforeAfter;
+    const initialSource = createTemplateSource(beforeAfter, clips);
+    const initial = parseSource(initialSource);
+    expect(initial.plan.layers[0]).toMatchObject({
+      id: "main/0",
+      cropPx: { x: 0, y: 0, width: 2160, height: 1920 },
+      transform: [1, 0, -540, 0, 1, 0, 0, 0, 1],
+    });
+
+    const reframed = setTemplateClipReframe(before, canvas, { zoom: 2, x: 1, y: 1 });
+    const result = parseSource(createTemplateSource(beforeAfter, { ...clips, before: reframed }));
+    expect(result).toEqual({
+      ...initial,
+      plan: {
+        ...initial.plan,
+        layers: initial.plan.layers.map((layer) =>
+          layer.id === "main/0"
+            ? {
+                ...layer,
+                cropPx: { x: 1620, y: 960, width: 540, height: 960 },
+                transform: [2, 0, -3240, 0, 2, -1920, 0, 0, 1],
+              }
+            : layer,
+        ),
+      },
+    });
+    expect(checkPlanInvariants(result.plan)).toEqual([]);
+
+    const reset = setTemplateClipReframe(reframed, canvas, defaultTemplateReframe);
+    expect(createTemplateSource(beforeAfter, { ...clips, before: reset })).toBe(initialSource);
+    const storedDefault = { ...before, reframe: { zoom: 1, x: 0.5, y: 1 } };
+    expect(createTemplateSource(beforeAfter, { ...clips, before: storedDefault })).toBe(initialSource);
+    const invalidReframe = { ...before, reframe: { zoom: 2, x: NaN, y: 1 } };
+    expect(() => createTemplateSource(beforeAfter, { ...clips, before: invalidReframe })).toThrow(RangeError);
+  });
+});
+
+describe("template clip reframing", () => {
+  const canvas = videoSize;
+  const portrait = fillSlots(beforeAfter)["before"]!;
+  const landscape = { ...portrait, width: 1920, height: 1080 };
+
+  it("starts with centered cover for matching and mismatched aspect ratios", () => {
+    expect(getTemplateCrop(portrait, canvas)).toEqual({ x: 0, y: 0, width: 1, height: 1 });
+    expect(getTemplateCrop(landscape, canvas)).toEqual({ x: 0.341796875, y: 0, width: 0.31640625, height: 1 });
+    const tallPortrait = { ...portrait, width: 720 };
+    expect(getTemplateCrop(tallPortrait, canvas)).toEqual({
+      x: 0,
+      y: expect.closeTo(1 / 6, 12),
+      width: 1,
+      height: 2 / 3,
+    });
+  });
+
+  it("uses the available travel at both edges when panning without zoom", () => {
+    expect(getTemplateCrop(landscape, canvas, { zoom: 1, x: 0, y: 1 })).toEqual({
+      x: 0,
+      y: 0,
+      width: 0.31640625,
+      height: 1,
+    });
+    expect(getTemplateCrop(landscape, canvas, { zoom: 1, x: 1, y: 0 })).toEqual({
+      x: 0.68359375,
+      y: 0,
+      width: 0.31640625,
+      height: 1,
+    });
+  });
+
+  it("supports both pan axes at the maximum zoom", () => {
+    const zoom = maxTemplateReframeZoom;
+    expect(zoom).toBe(3);
+    const topLeft = getTemplateCrop(portrait, canvas, { zoom, x: 0, y: 0 });
+    const bottomRight = getTemplateCrop(portrait, canvas, { zoom, x: 1, y: 1 });
+    expect(topLeft).toEqual({ x: 0, y: 0, width: 1 / 3, height: 1 / 3 });
+    expect(bottomRight.x + bottomRight.width).toBe(1);
+    expect(bottomRight.y + bottomRight.height).toBe(1);
+  });
+
+  it("canonicalizes axes without travel and keeps the same clip for an effective no-op", () => {
+    expect(setTemplateClipReframe(portrait, canvas, { zoom: 1, x: 0, y: 1 })).toBe(portrait);
+    expect(setTemplateClipReframe(landscape, canvas, defaultTemplateReframe)).toBe(landscape);
+    const moved = setTemplateClipReframe(landscape, canvas, { zoom: 1, x: 1, y: 0 });
+    expect(moved).toEqual({ ...landscape, reframe: { zoom: 1, x: 1, y: 0.5 } });
+    expect(setTemplateClipReframe(moved, canvas, { zoom: 1, x: 1, y: 1 })).toBe(moved);
+    const reset = setTemplateClipReframe(moved, canvas, { zoom: 1, x: 0.5, y: 0 });
+    expect(reset).toStrictEqual(landscape);
+    expect(reset).not.toHaveProperty("reframe");
+    expect(getTemplateCrop(reset, canvas)).toEqual(getTemplateCrop(landscape, canvas));
+  });
+
+  it("uses the saved reframe by default and accepts an explicit preview setting", () => {
+    const reframed = setTemplateClipReframe(portrait, canvas, { zoom: 2, x: 1, y: 0.5 });
+    expect(getTemplateCrop(reframed, canvas)).toEqual({ x: 0.5, y: 0.25, width: 0.5, height: 0.5 });
+    expect(getTemplateCrop(reframed, canvas, defaultTemplateReframe)).toEqual(getTemplateCrop(portrait, canvas));
+  });
+
+  it.each([{ zoom: NaN }, { zoom: 0.99 }, { zoom: 3.01 }, { x: -0.01 }, { x: 1.01 }, { y: Infinity }])(
+    "rejects invalid reframe settings %o",
+    (invalid) => {
+      const reframe = { ...defaultTemplateReframe, ...invalid };
+      expect(() => getTemplateCrop(portrait, canvas, reframe)).toThrow(RangeError);
+      expect(() => setTemplateClipReframe(portrait, canvas, reframe)).toThrow(RangeError);
+    },
+  );
+
+  it.each([0, -1, Infinity, NaN])("rejects a source or canvas dimension of %s", (dimension) => {
+    expect(() => getTemplateCrop({ ...portrait, width: dimension }, canvas)).toThrow(RangeError);
+    expect(() => getTemplateCrop(portrait, { ...canvas, height: dimension })).toThrow(RangeError);
   });
 });
 

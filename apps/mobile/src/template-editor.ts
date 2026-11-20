@@ -1,5 +1,5 @@
 import { checkTrim, createProject, frameToUs, resolve, US_PER_SECOND, usToFrame } from "@stackreel/core";
-import type { AssetInfo, AudioEntry, Project, VideoLayer } from "@stackreel/core";
+import type { AssetInfo, AudioEntry, Crop, Project, Size, SlotBinding, VideoLayer } from "@stackreel/core";
 import { validate } from "@stackreel/template-schema";
 import type { Transition } from "@stackreel/template-schema";
 import beforeAfter from "../../../templates/examples/before-after.json";
@@ -7,6 +7,7 @@ import hookAndReveal from "../../../templates/examples/hook-and-reveal.json";
 
 export type MobileTemplate = Project["template"];
 export type TemplateVideoSlot = { id: string; label: string; minDurationUs: number };
+export type TemplateReframe = { zoom: number; x: number; y: number };
 export type TemplateClip = {
   uri: string;
   name: string;
@@ -16,10 +17,65 @@ export type TemplateClip = {
   trimOutUs: number;
   width: number;
   height: number;
+  reframe?: TemplateReframe;
 };
+
+export const defaultTemplateReframe: Readonly<TemplateReframe> = Object.freeze({ zoom: 1, x: 0.5, y: 0.5 });
+export const maxTemplateReframeZoom = 3;
 
 const fps = 30;
 const invalidVideo = "This video has invalid dimensions or timing.";
+
+function isValidSize({ width, height }: Size): boolean {
+  return [width, height].every(
+    (dimension) => Number.isFinite(dimension) && dimension >= 1 && dimension <= Number.MAX_SAFE_INTEGER,
+  );
+}
+
+/** The visible part of the oriented source. Zoom is relative to cover and x/y are fractions of the available travel. */
+export function getTemplateCrop(
+  clip: TemplateClip,
+  canvas: Size,
+  { zoom, x, y }: TemplateReframe = clip.reframe ?? defaultTemplateReframe,
+): Crop {
+  if (!isValidSize(clip) || !isValidSize(canvas)) throw new RangeError("Invalid video or canvas dimensions.");
+  if (!Number.isFinite(zoom) || zoom < 1 || zoom > maxTemplateReframeZoom) {
+    throw new RangeError(`Reframe zoom must be between 1 and ${maxTemplateReframeZoom}.`);
+  }
+  if (![x, y].every((position) => Number.isFinite(position) && position >= 0 && position <= 1)) {
+    throw new RangeError("Reframe positions must be between 0 and 1.");
+  }
+
+  const scaleX = canvas.width / clip.width;
+  const scaleY = canvas.height / clip.height;
+  const coverScale = Math.max(scaleX, scaleY);
+  const width = scaleX / coverScale / zoom;
+  const height = scaleY / coverScale / zoom;
+  return { x: x === 0 ? 0 : (1 - width) * x, y: y === 0 ? 0 : (1 - height) * y, width, height };
+}
+
+function sameCrop(a: Crop, b: Crop): boolean {
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+export function setTemplateClipReframe(clip: TemplateClip, canvas: Size, reframe: TemplateReframe): TemplateClip {
+  const crop = getTemplateCrop(clip, canvas, reframe);
+  const defaultCrop = getTemplateCrop(clip, canvas, defaultTemplateReframe);
+  if (sameCrop(crop, clip.reframe ? getTemplateCrop(clip, canvas) : defaultCrop)) return clip;
+  if (sameCrop(crop, defaultCrop)) {
+    const { reframe: _reframe, ...reset } = clip;
+    return reset;
+  }
+
+  return {
+    ...clip,
+    reframe: {
+      zoom: reframe.zoom,
+      x: crop.width === 1 ? defaultTemplateReframe.x : reframe.x,
+      y: crop.height === 1 ? defaultTemplateReframe.y : reframe.y,
+    },
+  };
+}
 
 function iosTransition(transition: Transition | undefined): Transition | undefined {
   if (transition?.type === "whip-pan") return { type: "crossfade", durationUs: transition.durationUs };
@@ -91,18 +147,11 @@ function shortClipError(slot: TemplateVideoSlot): Error {
   );
 }
 
-function getTrimBounds(
-  slot: TemplateVideoSlot,
-  { uri, width, height, sourceStartUs, sourceEndUs }: Omit<TemplateClip, "trimInUs" | "trimOutUs">,
-) {
+function getTrimBounds(slot: TemplateVideoSlot, clip: Omit<TemplateClip, "trimInUs" | "trimOutUs">) {
+  const { uri, sourceStartUs, sourceEndUs } = clip;
   // A video track can begin before the asset timeline. Keep the probe value, but trim from zero or later.
   const playableStartUs = Math.max(0, sourceStartUs);
-  if (
-    !uri ||
-    !(width >= 1 && width <= Number.MAX_SAFE_INTEGER && height >= 1 && height <= Number.MAX_SAFE_INTEGER) ||
-    !Number.isSafeInteger(sourceStartUs) ||
-    checkTrim(playableStartUs, sourceEndUs)
-  ) {
+  if (!uri || !isValidSize(clip) || !Number.isSafeInteger(sourceStartUs) || checkTrim(playableStartUs, sourceEndUs)) {
     throw new Error(invalidVideo);
   }
 
@@ -188,7 +237,12 @@ export function createTemplateSource(
     if (!clip) continue;
     getTemplateTrimWindow(slot, clip);
     const assetUri = `slot:${slot.id}`;
-    project.bindings[slot.id] = { assetUri, trimInUs: clip.trimInUs, trimOutUs: clip.trimOutUs };
+    const binding: SlotBinding = { assetUri, trimInUs: clip.trimInUs, trimOutUs: clip.trimOutUs };
+    if (clip.reframe) {
+      const crop = getTemplateCrop(clip, template.canvas);
+      if (!sameCrop(crop, getTemplateCrop(clip, template.canvas, defaultTemplateReframe))) binding.crop = crop;
+    }
+    project.bindings[slot.id] = binding;
     assets[assetUri] = clip.uri;
     assetInfo[assetUri] = { width: clip.width, height: clip.height };
   }
