@@ -205,6 +205,57 @@ describe("template draft storage", () => {
     });
   });
 
+  it("preserves missing media and its settings when a caption autosaves", () => {
+    const { edits, beforeFile, musicFile } = fixture();
+    saveTemplateDraft(beforeAfter, { ...edits, name: "Weekend cut" });
+    beforeFile.delete();
+    musicFile.delete();
+
+    const draft = loadTemplateDraft(beforeAfter)!;
+    const field = getTemplateTextFields(beforeAfter)[0]!;
+    const textOverrides = setTemplateText(field, draft.textOverrides, "Final cut");
+    saveTemplateDraft(beforeAfter, { ...draft, textOverrides });
+
+    const reopened = loadTemplateDraft(beforeAfter)!;
+    expect(reopened).toEqual({ ...draft, textOverrides });
+
+    beforeFile.writeSync("fixture");
+    musicFile.writeSync("fixture");
+    saveTemplateDraft(beforeAfter, reopened);
+    expect(loadTemplateDraft(beforeAfter)).toEqual({
+      ...edits,
+      name: "Weekend cut",
+      textOverrides,
+      missingSlots: [],
+      missingMusic: false,
+    });
+  });
+
+  it("clears only the resolved warning when replacing missing media", () => {
+    const { edits, beforeFile, musicFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    beforeFile.delete();
+    musicFile.delete();
+
+    const draft = loadTemplateDraft(beforeAfter)!;
+    const replacement = createDraftMediaFile(beforeAfter, "Replacement.mov");
+    replacement.writeSync("fixture");
+    const clips = {
+      ...draft.clips,
+      [before.id]: createTemplateClip(before, replacement.uri, "Replacement.mov", metadata),
+    };
+    saveTemplateDraft(beforeAfter, { ...draft, clips, missingSlots: [] });
+
+    const reopened = loadTemplateDraft(beforeAfter)!;
+    expect(reopened).toEqual({ ...draft, clips, missingSlots: [], missingMusic: true });
+
+    const soundtrack = createDraftMediaFile(beforeAfter, "Replacement.m4a");
+    soundtrack.writeSync("fixture");
+    const music = createTemplateMusic(soundtrack.uri, "Replacement.m4a", { startUs: 0, durationUs: 2_000_000 });
+    saveTemplateDraft(beforeAfter, { ...reopened, music, missingMusic: false });
+    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...reopened, music, missingMusic: false });
+  });
+
   it("renames a legacy draft and carries the name through later edits", () => {
     const { edits } = fixture();
     saveTemplateDraft(beforeAfter, edits);

@@ -15,6 +15,8 @@ export type TemplateDraftEdits = {
   clips: Readonly<Record<string, TemplateClip>>;
   textOverrides: TemplateTextOverrides;
   music: TemplateMusic | null;
+  missingSlots?: readonly string[];
+  missingMusic?: boolean;
 };
 
 const snapshotName = /^draft-(\d{1,15})\.json$/;
@@ -94,10 +96,13 @@ export function renameTemplateDraft(template: MobileTemplate, name: string) {
   for (const { file } of snapshots) removeDraftFile(file);
 }
 
-export function saveTemplateDraft(template: MobileTemplate, { name, clips, textOverrides, music }: TemplateDraftEdits) {
+export function saveTemplateDraft(
+  template: MobileTemplate,
+  { name, clips, textOverrides, music, missingSlots = [], missingMusic = false }: TemplateDraftEdits,
+) {
   const directory = draftDirectory(template);
   directory.create({ intermediates: true, idempotent: true });
-  const revision = draftSnapshots(directory).at(-1)?.revision ?? 0;
+  const snapshot = draftSnapshots(directory).at(-1);
   const keep = new Set<string>();
   function storeAsset<T extends TemplateClip | TemplateMusic>({ uri, ...settings }: T) {
     const file = new File(uri).name;
@@ -107,15 +112,35 @@ export function saveTemplateDraft(template: MobileTemplate, { name, clips, textO
     keep.add(file);
     return { ...settings, file };
   }
+  function preserveAsset(reference: unknown) {
+    if (record(reference) && typeof reference.file === "string" && mediaName.test(reference.file)) {
+      keep.add(reference.file);
+    }
+    return reference;
+  }
+
+  const storedClips: [string, unknown][] = Object.entries(clips).map(([slot, clip]) => [slot, storeAsset(clip)]);
+  let storedMusic: unknown = music ? storeAsset(music) : null;
+  // An unrelated edit must retain the references and settings needed to recover missing media.
+  if (snapshot && (missingSlots.length > 0 || missingMusic)) {
+    const previous = readDraftManifest(snapshot.file);
+    for (const slot of missingSlots) {
+      if (!Object.hasOwn(clips, slot) && Object.hasOwn(previous.clips, slot)) {
+        storedClips.push([slot, preserveAsset(previous.clips[slot])]);
+      }
+    }
+    if (missingMusic && !music) storedMusic = preserveAsset(previous.saved.music ?? null);
+  }
+
   const manifest = {
     version: 1,
     name: name ?? undefined,
-    clips: Object.fromEntries(Object.entries(clips).map(([slot, clip]) => [slot, storeAsset(clip)])),
+    clips: Object.fromEntries(storedClips),
     textOverrides,
-    music: music ? storeAsset(music) : null,
+    music: storedMusic,
   };
 
-  keep.add(commitDraftManifest(directory, revision, manifest));
+  keep.add(commitDraftManifest(directory, snapshot?.revision ?? 0, manifest));
   pruneDraftFiles(directory, keep);
 }
 
