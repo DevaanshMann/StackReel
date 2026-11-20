@@ -3,12 +3,12 @@ import type { ReactNode } from "react";
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
-export function Screen({ children }: { children: ReactNode }) {
+export function Screen({ children, page }: { children: ReactNode; page?: string }) {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" />
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView key={page} contentContainerStyle={styles.scroll}>
           <View style={styles.content}>
             <Text accessibilityRole="header" style={styles.title}>
               StackReel
@@ -23,11 +23,13 @@ export function Screen({ children }: { children: ReactNode }) {
 
 export function Action({
   label,
+  accessibilityLabel = label,
   onPress,
   disabled = false,
   primary = false,
 }: {
   label: string;
+  accessibilityLabel?: string;
   onPress: () => void;
   disabled?: boolean;
   primary?: boolean;
@@ -35,7 +37,7 @@ export function Action({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
@@ -47,6 +49,7 @@ export function Action({
 }
 
 export const textStyles = StyleSheet.create({
+  heading: { color: darkColors.text, fontSize: fontSize["2xl"], fontWeight: "700" },
   body: { color: darkColors.text, fontSize: fontSize.md },
   muted: { color: darkColors.textMuted, fontSize: fontSize.sm, lineHeight: 21 },
   error: { color: darkColors.danger, fontSize: fontSize.sm, lineHeight: 21 },

@@ -6,13 +6,25 @@ import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
-import { canvas } from "./clip-source";
 
-export function PreviewFrame({ children }: { children: ReactNode }) {
-  return <View style={styles.frame}>{children}</View>;
+type PreviewCanvas = { width: number; height: number };
+const previewMaxWidth = 224;
+
+export function PreviewFrame({ canvas, children }: { canvas: PreviewCanvas; children: ReactNode }) {
+  const aspectRatio = canvas.width / canvas.height;
+  // Yoga can calculate the height before clamping the width, so bound both dimensions.
+  return <View style={[styles.frame, { aspectRatio, maxHeight: previewMaxWidth / aspectRatio }]}>{children}</View>;
 }
 
-export function ClipPreview({ source, suspended }: { source: string; suspended: boolean }) {
+export function ClipPreview({
+  canvas,
+  source,
+  suspended,
+}: {
+  canvas: PreviewCanvas;
+  source: string;
+  suspended: boolean;
+}) {
   const preview = useRef<StackReelPreviewViewRef>(null);
   const dragging = useRef(false);
   const pendingSeek = useRef<object | null>(null);
@@ -52,7 +64,7 @@ export function ClipPreview({ source, suspended }: { source: string; suspended: 
   const visiblePosition = scrubPosition ?? position;
   return (
     <View style={styles.controls}>
-      <PreviewFrame>
+      <PreviewFrame canvas={canvas}>
         <StackReelPreviewView
           ref={preview}
           style={StyleSheet.absoluteFill}
@@ -133,8 +145,7 @@ function timeLabel(seconds: number) {
 const styles = StyleSheet.create({
   frame: {
     width: "100%",
-    maxWidth: 224,
-    aspectRatio: canvas.width / canvas.height,
+    maxWidth: previewMaxWidth,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
