@@ -74,6 +74,7 @@ export function TemplateVideoSlots({
   importError,
   onSelect,
   onTrim,
+  onReframe,
 }: {
   slots: readonly TemplateVideoSlot[];
   clips: Readonly<Record<string, TemplateClip>>;
@@ -82,6 +83,7 @@ export function TemplateVideoSlots({
   importError: { slotId?: string; message: string } | null;
   onSelect: (slot: TemplateVideoSlot) => void;
   onTrim: (slot: TemplateVideoSlot) => void;
+  onReframe: (slot: TemplateVideoSlot) => void;
 }) {
   const nextSlot = slots.find((slot) => !clips[slot.id]);
   return (
@@ -121,12 +123,21 @@ export function TemplateVideoSlots({
                   primary={slot === nextSlot}
                 />
                 {clip && (
-                  <Action
-                    label="Trim"
-                    accessibilityLabel={`Trim ${slot.label}`}
-                    onPress={() => onTrim(slot)}
-                    disabled={busy}
-                  />
+                  <>
+                    <Action
+                      label="Trim"
+                      accessibilityLabel={`Trim ${slot.label}`}
+                      onPress={() => onTrim(slot)}
+                      disabled={busy}
+                    />
+                    <Action
+                      label="Reframe"
+                      accessibilityLabel={`Reframe ${slot.label}`}
+                      testID={`reframe-${slot.id}`}
+                      onPress={() => onReframe(slot)}
+                      disabled={busy}
+                    />
+                  </>
                 )}
               </View>
             </View>

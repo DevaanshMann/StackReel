@@ -10,6 +10,11 @@ window in whole-frame steps and play the selected segment with its audio. You ca
 Tap **Apply trim** to save the window, or **Cancel** to keep the current selection. If you change the window, export
 the template again before sharing.
 
+Tap **Reframe** on any filled slot to see its selected segment in the template’s vertical canvas. Drag the video or
+pinch to zoom up to 3×. The **Zoom**, **Horizontal position**, and **Vertical position** sliders make the same adjustments.
+**Reset** restores the centered framing. Tap **Apply** to save the framing for that slot, or **Cancel** to discard your
+changes. If you apply a different framing, export the template again before sharing.
+
 Choose **Single-clip editor** from the gallery to preview and export one local video at 720 × 1280 and 30 fps.
 The video fits inside the vertical frame without cropping, and the export includes the clip’s audio when present.
 You can return to the gallery and reopen a draft during the same app session.
@@ -48,9 +53,14 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
    that **Share MP4** is still available after each action. Apply a different window and confirm the template preview
    returns to the beginning and sharing requires another export. Try **Trim** on a video that has exactly the required
    number of frames and check the disabled slider and its explanation.
-5. Tap **Back to templates** and open **Hook & Reveal**. Fill all three slots, check the canvas metadata and preview,
+5. In a draft with one filled slot, open **Reframe** on a landscape video. Use a silent clip with visible detail on both
+   sides. Drag horizontally, pinch to zoom, and try the three sliders. Apply the framing, add the remaining videos,
+   and compare the template preview and exported MP4 with the framing you chose. Reopen **Reframe** to check that the
+   values persisted. Make a change and cancel, then reopen and apply the current framing. Check that **Share MP4** is
+   still available. Reset and apply, then check that the preview is centered and sharing requires a new export.
+6. Tap **Back to templates** and open **Hook & Reveal**. Fill all three slots, check the canvas metadata and preview,
    then export and share. Open the saved MP4s to check picture and audio.
-6. Open **Single-clip editor** and select a landscape video. Check for bars above and below it. To test cancellation,
+7. Open **Single-clip editor** and select a landscape video. Check for bars above and below it. To test cancellation,
    start exporting a longer video and tap **Cancel export** while it is encoding. Confirm cancellation is reported
    and another export is available. Imported and exported copies are kept in the app cache. Use **Save to Files**
    in the share sheet to keep an MP4 outside the app.
