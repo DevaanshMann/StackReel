@@ -10,7 +10,9 @@ let package = Package(
   ],
   targets: [
     .target(name: "StackReelPlan"),
-    .target(name: "StackReelComposition", dependencies: ["StackReelPlan"]),
+    .target(
+      name: "StackReelComposition", dependencies: ["StackReelPlan"],
+      resources: [.copy("Resources/Fonts")]),
     .testTarget(
       name: "StackReelCompositionTests", dependencies: ["StackReelComposition", "StackReelPlan"]),
     .testTarget(name: "StackReelPlanTests", dependencies: ["StackReelPlan"]),

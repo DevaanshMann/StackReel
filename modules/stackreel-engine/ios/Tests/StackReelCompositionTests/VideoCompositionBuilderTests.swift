@@ -395,7 +395,7 @@ final class VideoCompositionBuilderTests: XCTestCase {
     foreground["transform"] = [1, 0, 85, 0, 1, 126, 0, 0, 1]
     var overlay = textLayer(0, start: 400_000, end: 2_400_000, x: 12, y: 72)
     overlay["style"] = [
-      "font": "Helvetica-Bold", "sizePx": 25, "color": "#FFFFFF", "align": "center",
+      "font": "Inter-Bold", "sizePx": 25, "color": "#FFFFFF", "align": "center",
       "stroke": ["color": "#FF9900", "widthPx": 2],
       "shadow": ["color": "#FF00FF", "blurPx": 0, "offsetXPx": 4, "offsetYPx": 4],
       "background": ["color": "#007030", "paddingPx": 12, "cornerRadiusPx": 9],

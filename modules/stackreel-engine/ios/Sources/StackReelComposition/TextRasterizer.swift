@@ -17,6 +17,9 @@ struct TextTexture: Sendable {
 }
 
 enum TextRasterizer {
+  private static let bundledFontURLs =
+    Bundle.module.urls(forResourcesWithExtension: "ttf", subdirectory: "Fonts") ?? []
+
   fileprivate struct Line {
     let layout: CTLine
     let width: CGFloat
@@ -65,6 +68,31 @@ enum TextRasterizer {
     return textures
   }
 
+  static func font(named name: String, size: CGFloat) -> CTFont {
+    if let url = bundledFontURLs.first(where: {
+      $0.deletingPathExtension().lastPathComponent.caseInsensitiveCompare(name) == .orderedSame
+    }),
+      let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL)
+        as? [CTFontDescriptor],
+      let descriptor = descriptors.first
+    {
+      let bundledFont = CTFontCreateWithFontDescriptor(descriptor, size, nil)
+      if (CTFontCopyPostScriptName(bundledFont) as String).caseInsensitiveCompare(name)
+        == .orderedSame
+      {
+        return bundledFont
+      }
+    }
+
+    let font = CTFontCreateWithName(name as CFString, size, nil)
+    if (CTFontCopyPostScriptName(font) as String).caseInsensitiveCompare(name) != .orderedSame,
+      let fallback = CTFontCreateUIFontForLanguage(.system, size, nil)
+    {
+      return fallback
+    }
+    return font
+  }
+
   private static func draw(_ overlay: Layer.Text, canvas: Canvas, typewriter: Bool) -> TextTexture?
   {
     let style = overlay.style
@@ -86,13 +114,7 @@ enum TextRasterizer {
       2 + size / 4 + strokeWidth + 3 * blur + max(abs(offset.width), abs(offset.height)))
     guard margin + padding < 8192 else { return nil }
 
-    var font = CTFontCreateWithName(style.font as CFString, size, nil)
-    if (CTFontCopyPostScriptName(font) as String).caseInsensitiveCompare(style.font)
-      != .orderedSame,
-      let fallback = CTFontCreateUIFontForLanguage(.system, size, nil)
-    {
-      font = fallback
-    }
+    let font = font(named: style.font, size: size)
     var attributes: [NSAttributedString.Key: Any] = [
       NSAttributedString.Key(kCTFontAttributeName as String): font,
       NSAttributedString.Key(kCTForegroundColorAttributeName as String): fillColor,

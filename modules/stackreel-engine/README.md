@@ -46,8 +46,11 @@ See [sampled frames for all four directions](../../docs/ios-slide.png).
 
 Core Text draws multiline and wrapped text with alignment, stroke, shadow, and rounded backgrounds.
 The compositor caches the rendered text by content and style, then applies its anchor, rotation, and
-fade, pop, scale, slide, or bounce animation on each frame. If the requested PostScript font is unavailable,
-Core Text uses the system font. See [sampled text frames](../../docs/ios-text.png).
+fade, pop, scale, slide, or bounce animation on each frame. The Swift package bundles the Inter,
+Playfair Display, and Space Mono faces used by the sample templates and loads them by PostScript name.
+Core Text uses the system font when the requested face is unavailable. See
+[font sources and licenses](ios/Sources/StackReelComposition/Resources/Fonts/) and
+[sampled text frames](../../docs/ios-text.png).
 The typewriter animation reveals grapheme clusters in text order on entry and removes them in reverse on
 exit. Whitespace and line breaks count toward progress. The final wrapping, alignment, anchor, and
 background stay fixed throughout. See [sampled typewriter frames](../../docs/ios-typewriter.png).
