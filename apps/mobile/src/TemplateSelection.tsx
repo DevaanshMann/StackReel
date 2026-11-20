@@ -6,12 +6,19 @@ import { getVideoSlots, mobileTemplates } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
 
 const choices = mobileTemplates.map((template) => ({ template, slots: getVideoSlots(template) }));
+type SelectTemplate = (template: MobileTemplate, slots: TemplateVideoSlot[]) => void;
+type ProjectDraft = {
+  clips: Readonly<Record<string, TemplateClip>>;
+  missingSlots: readonly string[];
+  missingMusic: boolean;
+  loadError?: string;
+};
 
 export function TemplateGallery({
   onSelectTemplate,
   onSelectSingleClip,
 }: {
-  onSelectTemplate: (template: MobileTemplate, slots: TemplateVideoSlot[]) => void;
+  onSelectTemplate: SelectTemplate;
   onSelectSingleClip: () => void;
 }) {
   return (
@@ -31,6 +38,53 @@ export function TemplateGallery({
         ))}
       </View>
       <GalleryCard label="Single-clip editor" details="Preview and export one video" onPress={onSelectSingleClip} />
+    </>
+  );
+}
+
+export function TemplateProjects({
+  drafts,
+  onSelectTemplate,
+  onBrowseTemplates,
+}: {
+  drafts: Readonly<Record<string, ProjectDraft>>;
+  onSelectTemplate: SelectTemplate;
+  onBrowseTemplates: () => void;
+}) {
+  const projects = choices.flatMap(({ template, slots }) => {
+    const draft = drafts[template.id];
+    return draft ? [{ template, slots, draft }] : [];
+  });
+
+  return (
+    <>
+      <Text accessibilityRole="header" style={textStyles.heading}>
+        Projects
+      </Text>
+      {projects.length === 0 ? (
+        <View style={[styles.panel, styles.emptyProjects]}>
+          <Text style={styles.cardTitle}>No saved drafts yet</Text>
+          <Text style={textStyles.muted}>Make an edit in a template to start a draft.</Text>
+          <Action label="Browse templates" onPress={onBrowseTemplates} />
+        </View>
+      ) : (
+        <View style={styles.list}>
+          {projects.map(({ template, slots, draft }) => {
+            const filled = slots.filter(({ id }) => draft.clips[id]).length;
+            const missingMedia = draft.missingSlots.length > 0 || draft.missingMusic;
+            const progress = `${filled} of ${slots.length} videos`;
+            return (
+              <GalleryCard
+                key={template.id}
+                label={template.name}
+                details={draft.loadError ? "Couldn’t load draft" : progress}
+                description={missingMedia ? "Missing media" : undefined}
+                onPress={() => onSelectTemplate(template, slots)}
+              />
+            );
+          })}
+        </View>
+      )}
     </>
   );
 }
@@ -177,6 +231,7 @@ const styles = StyleSheet.create({
     padding: space[4],
   },
   cardCopy: { flex: 1, gap: space[1] },
+  emptyProjects: { padding: space[4], gap: space[3] },
   cardTitle: { color: darkColors.text, fontSize: fontSize.lg, fontWeight: "700" },
   cardDetails: { color: darkColors.accent, fontSize: fontSize.sm, fontWeight: "600" },
   chevron: { color: darkColors.textMuted, fontSize: fontSize.xl },

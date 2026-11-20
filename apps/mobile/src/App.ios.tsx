@@ -1,16 +1,16 @@
 import { addExportProgressListener, cancelExport, exportMP4, probeAudio, probeVideo } from "@stackreel/engine";
-import { darkColors, radius, space } from "@stackreel/ui";
+import { darkColors, fontSize, radius, space } from "@stackreel/ui";
 import { randomUUID } from "expo-crypto";
 import { getDocumentAsync } from "expo-document-picker";
 import { File, Paths } from "expo-file-system";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { TemplateMusicControls } from "./TemplateMusicControls";
 import { TemplateReframe } from "./TemplateReframe";
-import { TemplateGallery, TemplateVideoSlots } from "./TemplateSelection";
+import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
@@ -47,6 +47,12 @@ type Operation =
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
 type Feedback = { kind: "error" | "status"; message: string; slotId?: string; scope?: "music" };
 
+const homeTabs = [
+  { id: "templates", label: "Templates" },
+  { id: "projects", label: "Projects" },
+] as const;
+type HomeTab = (typeof homeTabs)[number]["id"];
+
 const emptyTemplateDraft: TemplateDraft = {
   clips: {},
   textOverrides: {},
@@ -59,6 +65,7 @@ const emptyTemplateDraft: TemplateDraft = {
 
 export default function App() {
   const activeOperation = useRef<Operation | null>(null);
+  const [homeTab, setHomeTab] = useState<HomeTab>("templates");
   const [editor, setEditor] = useState<Editor | null>(null);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [singleDraft, setSingleDraft] = useState<SingleDraft>({ clip: null, outputUri: null });
@@ -126,6 +133,10 @@ export default function App() {
     if (activeOperation.current) return;
     setFeedback(null);
     setEditor(next);
+  }
+
+  function openTemplate(template: MobileTemplate, slots: TemplateVideoSlot[]) {
+    navigate({ kind: "template", template, slots });
   }
 
   function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft) {
@@ -327,14 +338,17 @@ export default function App() {
 
   if (!editor) {
     return (
-      <Screen page="gallery">
-        {templateDrafts ? (
-          <TemplateGallery
-            onSelectTemplate={(template, slots) => navigate({ kind: "template", template, slots })}
-            onSelectSingleClip={() => navigate({ kind: "single" })}
+      <Screen page={homeTab} footer={templateDrafts && <HomeTabBar activeTab={homeTab} onSelect={setHomeTab} />}>
+        {!templateDrafts ? (
+          <Text style={textStyles.muted}>Opening saved drafts…</Text>
+        ) : homeTab === "projects" ? (
+          <TemplateProjects
+            drafts={templateDrafts}
+            onSelectTemplate={openTemplate}
+            onBrowseTemplates={() => setHomeTab("templates")}
           />
         ) : (
-          <Text style={textStyles.muted}>Opening saved drafts…</Text>
+          <TemplateGallery onSelectTemplate={openTemplate} onSelectSingleClip={() => navigate({ kind: "single" })} />
         )}
       </Screen>
     );
@@ -370,7 +384,11 @@ export default function App() {
         />
       )}
       <View style={styles.navigation}>
-        <Action label="Back to templates" onPress={() => navigate(null)} disabled={busy} />
+        <Action
+          label={homeTab === "projects" ? "Back to projects" : "Back to templates"}
+          onPress={() => navigate(null)}
+          disabled={busy}
+        />
       </View>
       <View style={styles.details}>
         <Text accessibilityRole="header" style={textStyles.heading}>
@@ -497,6 +515,30 @@ export default function App() {
   );
 }
 
+function HomeTabBar({ activeTab, onSelect }: { activeTab: HomeTab; onSelect: (tab: HomeTab) => void }) {
+  return (
+    <View style={styles.tabBar}>
+      <View accessibilityRole="tablist" style={styles.tabRow}>
+        {homeTabs.map(({ id, label }) => {
+          const selected = id === activeTab;
+          return (
+            <Pressable
+              key={id}
+              testID={`home-tab-${id}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
+              onPress={() => onSelect(id)}
+              style={({ pressed }) => [styles.tab, (selected || pressed) && styles.activeTab]}
+            >
+              <Text style={[styles.tabLabel, selected && styles.activeTabLabel]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function ExportProgress({ percentage }: { percentage: number }) {
   return (
     <View
@@ -525,6 +567,25 @@ function removeCachedFile(uri: string | null | undefined) {
 }
 
 const styles = StyleSheet.create({
+  tabBar: {
+    alignItems: "center",
+    paddingHorizontal: space[5],
+    paddingTop: space[2],
+    borderTopColor: darkColors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  tabRow: { flexDirection: "row", width: "100%", maxWidth: 440, gap: space[2] },
+  tab: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.lg,
+    padding: space[2],
+  },
+  activeTab: { backgroundColor: darkColors.elevated },
+  tabLabel: { color: darkColors.textMuted, fontSize: fontSize.md, fontWeight: "600", textAlign: "center" },
+  activeTabLabel: { color: darkColors.accent },
   navigation: { alignSelf: "flex-start" },
   details: { gap: space[1] },
   actions: { gap: space[2] },
