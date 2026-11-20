@@ -2,7 +2,7 @@
 
 StackReel opens to the iOS template gallery. **Before / After** takes two videos, and **Hook & Reveal** takes three.
 Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
-video. Use **Replace from Photos** or **Replace from Files** to swap it. The iOS Photos picker gives StackReel access
+video. Use **Replace from Photos** or **Replace from Files** to choose a different video. The iOS Photos picker gives StackReel access
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
 MP4. Each template supplies its own canvas, timing, and captions.
 
@@ -11,6 +11,12 @@ shown above the button. You can choose fewer videos and fill the remaining slots
 or a missing-media warning are skipped. Once Photos returns the videos, StackReel checks each one against its
 slot. If a video is too short or fails to import, the error names that slot. If Photos can’t return the selection,
 you’ll see an error for the group. StackReel saves the videos together only after every selected video is ready.
+
+Under **Required videos**, tap **Swap Before and After** to exchange those two clips. In **Hook & Reveal**, the swap
+button names the two filled slots. If all three are filled, tap **Swap clips**, then choose a named pair or tap **Cancel**.
+Each clip keeps its framing and as much of its original trim position as the new slot allows. If a clip is too short
+for its destination, the error names that slot and the draft and prior export stay as they were. A successful swap
+saves to the draft. If all required slots are filled, export a new MP4 before sharing.
 
 Under **Background music**, tap **Choose music from Files** to add an optional audio file, even before adding videos.
 The selected filename stays with that template’s draft. Use **Replace music** to choose another file or **Remove music**
@@ -126,5 +132,13 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
 11. In **Projects**, tap **Delete** beside a draft. Cancel and check that the draft still opens. Confirm deletion,
     relaunch, and verify that the draft is gone, the other draft still opens, and the deleted template starts fresh
     from **Templates**. Check that the original files are still available in Files.
+12. Fill **Before / After** with two distinguishable videos long enough for both slots. Trim **Before** near the end
+    of its source, reframe it, and export. Tap **Swap Before and After**. Check that the names and framing switch,
+    each trim fits its new slot, and the preview restarts. Confirm that sharing requires a new export. Repeat with
+    a **Before** clip that is too short for **After**, and check that the error names **After** and the clips and prior
+    export stay available. In **Hook & Reveal**, fill **Your hook shot** and **The reveal** with videos long enough
+    for both slots and use **Swap Your hook shot and The reveal** while **B-roll** is empty. Fill **B-roll**, open
+    **Swap clips**, and check that **Cancel** keeps the slot order. Reopen the chooser, select a named pair, and
+    relaunch and reopen the draft from **Projects** to verify the saved order.
 
 Run the app’s checks from the root with `pnpm exec turbo run lint typecheck test --filter=@stackreel/mobile`.

@@ -268,6 +268,32 @@ export function setTemplateClipTrim(slot: TemplateVideoSlot, clip: TemplateClip,
   };
 }
 
+function fitClipToSlot(clip: TemplateClip, from: TemplateVideoSlot, to: TemplateVideoSlot): TemplateClip {
+  const { startFrame } = getTemplateTrimWindow(from, clip);
+  const { lastStartFrame, durationFrames } = getTrimBounds(to, clip);
+  const newStartFrame = Math.min(startFrame, lastStartFrame);
+  const trimInUs = frameToUs(newStartFrame, fps);
+  const trimOutUs = frameToUs(newStartFrame + durationFrames, fps);
+  if (trimInUs === clip.trimInUs && trimOutUs === clip.trimOutUs) return clip;
+  return { ...clip, trimInUs, trimOutUs };
+}
+
+export function swapTemplateClips(
+  clips: Readonly<Record<string, TemplateClip>>,
+  first: TemplateVideoSlot,
+  second: TemplateVideoSlot,
+): Readonly<Record<string, TemplateClip>> {
+  const firstClip = Object.hasOwn(clips, first.id) ? clips[first.id] : undefined;
+  const secondClip = Object.hasOwn(clips, second.id) ? clips[second.id] : undefined;
+  if (first.id === second.id || !firstClip || !secondClip) {
+    throw new Error("Choose two filled video slots to swap.");
+  }
+
+  const firstDestination = fitClipToSlot(secondClip, second, first);
+  const secondDestination = fitClipToSlot(firstClip, first, second);
+  return { ...clips, [first.id]: firstDestination, [second.id]: secondDestination };
+}
+
 export function createTemplateClip(
   slot: TemplateVideoSlot,
   uri: string,
