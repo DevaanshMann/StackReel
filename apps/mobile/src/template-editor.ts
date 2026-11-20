@@ -1,4 +1,4 @@
-import { checkTrim, createProject, frameToUs, resolve, US_PER_SECOND, usToFrame } from "@stackreel/core";
+import { checkTrim, createProject, frameToUs, itemKey, resolve, US_PER_SECOND, usToFrame } from "@stackreel/core";
 import type { AssetInfo, AudioEntry, Crop, Project, Size, SlotBinding, VideoLayer } from "@stackreel/core";
 import { validate } from "@stackreel/template-schema";
 import type { Transition } from "@stackreel/template-schema";
@@ -7,6 +7,8 @@ import hookAndReveal from "../../../templates/examples/hook-and-reveal.json";
 
 export type MobileTemplate = Project["template"];
 export type TemplateVideoSlot = { id: string; label: string; minDurationUs: number };
+export type TemplateTextField = { id: string; label: string; defaultText: string; maxChars?: number };
+export type TemplateTextOverrides = Readonly<Record<string, string>>;
 export type TemplateReframe = { zoom: number; x: number; y: number };
 export type TemplateClip = {
   uri: string;
@@ -110,6 +112,57 @@ function loadTemplate(document: { id: string }): MobileTemplate {
 }
 
 export const mobileTemplates: readonly MobileTemplate[] = [loadTemplate(beforeAfter), loadTemplate(hookAndReveal)];
+
+const textFieldLabels: Readonly<Record<string, string>> = {
+  "before-after/labels/0": "Before label",
+  "before-after/labels/1": "After label",
+  "hook-and-reveal/text/0": "Hook text",
+};
+
+export function getTemplateTextFields(template: MobileTemplate): TemplateTextField[] {
+  const textSlots = template.slots.filter((slot) => slot.kind === "text");
+  const fields: TemplateTextField[] = [];
+  for (const track of template.tracks) {
+    if (track.type !== "overlay") continue;
+    track.items.forEach((item, index) => {
+      if (item.kind !== "text" || item.text.editable !== true) return;
+      const id = itemKey(track.id, index);
+      const slot = textSlots.find((slot) => slot.id === item.slot);
+      const maxChars = Math.min(item.text.maxChars ?? Infinity, slot?.maxChars ?? Infinity);
+      fields.push({
+        id,
+        label: slot?.label ?? textFieldLabels[`${template.id}/${id}`] ?? "Text",
+        defaultText: item.text.default,
+        ...(maxChars !== Infinity && { maxChars }),
+      });
+    });
+  }
+  return fields;
+}
+
+function normalizeTemplateText({ label, maxChars }: TemplateTextField, value: string): string {
+  if (typeof value !== "string") throw new TypeError(`"${label}" must be text.`);
+  if (maxChars !== undefined && [...value].length > maxChars) {
+    throw new RangeError(`"${label}" must be ${maxChars} characters or fewer.`);
+  }
+  return value.trim() === "" ? "" : value;
+}
+
+export function setTemplateText(
+  field: TemplateTextField,
+  overrides: TemplateTextOverrides,
+  value: string,
+): TemplateTextOverrides {
+  const text = value === field.defaultText ? value : normalizeTemplateText(field, value);
+  const hasOverride = Object.hasOwn(overrides, field.id);
+  if (text === field.defaultText) {
+    if (!hasOverride) return overrides;
+    const { [field.id]: _previous, ...remaining } = overrides;
+    return remaining;
+  }
+  if (hasOverride && overrides[field.id] === text) return overrides;
+  return { ...overrides, [field.id]: text };
+}
 
 export function getVideoSlots(template: MobileTemplate): TemplateVideoSlot[] {
   if (template.canvas.fps !== fps) throw new Error(`Mobile templates must use ${fps} fps.`);
@@ -225,11 +278,24 @@ function alignSourceRate<T extends VideoLayer | AudioEntry>(entry: T): T {
 export function createTemplateSource(
   template: MobileTemplate,
   clips: Readonly<Record<string, TemplateClip>>,
+  textOverrides: TemplateTextOverrides = {},
 ): string | null {
+  const text: Project["overrides"]["text"] = {};
+  const entries = Object.entries(textOverrides);
+  if (entries.length > 0) {
+    const fields = getTemplateTextFields(template);
+    for (const [id, value] of entries) {
+      const field = fields.find((field) => field.id === id);
+      if (!field) throw new Error(`No editable text field at "${id}".`);
+      text[id] = normalizeTemplateText(field, value);
+    }
+  }
+
   const clipFor = (id: string) => (Object.hasOwn(clips, id) ? clips[id] : undefined);
   if (template.slots.some((slot) => slot.kind === "video" && slot.optional !== true && !clipFor(slot.id))) return null;
 
   const project = createProject(template);
+  project.overrides.text = text;
   const assets: Record<string, string> = {};
   const assetInfo: Record<string, AssetInfo> = {};
   for (const slot of getVideoSlots(template)) {
