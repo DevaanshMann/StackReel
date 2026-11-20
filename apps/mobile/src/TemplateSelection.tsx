@@ -1,6 +1,7 @@
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
+import { trimTimeLabel } from "./TemplateTrim";
 import { getVideoSlots, mobileTemplates } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
 
@@ -72,6 +73,7 @@ export function TemplateVideoSlots({
   importingSlotId,
   importError,
   onSelect,
+  onTrim,
 }: {
   slots: readonly TemplateVideoSlot[];
   clips: Readonly<Record<string, TemplateClip>>;
@@ -79,6 +81,7 @@ export function TemplateVideoSlots({
   importingSlotId: string | undefined;
   importError: { slotId?: string; message: string } | null;
   onSelect: (slot: TemplateVideoSlot) => void;
+  onTrim: (slot: TemplateVideoSlot) => void;
 }) {
   const nextSlot = slots.find((slot) => !clips[slot.id]);
   return (
@@ -99,9 +102,14 @@ export function TemplateVideoSlots({
                 </Text>
                 <Text style={textStyles.muted}>At least {secondsLabel(slot.minDurationUs)}</Text>
                 {clip && (
-                  <Text numberOfLines={1} style={textStyles.body}>
-                    {clip.name}
-                  </Text>
+                  <>
+                    <Text numberOfLines={1} style={textStyles.body}>
+                      {clip.name}
+                    </Text>
+                    <Text style={textStyles.muted}>
+                      Source {trimTimeLabel(clip.trimInUs)} to {trimTimeLabel(clip.trimOutUs)}
+                    </Text>
+                  </>
                 )}
               </View>
               <View style={styles.slotAction}>
@@ -112,6 +120,14 @@ export function TemplateVideoSlots({
                   disabled={busy}
                   primary={slot === nextSlot}
                 />
+                {clip && (
+                  <Action
+                    label="Trim"
+                    accessibilityLabel={`Trim ${slot.label}`}
+                    onPress={() => onTrim(slot)}
+                    disabled={busy}
+                  />
+                )}
               </View>
             </View>
             {importError?.slotId === slot.id && (
@@ -152,6 +168,6 @@ const styles = StyleSheet.create({
   slot: { padding: space[3], gap: space[2] },
   slotBody: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space[2] },
   slotCopy: { flexGrow: 1, flexShrink: 1, flexBasis: 136, gap: space[1] },
-  slotAction: { maxWidth: "100%" },
+  slotAction: { flexDirection: "row", flexWrap: "wrap", gap: space[2], maxWidth: "100%" },
   slotTitle: { color: darkColors.text, fontSize: fontSize.md, fontWeight: "700" },
 });

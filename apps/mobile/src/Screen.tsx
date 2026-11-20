@@ -3,7 +3,15 @@ import type { ReactNode } from "react";
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
-export function Screen({ children, page }: { children: ReactNode; page?: string }) {
+export function Screen({
+  children,
+  page,
+  title = "StackReel",
+}: {
+  children: ReactNode;
+  page?: string;
+  title?: string;
+}) {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
@@ -11,7 +19,7 @@ export function Screen({ children, page }: { children: ReactNode; page?: string 
         <ScrollView key={page} contentContainerStyle={styles.scroll}>
           <View style={styles.content}>
             <Text accessibilityRole="header" style={styles.title}>
-              StackReel
+              {title}
             </Text>
             {children}
           </View>

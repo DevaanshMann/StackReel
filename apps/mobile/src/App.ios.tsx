@@ -9,8 +9,9 @@ import { StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { TemplateGallery, TemplateVideoSlots } from "./TemplateSelection";
+import { TemplateTrim } from "./TemplateTrim";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
-import { createTemplateClip, createTemplateSource } from "./template-editor";
+import { createTemplateClip, createTemplateSource, setTemplateClipTrim } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
 
 type Clip = { name: string; uri: string; source: string };
@@ -23,9 +24,10 @@ type TemplateDraft = {
 type Editor = { kind: "single" } | { kind: "template"; template: MobileTemplate; slots: TemplateVideoSlot[] };
 type ImportTarget = { kind: "single" } | { kind: "template"; template: MobileTemplate; slot: TemplateVideoSlot };
 type ImportOperation = { kind: "import"; slotId?: string };
+type TrimOperation = { kind: "trim"; template: MobileTemplate; slot: TemplateVideoSlot; clip: TemplateClip };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
-type Operation = ImportOperation | { kind: "share" } | ExportJob;
-type Activity = ImportOperation | { kind: "share" } | (ExportJob & { progress: number });
+type Operation = ImportOperation | TrimOperation | { kind: "share" } | ExportJob;
+type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
 type Feedback = { kind: "error" | "status"; message: string; slotId?: string };
 
 const emptyTemplateDraft: TemplateDraft = { clips: {}, source: null, outputUri: null };
@@ -82,6 +84,27 @@ export default function App() {
     if (activeOperation.current) return;
     setFeedback(null);
     setEditor(next);
+  }
+
+  function openTrim(slot: TemplateVideoSlot) {
+    const clip = templateDraft.clips[slot.id];
+    if (template && clip) begin({ kind: "trim", template, slot, clip });
+  }
+
+  function applyTrim(operation: TrimOperation, startFrame: number) {
+    if (activeOperation.current !== operation) return;
+    const { template, slot, clip } = operation;
+    const draft = templateDrafts[template.id];
+    if (!draft || draft.clips[slot.id] !== clip) throw new Error("This slot changed. Close Trim and open it again.");
+
+    const trimmed = setTemplateClipTrim(slot, clip, startFrame);
+    if (trimmed !== clip) {
+      const clips = { ...draft.clips, [slot.id]: trimmed };
+      const source = createTemplateSource(template, clips);
+      setTemplateDrafts((drafts) => ({ ...drafts, [template.id]: { clips, source, outputUri: null } }));
+      removeCachedFile(draft.outputUri);
+    }
+    finish(operation);
   }
 
   async function selectVideo(target: ImportTarget) {
@@ -201,9 +224,18 @@ export default function App() {
 
   const importing = activity?.kind === "import";
   const exporting = activity?.kind === "export";
+  const trimming = activity?.kind === "trim";
   const clip = singleDraft.clip;
   return (
     <Screen page={template?.id ?? "single-clip"}>
+      {trimming && (
+        <TemplateTrim
+          slot={activity.slot}
+          clip={activity.clip}
+          onApply={(startFrame) => applyTrim(activity, startFrame)}
+          onCancel={() => finish(activity)}
+        />
+      )}
       <View style={styles.navigation}>
         <Action label="Back to templates" onPress={() => navigate(null)} disabled={busy} />
       </View>
@@ -228,11 +260,10 @@ export default function App() {
           importingSlotId={importing ? activity.slotId : undefined}
           importError={feedback?.kind === "error" ? feedback : null}
           onSelect={(slot) => selectVideo({ kind: "template", template: editor.template, slot })}
+          onTrim={openTrim}
         />
       )}
-      {source && (
-        <ClipPreview key={source} canvas={canvas} source={source} suspended={importing || activity?.kind === "share"} />
-      )}
+      {source && <ClipPreview key={source} canvas={canvas} source={source} suspended={busy && !exporting} />}
       {editor.kind === "single" && !source && (
         <PreviewFrame canvas={canvas}>
           <Text style={textStyles.muted}>Choose a clip from Files</Text>
