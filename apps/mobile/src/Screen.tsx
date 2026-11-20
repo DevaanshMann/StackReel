@@ -5,12 +5,14 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 export function Screen({
   children,
+  footer,
   page,
   title = "StackReel",
   scrollEnabled = true,
   adjustForKeyboard = false,
 }: {
   children: ReactNode;
+  footer?: ReactNode;
   page?: string;
   title?: string;
   scrollEnabled?: boolean;
@@ -35,6 +37,7 @@ export function Screen({
             {children}
           </View>
         </ScrollView>
+        {footer}
       </SafeAreaView>
     </SafeAreaProvider>
   );
