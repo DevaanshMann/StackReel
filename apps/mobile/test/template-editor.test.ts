@@ -2,7 +2,14 @@ import { checkPlanInvariants } from "@stackreel/core";
 import type { RenderPlan } from "@stackreel/core";
 import { validate } from "@stackreel/template-schema";
 import { describe, expect, it } from "vitest";
-import { createTemplateClip, createTemplateSource, getVideoSlots, mobileTemplates } from "../src/template-editor";
+import {
+  createTemplateClip,
+  createTemplateSource,
+  getTemplateTrimWindow,
+  getVideoSlots,
+  mobileTemplates,
+  setTemplateClipTrim,
+} from "../src/template-editor";
 import type { MobileTemplate, TemplateClip } from "../src/template-editor";
 
 const beforeAfter = mobileTemplates[0]!;
@@ -141,6 +148,63 @@ describe("createTemplateSource", () => {
 describe("template clip boundaries", () => {
   const hookSlot = getVideoSlots(hookAndReveal)[0]!;
   const uri = "file:///hook.mov";
+  const longVideo = { ...videoSize, startUs: 50_000, durationUs: 5_994_000 };
+
+  it("retains the probe bounds and selects the earliest whole-frame window on import", () => {
+    const clip = createTemplateClip(hookSlot, uri, "hook.mov", longVideo);
+    expect(clip).toEqual({
+      uri,
+      name: "hook.mov",
+      ...videoSize,
+      sourceStartUs: 50_000,
+      sourceEndUs: 6_044_000,
+      trimInUs: 66_667,
+      trimOutUs: 3_333_333,
+    });
+    expect(getTemplateTrimWindow(hookSlot, clip)).toEqual({
+      firstFrame: 2,
+      lastStartFrame: 83,
+      sourceEndFrame: 181,
+      startFrame: 2,
+      durationFrames: 98,
+    });
+    expect(setTemplateClipTrim(hookSlot, clip, 2)).toBe(clip);
+  });
+
+  it("keeps the fixed frame length when moving to the last start and back", () => {
+    const clip = createTemplateClip(hookSlot, uri, "hook.mov", longVideo);
+    const latest = setTemplateClipTrim(hookSlot, clip, 83);
+    expect(latest).toEqual({ ...clip, trimInUs: 2_766_667, trimOutUs: 6_033_333 });
+    expect(getTemplateTrimWindow(hookSlot, latest)).toEqual({
+      ...getTemplateTrimWindow(hookSlot, clip),
+      startFrame: 83,
+    });
+    expect(setTemplateClipTrim(hookSlot, latest, 2)).toEqual(clip);
+    expect(clip.trimInUs).toBe(66_667);
+  });
+
+  it.each([1, 84, 2.5, NaN, Infinity])("rejects an invalid trim start of %s", (startFrame) => {
+    const clip = createTemplateClip(hookSlot, uri, "hook.mov", longVideo);
+    expect(() => setTemplateClipTrim(hookSlot, clip, startFrame)).toThrow(RangeError);
+  });
+
+  it("keeps a negative track start from the probe and selects from frame zero", () => {
+    const clip = createTemplateClip(hookSlot, uri, "hook.mov", {
+      ...videoSize,
+      startUs: -50_000,
+      durationUs: 3_316_667,
+    });
+    expect(clip).toMatchObject({ sourceStartUs: -50_000, sourceEndUs: 3_266_667, trimInUs: 0, trimOutUs: 3_266_667 });
+    expect(getTemplateTrimWindow(hookSlot, clip)).toEqual({
+      firstFrame: 0,
+      lastStartFrame: 0,
+      sourceEndFrame: 98,
+      startFrame: 0,
+      durationFrames: 98,
+    });
+    expect(setTemplateClipTrim(hookSlot, clip, 0)).toBe(clip);
+    expect(() => setTemplateClipTrim(hookSlot, clip, 1)).toThrow(RangeError);
+  });
 
   it.each([
     { startUs: 0, durationUs: 3_266_666 },
@@ -170,6 +234,56 @@ describe("template clip boundaries", () => {
     expect(checkPlanInvariants(plan)).toEqual([]);
   });
 
+  it("resolves the stored trim for matching video and audio while preserving the rest of the edit", () => {
+    const clip = createTemplateClip(hookSlot, uri, "hook.mov", longVideo);
+    const clips = { ...fillSlots(hookAndReveal), clip1: clip };
+    const previous = parseSource(createTemplateSource(hookAndReveal, clips));
+    const latest = setTemplateClipTrim(hookSlot, clip, 83);
+    const { plan, assets } = parseSource(createTemplateSource(hookAndReveal, { ...clips, clip1: latest }));
+    const source = {
+      assetUri: "slot:clip1",
+      sourceStartUs: 2_766_667,
+      sourceEndUs: 6_033_333,
+      rate: 3_266_666 / 3_266_667,
+      fitMode: "trim",
+      afterEnd: "hold",
+    };
+    expect(assets).toEqual(previous.assets);
+    expect(plan).toEqual({
+      ...previous.plan,
+      layers: previous.plan.layers.map((layer) => (layer.id === "main/0" ? { ...layer, source } : layer)),
+      audio: previous.plan.audio.map((entry) => (entry.id === "main/0" ? { ...entry, source } : entry)),
+    });
+    expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
+  it("uses the full selected window when playback speed magnifies microsecond rounding", () => {
+    const template: MobileTemplate = {
+      ...hookAndReveal,
+      durationUs: 100_000,
+      slots: [{ kind: "video", id: "clip", label: "Clip", shortClipPolicy: "slow", minSpeed: 4 }],
+      tracks: [
+        {
+          type: "video",
+          id: "main",
+          items: [{ slot: "clip", startUs: 33_333, durationUs: 33_334, speed: 4 }],
+        },
+      ],
+    };
+    const [slot] = getVideoSlots(template);
+    const clip = createTemplateClip(slot!, uri, "hook.mov", longVideo);
+    const { plan } = parseSource(createTemplateSource(template, { clip }));
+    const edit = {
+      startUs: 33_333,
+      endUs: 66_667,
+      source: { sourceStartUs: 66_667, sourceEndUs: 200_000, rate: 133_333 / 33_334, fitMode: "trim" },
+    };
+    expect(plan.layers[0]).toMatchObject(edit);
+    expect(plan.audio[0]).toMatchObject(edit);
+    expect(plan.warnings).toEqual([]);
+    expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
   it("rejects invalid metadata and rechecks trims before creating a native payload", () => {
     expect(() =>
       createTemplateClip(hookSlot, uri, "hook.mov", { height: 0, width: 1080, startUs: 0, durationUs: 5_000_000 }),
@@ -177,5 +291,17 @@ describe("template clip boundaries", () => {
     const clips = fillSlots(hookAndReveal);
     const clip1 = { ...clips["clip1"]!, trimOutUs: 3_000_000 };
     expect(() => createTemplateSource(hookAndReveal, { ...clips, clip1 })).toThrow("Your hook shot");
+  });
+
+  it.each([
+    { trimInUs: 0, trimOutUs: 3_266_667 },
+    { trimInUs: 2_800_000, trimOutUs: 6_066_667 },
+    { trimInUs: 66_667, trimOutUs: 3_333_334 },
+    { trimInUs: 66_667, trimOutUs: 3_366_667 },
+  ])("rejects a stored trim outside the playable range or fixed frame window (%o)", (trim) => {
+    const clip1 = { ...createTemplateClip(hookSlot, uri, "hook.mov", longVideo), ...trim };
+    expect(() => createTemplateSource(hookAndReveal, { ...fillSlots(hookAndReveal), clip1 })).toThrow(
+      "invalid dimensions or timing",
+    );
   });
 });
