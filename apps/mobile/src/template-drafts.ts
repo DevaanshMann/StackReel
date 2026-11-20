@@ -103,6 +103,8 @@ export function saveTemplateDraft(
   const directory = draftDirectory(template);
   directory.create({ intermediates: true, idempotent: true });
   const snapshot = draftSnapshots(directory).at(-1);
+  // Read the current snapshot before writing or pruning so an unreadable draft stays recoverable.
+  const previous = snapshot ? readDraftManifest(snapshot.file) : null;
   const keep = new Set<string>();
   function storeAsset<T extends TemplateClip | TemplateMusic>({ uri, ...settings }: T) {
     const file = new File(uri).name;
@@ -122,8 +124,7 @@ export function saveTemplateDraft(
   const storedClips: [string, unknown][] = Object.entries(clips).map(([slot, clip]) => [slot, storeAsset(clip)]);
   let storedMusic: unknown = music ? storeAsset(music) : null;
   // An unrelated edit must retain the references and settings needed to recover missing media.
-  if (snapshot && (missingSlots.length > 0 || missingMusic)) {
-    const previous = readDraftManifest(snapshot.file);
+  if (previous) {
     for (const slot of missingSlots) {
       if (!Object.hasOwn(clips, slot) && Object.hasOwn(previous.clips, slot)) {
         storedClips.push([slot, preserveAsset(previous.clips[slot])]);

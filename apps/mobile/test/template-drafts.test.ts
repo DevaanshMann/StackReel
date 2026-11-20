@@ -297,6 +297,22 @@ describe("template draft storage", () => {
     expect(loadTemplateDraft(beforeAfter)).toMatchObject({ ...edits, name: "Original cut" });
   });
 
+  it.each([
+    ["malformed JSON", "broken snapshot"],
+    ["an unsupported version", JSON.stringify({ version: 2, clips: {}, textOverrides: {} })],
+  ])("preserves the saved files when autosave encounters %s", (_reason, contents) => {
+    const { edits } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const folder = `${storage.document}/StackReelDrafts/${beforeAfter.id}`;
+    storage.files.set(`${folder}/draft-1.json`, contents);
+    const originalFiles = new Map(storage.files);
+    const textOverrides = setTemplateText(getTemplateTextFields(beforeAfter)[0]!, {}, "New caption");
+
+    expect(() => loadTemplateDraft(beforeAfter)).toThrow();
+    expect(() => saveTemplateDraft(beforeAfter, { clips: {}, textOverrides, music: null })).toThrow();
+    expect(storage.files).toEqual(originalFiles);
+  });
+
   it("deletes an unreadable draft and its imported copies without affecting other files", () => {
     const { edits, beforeFile, afterFile, musicFile } = fixture();
     saveTemplateDraft(beforeAfter, edits);

@@ -40,6 +40,8 @@ Tap **Delete** beside a draft and confirm to remove its edits and imported media
 place, and the next time you open that template it starts fresh.
 If an imported copy is missing, use the editor’s Files picker to replace it. Export again after relaunch, or use
 **Save to Files** in the share sheet to keep a finished MP4.
+If StackReel can’t reopen a draft, the recovery screen preserves its saved edits and media copies. To start fresh,
+delete the draft from **Projects** and open the template again.
 
 ## Run on iOS
 
