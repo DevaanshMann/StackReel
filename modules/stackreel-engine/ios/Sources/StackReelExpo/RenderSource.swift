@@ -80,6 +80,10 @@ enum LocalMedia {
     ]
   }
 
+  @concurrent static func probeAudio(_ uri: String) async throws -> [String: Double] {
+    try await AudioProbe.metadata(for: fileURL(uri))
+  }
+
   // Transfer the finished composition to its sole owner, or use it locally for export.
   @concurrent static func composition(_ source: String) async throws -> sending VideoComposition {
     try Task.checkCancellation()
