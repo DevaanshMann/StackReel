@@ -8,9 +8,12 @@ import { StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
 
 type PreviewCanvas = { width: number; height: number };
+const previewMaxWidth = 224;
 
 export function PreviewFrame({ canvas, children }: { canvas: PreviewCanvas; children: ReactNode }) {
-  return <View style={[styles.frame, { aspectRatio: canvas.width / canvas.height }]}>{children}</View>;
+  const aspectRatio = canvas.width / canvas.height;
+  // Yoga can calculate the height before clamping the width, so bound both dimensions.
+  return <View style={[styles.frame, { aspectRatio, maxHeight: previewMaxWidth / aspectRatio }]}>{children}</View>;
 }
 
 export function ClipPreview({
@@ -142,7 +145,7 @@ function timeLabel(seconds: number) {
 const styles = StyleSheet.create({
   frame: {
     width: "100%",
-    maxWidth: 224,
+    maxWidth: previewMaxWidth,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
