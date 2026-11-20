@@ -1,8 +1,9 @@
 import Slider from "@react-native-community/slider";
 import { StackReelPreviewView } from "@stackreel/engine";
+import type { StackReelPreviewViewRef } from "@stackreel/engine";
 import { darkColors, neutral, radius, space } from "@stackreel/ui";
 import { useRef, useState } from "react";
-import type { ComponentRef, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
 import { canvas } from "./clip-source";
@@ -12,7 +13,7 @@ export function PreviewFrame({ children }: { children: ReactNode }) {
 }
 
 export function ClipPreview({ source, suspended }: { source: string; suspended: boolean }) {
-  const preview = useRef<ComponentRef<typeof StackReelPreviewView>>(null);
+  const preview = useRef<StackReelPreviewViewRef>(null);
   const dragging = useRef(false);
   const pendingSeek = useRef<object | null>(null);
   const [duration, setDuration] = useState(0);
