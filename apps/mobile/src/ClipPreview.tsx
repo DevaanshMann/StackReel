@@ -5,25 +5,36 @@ import { darkColors, neutral, radius, space } from "@stackreel/ui";
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import type { ViewProps, ViewStyle } from "react-native";
 import { Action, textStyles } from "./Screen";
 
 type PreviewCanvas = { width: number; height: number };
 const previewMaxWidth = 224;
 
-export function PreviewFrame({ canvas, children }: { canvas: PreviewCanvas; children: ReactNode }) {
+export function PreviewFrame({
+  canvas,
+  children,
+  maxWidth = previewMaxWidth,
+}: {
+  canvas: PreviewCanvas;
+  children: ReactNode;
+  maxWidth?: number;
+}) {
   const aspectRatio = canvas.width / canvas.height;
   // Yoga can calculate the height before clamping the width, so bound both dimensions.
-  return <View style={[styles.frame, { aspectRatio, maxHeight: previewMaxWidth / aspectRatio }]}>{children}</View>;
+  return <View style={[styles.frame, { aspectRatio, maxWidth, maxHeight: maxWidth / aspectRatio }]}>{children}</View>;
 }
 
 export function ClipPreview({
   canvas,
   source,
   suspended,
+  viewport,
 }: {
   canvas: PreviewCanvas;
   source: string;
   suspended: boolean;
+  viewport?: { maxWidth: number; props: ViewProps; videoStyle: ViewStyle };
 }) {
   const preview = useRef<StackReelPreviewViewRef>(null);
   const dragging = useRef(false);
@@ -64,29 +75,31 @@ export function ClipPreview({
   const visiblePosition = scrubPosition ?? position;
   return (
     <View style={styles.controls}>
-      <PreviewFrame canvas={canvas}>
-        <StackReelPreviewView
-          ref={preview}
-          style={StyleSheet.absoluteFill}
-          source={source}
-          playing={playing && !suspended && scrubPosition === null}
-          onReady={({ nativeEvent }) => setDuration(nativeEvent.durationSeconds)}
-          onPositionChange={({ nativeEvent }) => {
-            if (duration <= 0 || dragging.current || pendingSeek.current) return;
-            const seconds = nativeEvent.positionSeconds;
-            setPosition(Math.min(seconds, duration));
-            if (seconds >= duration) setPlaying(false);
-          }}
-          onError={({ nativeEvent }) => {
-            dragging.current = false;
-            pendingSeek.current = null;
-            setScrubPosition(null);
-            setPlaying(false);
-            setDuration(0);
-            setError(errorMessage("Couldn’t load the preview.", nativeEvent.message));
-          }}
-        />
-        {duration === 0 && !error && <Text style={textStyles.muted}>Preparing preview…</Text>}
+      <PreviewFrame canvas={canvas} maxWidth={viewport?.maxWidth ?? previewMaxWidth}>
+        <View {...viewport?.props} style={[StyleSheet.absoluteFill, styles.viewport]}>
+          <StackReelPreviewView
+            ref={preview}
+            style={viewport?.videoStyle ?? StyleSheet.absoluteFill}
+            source={source}
+            playing={playing && !suspended && scrubPosition === null}
+            onReady={({ nativeEvent }) => setDuration(nativeEvent.durationSeconds)}
+            onPositionChange={({ nativeEvent }) => {
+              if (duration <= 0 || dragging.current || pendingSeek.current) return;
+              const seconds = nativeEvent.positionSeconds;
+              setPosition(Math.min(seconds, duration));
+              if (seconds >= duration) setPlaying(false);
+            }}
+            onError={({ nativeEvent }) => {
+              dragging.current = false;
+              pendingSeek.current = null;
+              setScrubPosition(null);
+              setPlaying(false);
+              setDuration(0);
+              setError(errorMessage("Couldn’t load the preview.", nativeEvent.message));
+            }}
+          />
+          {duration === 0 && !error && <Text style={textStyles.muted}>Preparing preview…</Text>}
+        </View>
       </PreviewFrame>
       <View style={styles.transport}>
         <Action
@@ -145,7 +158,6 @@ function timeLabel(seconds: number) {
 const styles = StyleSheet.create({
   frame: {
     width: "100%",
-    maxWidth: previewMaxWidth,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
@@ -155,6 +167,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: "hidden",
   },
+  viewport: { alignItems: "center", justifyContent: "center" },
   controls: { gap: space[3] },
   transport: { flexDirection: "row", alignItems: "center", gap: space[3] },
   timeline: { flex: 1 },

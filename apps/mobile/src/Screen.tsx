@@ -7,16 +7,18 @@ export function Screen({
   children,
   page,
   title = "StackReel",
+  scrollEnabled = true,
 }: {
   children: ReactNode;
   page?: string;
   title?: string;
+  scrollEnabled?: boolean;
 }) {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" />
-        <ScrollView key={page} contentContainerStyle={styles.scroll}>
+        <ScrollView key={page} contentContainerStyle={styles.scroll} scrollEnabled={scrollEnabled}>
           <View style={styles.content}>
             <Text accessibilityRole="header" style={styles.title}>
               {title}
@@ -32,18 +34,21 @@ export function Screen({
 export function Action({
   label,
   accessibilityLabel = label,
+  testID,
   onPress,
   disabled = false,
   primary = false,
 }: {
   label: string;
   accessibilityLabel?: string;
+  testID?: string;
   onPress: () => void;
   disabled?: boolean;
   primary?: boolean;
 }) {
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}

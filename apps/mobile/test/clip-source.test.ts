@@ -46,6 +46,22 @@ describe("createClipSource", () => {
     });
   });
 
+  it("can fill a preview canvas with the entire oriented source for the selected trim", () => {
+    const orientedVideo = { width: 721, height: 1281, startUs: 66_667, durationUs: 1_000_000 };
+    const previewCanvas = { width: 722, height: 1282, fps: 30, background: "#000000" };
+    const { plan } = parseSource(createClipSource(uri, orientedVideo, previewCanvas, "fill"));
+    const source = { sourceStartUs: 66_667, sourceEndUs: 1_066_667, rate: 1, fitMode: "trim" };
+    expect(plan.canvas).toEqual(previewCanvas);
+    expect(plan.durationUs).toBe(1_000_000);
+    expect(plan.layers[0]).toMatchObject({
+      fit: "fill",
+      cropPx: { x: 0, y: 0, width: 721, height: 1281 },
+      source,
+      transform: [722 / 721, 0, 0, 0, 1282 / 1281, 0, 0, 0, 1],
+    });
+    expect(plan.audio[0]).toMatchObject({ source });
+  });
+
   it("rejects inputs with no complete output frame or invalid metadata", () => {
     expect(() => createClipSource(uri, { ...landscapeVideo, startUs: 10_000, durationUs: 50_000 })).toThrow(
       "too short",

@@ -6,6 +6,8 @@ export const canvas = { width: 720, height: 1280, fps: 30, background: "#000000"
 export function createClipSource(
   uri: string,
   { width, height, startUs, durationUs }: { width: number; height: number; startUs: number; durationUs: number },
+  targetCanvas: PlanCanvas = canvas,
+  fit: VideoLayer["fit"] = "contain",
 ): string {
   const endUs = startUs + durationUs;
   if (
@@ -22,13 +24,14 @@ export function createClipSource(
     throw new Error("This video has invalid dimensions or timing.");
   }
 
-  const firstFrame = usToFrame(Math.max(0, startUs), canvas.fps, "ceil");
-  const endFrame = usToFrame(endUs, canvas.fps, "floor");
-  if (endFrame <= firstFrame) throw new Error("This video is too short for a 30 fps export.");
+  const { fps } = targetCanvas;
+  const firstFrame = usToFrame(Math.max(0, startUs), fps, "ceil");
+  const endFrame = usToFrame(endUs, fps, "floor");
+  if (endFrame <= firstFrame) throw new Error(`This video is too short for a ${fps} fps export.`);
 
-  const sourceStartUs = frameToUs(firstFrame, canvas.fps);
-  const sourceEndUs = frameToUs(endFrame, canvas.fps);
-  const timelineEndUs = frameToUs(endFrame - firstFrame, canvas.fps);
+  const sourceStartUs = frameToUs(firstFrame, fps);
+  const sourceEndUs = frameToUs(endFrame, fps);
+  const timelineEndUs = frameToUs(endFrame - firstFrame, fps);
   const assetId = "clip";
   const source: SourceTiming = {
     assetUri: assetId,
@@ -58,15 +61,15 @@ export function createClipSource(
     itemIndex: 0,
     z: 0,
     opacity: 1,
-    fit: "contain",
+    fit,
     sourceSize,
     cropPx,
-    transform: fitMatrix(sourceSize, canvas, "contain", cropPx),
+    transform: fitMatrix(sourceSize, targetCanvas, fit, cropPx),
   };
   const plan: RenderPlan = {
     renderPlanVersion: RENDER_PLAN_VERSION,
     templateId: "single-clip",
-    canvas,
+    canvas: targetCanvas,
     durationUs: timelineEndUs,
     layers: [layer],
     transitions: [],

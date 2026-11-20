@@ -8,10 +8,16 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
+import { TemplateReframe } from "./TemplateReframe";
 import { TemplateGallery, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTrim } from "./TemplateTrim";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
-import { createTemplateClip, createTemplateSource, setTemplateClipTrim } from "./template-editor";
+import {
+  createTemplateClip,
+  createTemplateSource,
+  setTemplateClipReframe,
+  setTemplateClipTrim,
+} from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
 
 type Clip = { name: string; uri: string; source: string };
@@ -24,9 +30,9 @@ type TemplateDraft = {
 type Editor = { kind: "single" } | { kind: "template"; template: MobileTemplate; slots: TemplateVideoSlot[] };
 type ImportTarget = { kind: "single" } | { kind: "template"; template: MobileTemplate; slot: TemplateVideoSlot };
 type ImportOperation = { kind: "import"; slotId?: string };
-type TrimOperation = { kind: "trim"; template: MobileTemplate; slot: TemplateVideoSlot; clip: TemplateClip };
+type SlotEdit = { kind: "trim" | "reframe"; template: MobileTemplate; slot: TemplateVideoSlot; clip: TemplateClip };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
-type Operation = ImportOperation | TrimOperation | { kind: "share" } | ExportJob;
+type Operation = ImportOperation | SlotEdit | { kind: "share" } | ExportJob;
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
 type Feedback = { kind: "error" | "status"; message: string; slotId?: string };
 
@@ -86,20 +92,22 @@ export default function App() {
     setEditor(next);
   }
 
-  function openTrim(slot: TemplateVideoSlot) {
+  function openSlotEdit(kind: SlotEdit["kind"], slot: TemplateVideoSlot) {
     const clip = templateDraft.clips[slot.id];
-    if (template && clip) begin({ kind: "trim", template, slot, clip });
+    if (template && clip) begin({ kind, template, slot, clip });
   }
 
-  function applyTrim(operation: TrimOperation, startFrame: number) {
+  function applySlotEdit(operation: SlotEdit, update: (clip: TemplateClip) => TemplateClip) {
     if (activeOperation.current !== operation) return;
     const { template, slot, clip } = operation;
     const draft = templateDrafts[template.id];
-    if (!draft || draft.clips[slot.id] !== clip) throw new Error("This slot changed. Close Trim and open it again.");
+    if (!draft || draft.clips[slot.id] !== clip) {
+      throw new Error("This slot changed. Close the editor and open it again.");
+    }
 
-    const trimmed = setTemplateClipTrim(slot, clip, startFrame);
-    if (trimmed !== clip) {
-      const clips = { ...draft.clips, [slot.id]: trimmed };
+    const updated = update(clip);
+    if (updated !== clip) {
+      const clips = { ...draft.clips, [slot.id]: updated };
       const source = createTemplateSource(template, clips);
       setTemplateDrafts((drafts) => ({ ...drafts, [template.id]: { clips, source, outputUri: null } }));
       removeCachedFile(draft.outputUri);
@@ -225,6 +233,7 @@ export default function App() {
   const importing = activity?.kind === "import";
   const exporting = activity?.kind === "export";
   const trimming = activity?.kind === "trim";
+  const reframing = activity?.kind === "reframe";
   const clip = singleDraft.clip;
   return (
     <Screen page={template?.id ?? "single-clip"}>
@@ -232,7 +241,20 @@ export default function App() {
         <TemplateTrim
           slot={activity.slot}
           clip={activity.clip}
-          onApply={(startFrame) => applyTrim(activity, startFrame)}
+          onApply={(startFrame) =>
+            applySlotEdit(activity, (clip) => setTemplateClipTrim(activity.slot, clip, startFrame))
+          }
+          onCancel={() => finish(activity)}
+        />
+      )}
+      {reframing && (
+        <TemplateReframe
+          slot={activity.slot}
+          clip={activity.clip}
+          canvas={activity.template.canvas}
+          onApply={(reframe) =>
+            applySlotEdit(activity, (clip) => setTemplateClipReframe(clip, activity.template.canvas, reframe))
+          }
           onCancel={() => finish(activity)}
         />
       )}
@@ -260,7 +282,8 @@ export default function App() {
           importingSlotId={importing ? activity.slotId : undefined}
           importError={feedback?.kind === "error" ? feedback : null}
           onSelect={(slot) => selectVideo({ kind: "template", template: editor.template, slot })}
-          onTrim={openTrim}
+          onTrim={(slot) => openSlotEdit("trim", slot)}
+          onReframe={(slot) => openSlotEdit("reframe", slot)}
         />
       )}
       {source && <ClipPreview key={source} canvas={canvas} source={source} suspended={busy && !exporting} />}
