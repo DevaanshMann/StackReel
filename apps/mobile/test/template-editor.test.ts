@@ -4,6 +4,7 @@ import { validate } from "@stackreel/template-schema";
 import { describe, expect, it } from "vitest";
 import {
   createTemplateClip,
+  createTemplateMusic,
   createTemplateSource,
   defaultTemplateReframe,
   getTemplateCrop,
@@ -322,6 +323,160 @@ describe("createTemplateSource", () => {
     expect(createTemplateSource(beforeAfter, { ...clips, before: storedDefault })).toBe(initialSource);
     const invalidReframe = { ...before, reframe: { zoom: 2, x: NaN, y: 1 } };
     expect(() => createTemplateSource(beforeAfter, { ...clips, before: invalidReframe })).toThrow(RangeError);
+  });
+});
+
+describe("template music", () => {
+  const uri = "file:///Music/Backing%20Track.m4a";
+  const name = "Backing Track.m4a";
+
+  it.each(mobileTemplates)("keeps the music slot optional in $name", (template) => {
+    expect(template.audio?.music?.slot).toBe("music");
+    const clips = fillSlots(template);
+    const source = createTemplateSource(template, clips);
+    expect(createTemplateSource(template, clips, undefined, null)).toBe(source);
+    const { plan, assets } = parseSource(source);
+    expect(plan.audio.every((entry) => entry.kind === "video")).toBe(true);
+    expect(assets).not.toHaveProperty("slot:music");
+    const music = createTemplateMusic(uri, name, { startUs: 0, durationUs: 1_000_000 });
+    expect(createTemplateSource(template, {}, undefined, music)).toBeNull();
+  });
+
+  it.each([
+    { template: beforeAfter, gainDb: -5, ducking: undefined },
+    {
+      template: hookAndReveal,
+      gainDb: -6,
+      ducking: { gainDb: -12, rampUs: 200_000, regions: [{ startUs: 0, endUs: 9_000_000 }] },
+    },
+  ])("trims a long track and keeps the mix for $template.name", ({ template, gainDb, ducking }) => {
+    const clips = fillSlots(template);
+    const original = parseSource(createTemplateSource(template, clips));
+    const music = createTemplateMusic(uri, name, { startUs: 50_000, durationUs: template.durationUs + 1_000_000 });
+    const { plan, assets } = parseSource(createTemplateSource(template, clips, undefined, music));
+    const musicEntry = plan.audio.find((entry) => entry.kind === "music");
+    expect(musicEntry).toEqual({
+      id: "music",
+      kind: "music",
+      slotId: "music",
+      startUs: 0,
+      endUs: template.durationUs,
+      source: {
+        assetUri: "slot:music",
+        sourceStartUs: 66_667,
+        sourceEndUs: 66_667 + template.durationUs,
+        rate: 1,
+        afterEnd: "hold",
+        fitMode: "trim",
+      },
+      gainDb,
+      fadeInUs: 0,
+      fadeOutUs: 500_000,
+      ...(ducking && { ducking }),
+    });
+    expect(assets).toEqual({ ...original.assets, "slot:music": uri });
+    expect({ ...plan, audio: plan.audio.filter((entry) => entry.kind !== "music") }).toEqual(original.plan);
+    expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
+  it.each(mobileTemplates)("loops only the whole frames of a short, offset track in $name", (template) => {
+    const music = createTemplateMusic(uri, name, { startUs: 50_000, durationUs: 1_991_000 });
+    expect(music).toEqual({ uri, name, sourceStartUs: 50_000, sourceEndUs: 2_041_000 });
+    const { plan } = parseSource(createTemplateSource(template, fillSlots(template), undefined, music));
+    expect(plan.audio.find((entry) => entry.kind === "music")).toMatchObject({
+      startUs: 0,
+      endUs: template.durationUs,
+      source: {
+        sourceStartUs: 66_667,
+        sourceEndUs: 2_033_333,
+        rate: 1,
+        afterEnd: "loop",
+        fitMode: "loop",
+      },
+    });
+    expect(plan.warnings).toEqual([]);
+    expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
+  it("resolves music placement and fades while preserving the trimmed and reframed video and its sound", () => {
+    const template: MobileTemplate = {
+      ...hookAndReveal,
+      audio: { ...hookAndReveal.audio, music: { ...hookAndReveal.audio!.music!, startUs: 526_000, fadeInUs: 300_000 } },
+    };
+    const [slot] = getVideoSlots(template);
+    const clip = createTemplateClip(slot!, "file:///landscape.mov", "landscape.mov", {
+      width: 1920,
+      height: 1080,
+      startUs: 50_000,
+      durationUs: 6_000_000,
+    });
+    const trimmed = setTemplateClipTrim(slot!, clip, 83);
+    const reframed = setTemplateClipReframe(trimmed, template.canvas, { zoom: 2, x: 1, y: 0.5 });
+    const clips = { ...fillSlots(template), [slot!.id]: reframed };
+    const overrides = { "text/0": "New hook" };
+    const original = parseSource(createTemplateSource(template, clips, overrides));
+    const music = createTemplateMusic(uri, name, { startUs: 50_000, durationUs: 15_000_000 });
+    const { plan } = parseSource(createTemplateSource(template, clips, overrides, music));
+    expect(plan.audio.find((entry) => entry.kind === "music")).toMatchObject({
+      startUs: 533_333,
+      endUs: 9_000_000,
+      fadeInUs: 300_000,
+      fadeOutUs: 500_000,
+      ducking: { regions: [{ startUs: 533_333, endUs: 9_000_000 }] },
+      source: { sourceStartUs: 66_667, sourceEndUs: 8_533_333, rate: 1, fitMode: "trim" },
+    });
+    expect(original.plan.audio[0]?.source.rate).toBe(3_266_666 / 3_266_667);
+    expect({ ...plan, audio: plan.audio.filter((entry) => entry.kind !== "music") }).toEqual(original.plan);
+    expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
+  it("clips a negative track start at zero while keeping the original end", () => {
+    const music = createTemplateMusic(uri, name, { startUs: -50_000, durationUs: 1_050_000 });
+    expect(music).toEqual({ uri, name, sourceStartUs: 0, sourceEndUs: 1_000_000 });
+    const { plan } = parseSource(createTemplateSource(beforeAfter, fillSlots(beforeAfter), undefined, music));
+    expect(plan.audio.find((entry) => entry.kind === "music")?.source).toMatchObject({
+      sourceStartUs: 0,
+      sourceEndUs: 1_000_000,
+      fitMode: "loop",
+    });
+  });
+
+  it.each([
+    { startUs: Infinity, durationUs: 100_000 },
+    { startUs: 0.5, durationUs: 100_000 },
+    { startUs: 0, durationUs: NaN },
+    { startUs: 0, durationUs: 100_000.5 },
+    { startUs: 0, durationUs: 0 },
+    { startUs: 0, durationUs: -1 },
+    { startUs: 99_000, durationUs: Number.MAX_SAFE_INTEGER },
+    { startUs: -50_000, durationUs: 50_000 },
+    { startUs: 50_000, durationUs: 33_333 },
+  ])("rejects invalid or unplayable probe timing %o", (metadata) => {
+    expect(() => createTemplateMusic(uri, name, metadata)).toThrow("invalid timing or no playable frames");
+  });
+
+  it("validates a stored selection before the videos are complete", () => {
+    const music = createTemplateMusic(uri, name, { startUs: 50_000, durationUs: 1_000_000 });
+    expect(() => createTemplateSource(beforeAfter, {}, undefined, { ...music, sourceEndUs: 83_333 })).toThrow(
+      "invalid timing or no playable frames",
+    );
+    expect(() => createTemplateSource(beforeAfter, {}, undefined, { ...music, uri: "" })).toThrow(
+      "invalid timing or no playable frames",
+    );
+  });
+
+  it("reports a short audio item even when it uses the music slot", () => {
+    const template: MobileTemplate = {
+      ...beforeAfter,
+      tracks: [
+        ...beforeAfter.tracks,
+        { id: "audio", type: "audio", items: [{ slot: "music", startUs: 0, durationUs: 2_000_000 }] },
+      ],
+    };
+    const music = createTemplateMusic(uri, name, { startUs: 0, durationUs: 1_000_000 });
+    expect(() => createTemplateSource(template, fillSlots(template), undefined, music)).toThrow(
+      "shorter than its slot",
+    );
   });
 });
 
