@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
 import { trimTimeLabel } from "./TemplateTrim";
 import { VideoImportActions } from "./VideoImportActions";
-import { getVideoSlots, mobileTemplates } from "./template-editor";
+import { getEmptyVideoSlots, getVideoSlots, mobileTemplates } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
 import type { VideoPickerSource } from "./video-picker";
 
@@ -160,6 +160,7 @@ export function TemplateVideoSlots({
   importingFrom,
   importError,
   onSelect,
+  onSelectOrdered,
   onTrim,
   onReframe,
 }: {
@@ -171,15 +172,34 @@ export function TemplateVideoSlots({
   importingFrom: VideoPickerSource | undefined;
   importError: { slotId?: string; message: string } | null;
   onSelect: (slot: TemplateVideoSlot, source: VideoPickerSource) => void;
+  onSelectOrdered: (slots: TemplateVideoSlot[]) => void;
   onTrim: (slot: TemplateVideoSlot) => void;
   onReframe: (slot: TemplateVideoSlot) => void;
 }) {
+  const emptySlots = getEmptyVideoSlots(slots, clips, missingSlots);
   const nextSlot = slots.find((slot) => !clips[slot.id]);
   return (
     <View style={styles.list}>
       <Text accessibilityRole="header" style={styles.cardTitle}>
         Required videos
       </Text>
+      {emptySlots.length >= 2 && (
+        <View style={[styles.panel, styles.slot]}>
+          <Text style={textStyles.body}>
+            Pick in slot order · {emptySlots.map(({ label }, index) => `${index + 1}. ${label}`).join(" · ")}
+          </Text>
+          <Action
+            label={
+              importingFrom === "Photos" && importingSlotId === undefined
+                ? "Importing from Photos…"
+                : "Choose videos from Photos"
+            }
+            onPress={() => onSelectOrdered(emptySlots)}
+            disabled={busy}
+            primary
+          />
+        </View>
+      )}
       {slots.map((slot) => {
         const clip = clips[slot.id];
         const missing = missingSlots.includes(slot.id);
@@ -210,7 +230,7 @@ export function TemplateVideoSlots({
               replace={!!clip || missing}
               importingFrom={importingSlotId === slot.id ? importingFrom : undefined}
               busy={busy}
-              primary={slot === nextSlot}
+              primary={emptySlots.length < 2 && slot === nextSlot}
               slotLabel={slot.label}
               onSelect={(source) => onSelect(slot, source)}
             />

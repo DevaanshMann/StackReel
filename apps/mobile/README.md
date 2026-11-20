@@ -3,8 +3,14 @@
 StackReel opens to the iOS template gallery. **Before / After** takes two videos, and **Hook & Reveal** takes three.
 Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
 video. Use **Replace from Photos** or **Replace from Files** to swap it. The iOS Photos picker gives StackReel access
-to the selected video. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
+to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
 MP4. Each template supplies its own canvas, timing, and captions.
+
+When at least two video slots are empty, tap **Choose videos from Photos**. Pick videos in the numbered slot order
+shown above the button. You can choose fewer videos and fill the remaining slots later. Slots with a saved video
+or a missing-media warning are skipped. Once Photos returns the videos, StackReel checks each one against its
+slot. If a video is too short or fails to import, the error names that slot. If Photos can’t return the selection,
+you’ll see an error for the group. StackReel saves the videos together only after every selected video is ready.
 
 Under **Background music**, tap **Choose music from Files** to add an optional audio file, even before adding videos.
 The selected filename stays with that template’s draft. Use **Replace music** to choose another file or **Remove music**
@@ -94,8 +100,11 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
    an MP4 exported from silent clips. Edit a field and cancel, then reopen and apply the current wording. Check that
    **Share MP4** is still available both times. Tap **Back to templates**, reopen **Before / After**, and verify that
    the edits are still there. Reset and apply, then verify that the original text returns and sharing requires a new export.
-7. Open **Hook & Reveal** and edit **Hook text**. Fill all three slots, check the canvas metadata and preview,
-   then export and share. Open the saved MP4s to check picture and audio.
+7. Open an empty **Hook & Reveal** draft and edit **Hook text**. Tap **Choose videos from Photos** and select a
+   recognizable video for **Your hook shot**, then a short video for **B-roll**. Confirm the error names **B-roll**
+   and both slots are still empty. Retry and cancel. Then pick just the hook video and check the next order is
+   **B-roll**, **The reveal**. Pick two distinguishable videos in that order and verify their positions in preview.
+   Relaunch, reopen the draft from **Projects**, and check the same sequence and edited text. Export and share.
 8. Open **Before / After** or **Hook & Reveal** with no videos selected and choose a short audio file under
    **Background music**. Fill the video slots, check that the track loops in the preview, then listen to the exported
    MP4. Cancel **Replace music** in Files, then try a damaged audio file and check that the previous filename and

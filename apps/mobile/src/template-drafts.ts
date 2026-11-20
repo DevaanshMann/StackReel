@@ -76,8 +76,13 @@ function commitDraftManifest(directory: Directory, revision: number, manifest: u
   const next = new File(directory, `draft-${revision + 1}.json`);
   // Publish by renaming to a new path so the last committed snapshot survives a failed write.
   const pending = new File(directory, pendingName);
-  pending.writeSync(JSON.stringify(manifest));
-  pending.moveSync(next);
+  try {
+    pending.writeSync(JSON.stringify(manifest));
+    pending.moveSync(next);
+  } catch (cause) {
+    removeDraftFile(pending);
+    throw cause;
+  }
   return next.name;
 }
 
