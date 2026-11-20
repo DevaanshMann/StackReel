@@ -5,7 +5,7 @@ import { getDocumentAsync } from "expo-document-picker";
 import { File, Paths } from "expo-file-system";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { TemplateMusicControls } from "./TemplateMusicControls";
@@ -14,7 +14,13 @@ import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./Templat
 import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
-import { createDraftMediaFile, loadTemplateDraft, removeDraftFile, saveTemplateDraft } from "./template-drafts";
+import {
+  createDraftMediaFile,
+  deleteTemplateDraft,
+  loadTemplateDraft,
+  removeDraftFile,
+  saveTemplateDraft,
+} from "./template-drafts";
 import type { TemplateDraftEdits } from "./template-drafts";
 import {
   createTemplateClip,
@@ -137,6 +143,36 @@ export default function App() {
 
   function openTemplate(template: MobileTemplate, slots: TemplateVideoSlot[]) {
     navigate({ kind: "template", template, slots });
+  }
+
+  function confirmDeleteDraft(template: MobileTemplate) {
+    const draft = templateDrafts?.[template.id];
+    if (!draft) return;
+
+    Alert.alert(
+      `Delete ${template.name} draft?`,
+      "Your edits and StackReel’s copies of the videos and music will be removed. Your original files will stay in place.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            try {
+              deleteTemplateDraft(template);
+              setTemplateDrafts((drafts) => {
+                const remaining = { ...drafts };
+                delete remaining[template.id];
+                return remaining;
+              });
+              removeCachedFile(draft.outputUri);
+            } catch {
+              Alert.alert("Couldn’t delete the draft", "Try again from Projects.");
+            }
+          },
+        },
+      ],
+    );
   }
 
   function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft) {
@@ -345,6 +381,7 @@ export default function App() {
           <TemplateProjects
             drafts={templateDrafts}
             onSelectTemplate={openTemplate}
+            onDeleteDraft={confirmDeleteDraft}
             onBrowseTemplates={() => setHomeTab("templates")}
           />
         ) : (

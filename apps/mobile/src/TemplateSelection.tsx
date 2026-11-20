@@ -1,4 +1,5 @@
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
 import { trimTimeLabel } from "./TemplateTrim";
@@ -45,10 +46,12 @@ export function TemplateGallery({
 export function TemplateProjects({
   drafts,
   onSelectTemplate,
+  onDeleteDraft,
   onBrowseTemplates,
 }: {
   drafts: Readonly<Record<string, ProjectDraft>>;
   onSelectTemplate: SelectTemplate;
+  onDeleteDraft: (template: MobileTemplate) => void;
   onBrowseTemplates: () => void;
 }) {
   const projects = choices.flatMap(({ template, slots }) => {
@@ -80,6 +83,13 @@ export function TemplateProjects({
                 details={draft.loadError ? "Couldn’t load draft" : progress}
                 description={missingMedia ? "Missing media" : undefined}
                 onPress={() => onSelectTemplate(template, slots)}
+                action={
+                  <Action
+                    label="Delete"
+                    accessibilityLabel={`Delete ${template.name} draft`}
+                    onPress={() => onDeleteDraft(template)}
+                  />
+                }
               />
             );
           })}
@@ -94,29 +104,34 @@ function GalleryCard({
   details,
   description,
   onPress,
+  action,
 }: {
   label: string;
   details: string;
   description?: string | undefined;
   onPress: () => void;
+  action?: ReactNode;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={`${details}.${description ? ` ${description}` : ""}`}
-      onPress={onPress}
-      style={({ pressed }) => [styles.panel, styles.card, pressed && styles.pressed]}
-    >
-      <View style={styles.cardCopy}>
-        <Text style={styles.cardTitle}>{label}</Text>
-        <Text style={styles.cardDetails}>{details}</Text>
-        {description && <Text style={textStyles.muted}>{description}</Text>}
-      </View>
-      <Text accessible={false} accessibilityElementsHidden style={styles.chevron}>
-        ›
-      </Text>
-    </Pressable>
+    <View style={[styles.panel, styles.cardRow]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityHint={`${details}.${description ? ` ${description}` : ""}`}
+        onPress={onPress}
+        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      >
+        <View style={styles.cardCopy}>
+          <Text style={styles.cardTitle}>{label}</Text>
+          <Text style={styles.cardDetails}>{details}</Text>
+          {description && <Text style={textStyles.muted}>{description}</Text>}
+        </View>
+        <Text accessible={false} accessibilityElementsHidden style={styles.chevron}>
+          ›
+        </Text>
+      </Pressable>
+      {action && <View style={styles.cardAction}>{action}</View>}
+    </View>
   );
 }
 
@@ -224,13 +239,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.lg,
   },
+  cardRow: { flexDirection: "row", alignItems: "center", overflow: "hidden" },
   card: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: space[3],
     padding: space[4],
   },
   cardCopy: { flex: 1, gap: space[1] },
+  cardAction: { paddingRight: space[3] },
   emptyProjects: { padding: space[4], gap: space[3] },
   cardTitle: { color: darkColors.text, fontSize: fontSize.lg, fontWeight: "700" },
   cardDetails: { color: darkColors.accent, fontSize: fontSize.sm, fontWeight: "600" },
