@@ -2,7 +2,7 @@ import { addExportProgressListener, cancelExport, exportMP4, probeAudio, probeVi
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
 import { randomUUID } from "expo-crypto";
 import { getDocumentAsync } from "expo-document-picker";
-import { File, Paths } from "expo-file-system";
+import { File } from "expo-file-system";
 import { Asset, requestPermissionsAsync } from "expo-media-library";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
@@ -26,7 +26,6 @@ import {
 } from "./template-drafts";
 import type { TemplateDraftEdits } from "./template-drafts";
 import {
-  createTemplateClip,
   createTemplateMusic,
   createTemplateSource,
   getTemplateTextFields,
@@ -35,6 +34,7 @@ import {
   setTemplateClipTrim,
 } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateTextOverrides, TemplateVideoSlot } from "./template-editor";
+import { importTemplateVideos, removeCachedFile, SlotImportError } from "./template-video-import";
 import { pickVideo } from "./video-picker";
 import type { VideoPickerSource } from "./video-picker";
 
@@ -48,7 +48,6 @@ type TemplateDraft = TemplateDraftEdits & {
   loadError?: string;
 };
 type Editor = { kind: "single" } | { kind: "template"; template: MobileTemplate; slots: TemplateVideoSlot[] };
-type ImportTarget = { kind: "single" } | { kind: "template"; template: MobileTemplate; slot: TemplateVideoSlot };
 type ImportOperation = { kind: "import"; source: VideoPickerSource; slotId?: string };
 type SlotEdit = { kind: "trim" | "reframe"; template: MobileTemplate; slot: TemplateVideoSlot; clip: TemplateClip };
 type TextEdit = { kind: "text"; template: MobileTemplate; textOverrides: TemplateTextOverrides };
@@ -259,49 +258,57 @@ export default function App() {
     finish(operation);
   }
 
-  async function selectVideo(target: ImportTarget, pickerSource: VideoPickerSource) {
-    const operation: ImportOperation =
-      target.kind === "template"
-        ? { kind: "import", source: pickerSource, slotId: target.slot.id }
-        : { kind: "import", source: pickerSource };
+  async function selectTemplateVideos(slots: readonly TemplateVideoSlot[], source: VideoPickerSource) {
+    if (!template || !slots.length) return;
+    const operation: ImportOperation = { kind: "import", source, ...(slots.length === 1 && { slotId: slots[0]!.id }) };
+    if (!begin(operation)) return;
+    try {
+      await importTemplateVideos({
+        template,
+        slots,
+        source,
+        isCurrent: () => activeOperation.current === operation,
+        commit: (imported) => {
+          const clips = { ...templateDraft.clips, ...imported };
+          const missingSlots = templateDraft.missingSlots.filter((id) => !Object.hasOwn(imported, id));
+          updateTemplateDraft(template, { ...templateDraft, clips, missingSlots });
+        },
+      });
+    } catch (cause) {
+      if (activeOperation.current === operation) {
+        if (cause instanceof SlotImportError) {
+          setFeedback({ kind: "error", slotId: cause.slot.id, message: cause.message });
+        } else {
+          const summary = slots.length > 1 ? "Couldn’t import the selected videos." : "Couldn’t import the video.";
+          setFeedback({ ...operation, kind: "error", message: errorMessage(summary, cause) });
+        }
+      }
+    } finally {
+      finish(operation);
+    }
+  }
+
+  async function selectSingleVideo(source: VideoPickerSource) {
+    const operation: ImportOperation = { kind: "import", source };
     if (!begin(operation)) return;
     let pickedUri: string | undefined;
-    let draftMedia: File | undefined;
     try {
-      const asset = await pickVideo(pickerSource);
+      const asset = await pickVideo(source);
       if (!asset) return;
       pickedUri = asset.uri;
       if (activeOperation.current !== operation) return;
-
       const metadata = await probeVideo(pickedUri);
       if (activeOperation.current !== operation) return;
-
-      if (target.kind === "template") {
-        const { template, slot } = target;
-        const draft = templateDrafts?.[template.id] ?? emptyTemplateDraft;
-        const clip = createTemplateClip(slot, pickedUri, asset.name, metadata);
-        draftMedia = createDraftMediaFile(template, asset.draftFileName);
-        await new File(pickedUri).move(draftMedia);
-        if (activeOperation.current !== operation) return;
-        const clips = { ...draft.clips, [slot.id]: { ...clip, uri: draftMedia.uri } };
-        const missingSlots = draft.missingSlots.filter((id) => id !== slot.id);
-        updateTemplateDraft(template, { ...draft, clips, missingSlots });
-        draftMedia = undefined;
-      } else {
-        const source = createClipSource(pickedUri, metadata);
-        setSingleDraft({ clip: { name: asset.name, uri: pickedUri, source }, outputUri: null });
-        if (singleDraft.clip?.uri !== pickedUri) removeCachedFile(singleDraft.clip?.uri);
-        removeCachedFile(outputUri);
-      }
-
+      const clipSource = createClipSource(pickedUri, metadata);
+      setSingleDraft({ clip: { name: asset.name, uri: pickedUri, source: clipSource }, outputUri: null });
+      if (singleDraft.clip?.uri !== pickedUri) removeCachedFile(singleDraft.clip?.uri);
+      removeCachedFile(outputUri);
       pickedUri = undefined;
     } catch (cause) {
       if (activeOperation.current === operation) {
-        const message = errorMessage("Couldn’t import the video.", cause);
-        setFeedback({ ...operation, kind: "error", message });
+        setFeedback({ kind: "error", message: errorMessage("Couldn’t import the video.", cause) });
       }
     } finally {
-      if (draftMedia) removeDraftFile(draftMedia);
       if (pickedUri !== singleDraft.clip?.uri) removeCachedFile(pickedUri);
       finish(operation);
     }
@@ -556,7 +563,8 @@ export default function App() {
           importingSlotId={importing ? activity.slotId : undefined}
           importingFrom={importing ? activity.source : undefined}
           importError={feedback?.kind === "error" && feedback.slotId !== undefined ? feedback : null}
-          onSelect={(slot, source) => selectVideo({ kind: "template", template: editor.template, slot }, source)}
+          onSelectOrdered={(slots) => selectTemplateVideos(slots, "Photos")}
+          onSelect={(slot, source) => selectTemplateVideos([slot], source)}
           onTrim={(slot) => openSlotEdit("trim", slot)}
           onReframe={(slot) => openSlotEdit("reframe", slot)}
         />
@@ -567,7 +575,7 @@ export default function App() {
           importingFrom={importing ? activity.source : undefined}
           busy={busy}
           primary={clip === null}
-          onSelect={(source) => selectVideo({ kind: "single" }, source)}
+          onSelect={selectSingleVideo}
         />
       )}
       {source && <ClipPreview key={source} canvas={canvas} source={source} suspended={busy && !exporting} />}
@@ -692,16 +700,6 @@ function ExportProgress({ percentage }: { percentage: number }) {
       </View>
     </View>
   );
-}
-
-function removeCachedFile(uri: string | null | undefined) {
-  if (!uri) return;
-  try {
-    const cache = Paths.cache.uri.replace(/\/$/, "");
-    if (uri.startsWith(`${cache}/`)) new File(uri).delete();
-  } catch {
-    // The system may have already evicted the file from the cache.
-  }
 }
 
 const styles = StyleSheet.create({

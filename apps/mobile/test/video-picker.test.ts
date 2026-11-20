@@ -2,7 +2,7 @@ import { getDocumentAsync } from "expo-document-picker";
 import { launchImageLibraryAsync } from "expo-image-picker";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickVideo } from "../src/video-picker";
+import { pickOrderedVideos, pickVideo } from "../src/video-picker";
 
 vi.mock("expo-document-picker", () => ({ getDocumentAsync: vi.fn() }));
 vi.mock("expo-image-picker", () => ({
@@ -71,5 +71,35 @@ describe("pickVideo", () => {
 
     await expect(pickVideo("Photos")).rejects.toThrow("Photos did not return a video.");
     await expect(pickVideo("Files")).rejects.toThrow("Files did not return a video.");
+  });
+});
+
+describe("pickOrderedVideos", () => {
+  it("limits the numbered video selection to the open slots and preserves tap order", async () => {
+    const assets = ["Z.mov", "A.mp4"].map((name) => ({
+      uri: `file:///Caches/ImagePicker/${name}`,
+      fileName: name,
+      width: 1920,
+      height: 1080,
+    }));
+    photos.mockResolvedValueOnce({ canceled: false, assets });
+
+    const picked = await pickOrderedVideos(3);
+
+    expect(photos).toHaveBeenCalledWith({
+      mediaTypes: ["videos"],
+      allowsEditing: false,
+      preferredAssetRepresentationMode: "current",
+      allowsMultipleSelection: true,
+      orderedSelection: true,
+      selectionLimit: 3,
+    });
+    expect(picked?.map(({ name }) => name)).toEqual(["Z.mov", "A.mp4"]);
+    expect(files).not.toHaveBeenCalled();
+  });
+
+  it("returns no selection when canceled", async () => {
+    photos.mockResolvedValueOnce({ canceled: true, assets: null });
+    await expect(pickOrderedVideos(2)).resolves.toBeNull();
   });
 });

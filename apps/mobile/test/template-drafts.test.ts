@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { probeVideo } from "@stackreel/engine";
+import { File } from "expo-file-system";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createDraftMediaFile,
   deleteTemplateDraft,
@@ -10,6 +12,7 @@ import {
   createTemplateClip,
   createTemplateMusic,
   createTemplateSource,
+  getEmptyVideoSlots,
   getTemplateTextFields,
   getVideoSlots,
   mobileTemplates,
@@ -17,6 +20,13 @@ import {
   setTemplateClipTrim,
   setTemplateText,
 } from "../src/template-editor";
+
+import type { TemplateClip } from "../src/template-editor";
+import { importTemplateVideos } from "../src/template-video-import";
+import { pickOrderedVideos } from "../src/video-picker";
+
+vi.mock("@stackreel/engine", () => ({ probeVideo: vi.fn() }));
+vi.mock("../src/video-picker", () => ({ pickOrderedVideos: vi.fn(), pickVideo: vi.fn() }));
 
 const storage = vi.hoisted(() => ({
   document: "file:///Documents",
@@ -64,6 +74,14 @@ vi.mock("expo-file-system", () => {
       storage.files.set(this.uri, data);
     }
 
+    async move(destination: File) {
+      this.moveSync(destination);
+    }
+
+    async copy(destination: File) {
+      destination.writeSync(this.textSync());
+    }
+
     moveSync(destination: File) {
       if (storage.interruptMove) throw new Error("Interrupted write");
       if (destination.exists) throw new Error("Destination already exists");
@@ -91,6 +109,7 @@ vi.mock("expo-file-system", () => {
     File,
     Directory,
     Paths: {
+      cache: new Directory("file:///Caches"),
       get document() {
         return new Directory(storage.document);
       },
@@ -127,15 +146,15 @@ function fixture() {
   return { edits, beforeFile, afterFile, musicFile };
 }
 
-describe("template draft storage", () => {
-  beforeEach(() => {
-    storage.document = "file:///Documents";
-    storage.files.clear();
-    storage.directories.clear();
-    storage.interruptMove = false;
-    storage.blockedDeletion = "";
-  });
+beforeEach(() => {
+  storage.document = "file:///Documents";
+  storage.files.clear();
+  storage.directories.clear();
+  storage.interruptMove = false;
+  storage.blockedDeletion = "";
+});
 
+describe("template draft storage", () => {
   it("restores edited media, trims, framing, and text after the app sandbox moves", () => {
     const { edits } = fixture();
     saveTemplateDraft(beforeAfter, edits);
@@ -171,11 +190,10 @@ describe("template draft storage", () => {
 
     storage.interruptMove = true;
     expect(() => saveTemplateDraft(beforeAfter, pendingEdits)).toThrow("Interrupted write");
-    expect(storage.files.has(pending)).toBe(true);
+    expect(storage.files.has(pending)).toBe(false);
     expect(beforeFile.exists && musicFile.exists).toBe(true);
     expect(loadTemplateDraft(beforeAfter)).toMatchObject(edits);
     expect(replacement.exists).toBe(false);
-    expect(storage.files.has(pending)).toBe(false);
 
     storage.interruptMove = false;
     replacement.writeSync("fixture");
@@ -358,5 +376,147 @@ describe("template draft storage", () => {
     storage.blockedDeletion = "";
     deleteTemplateDraft(beforeAfter);
     expect(loadTemplateDraft(beforeAfter)).toBeNull();
+  });
+});
+
+describe("ordered template video import", () => {
+  const slots = getVideoSlots(hook);
+  const textOverrides = { "text/0": "Watch closely" };
+  const draft = { name: "Series intro", clips: {}, music: null, textOverrides };
+  const commit = vi.fn((clips: Record<string, TemplateClip>) => saveTemplateDraft(hook, { ...draft, clips }));
+  const run = (isCurrent = () => true) =>
+    importTemplateVideos({ template: hook, slots, source: "Photos", isCurrent, commit });
+
+  function pick(names: string[]) {
+    const videos = names.map((name) => {
+      const uri = `file:///Caches/ImagePicker/${name}`;
+      storage.files.set(uri, name);
+      return { uri, name, draftFileName: name };
+    });
+    vi.mocked(pickOrderedVideos).mockResolvedValueOnce(videos);
+    return videos;
+  }
+
+  beforeEach(() => {
+    saveTemplateDraft(hook, draft);
+    vi.mocked(probeVideo).mockResolvedValue(metadata);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.resetAllMocks();
+  });
+
+  it("saves one revision in selection order and reopens the partial draft", async () => {
+    pick(["Zebra.mov", "Acorn.mp4"]);
+    await run();
+    expect(commit).toHaveBeenCalledTimes(1);
+    const restored = loadTemplateDraft(hook)!;
+    expect(restored).toMatchObject({ name: draft.name, textOverrides });
+    expect(Object.keys(restored.clips)).toEqual(["clip1", "clip2"]);
+    expect(storage.files.get(restored.clips.clip1!.uri)).toBe("Zebra.mov");
+    expect(storage.files.get(restored.clips.clip2!.uri)).toBe("Acorn.mp4");
+  });
+
+  it("reserves filled slots and missing-media slots in the displayed order", () => {
+    const clip = createTemplateClip(slots[1]!, "file:///existing.mov", "existing", metadata);
+    expect(getEmptyVideoSlots(slots, { clip2: clip }, [])).toEqual([slots[0], slots[2]]);
+    expect(getEmptyVideoSlots(slots, {}, ["clip2"])).toEqual([slots[0], slots[2]]);
+    expect(getEmptyVideoSlots(slots, { clip3: clip }, ["clip1"])).toEqual([slots[1]]);
+  });
+
+  it("fills around a missing video and reopens its saved trim when the video is recovered", async () => {
+    const middleSlot = slots[1]!;
+    const file = createDraftMediaFile(hook, "Original.mp4");
+    file.writeSync("original video");
+    const original = setTemplateClipTrim(middleSlot, createTemplateClip(middleSlot, file.uri, "Original", metadata), 8);
+    saveTemplateDraft(hook, { ...draft, clips: { [middleSlot.id]: original } });
+    file.delete();
+    const saved = loadTemplateDraft(hook)!;
+    const targets = getEmptyVideoSlots(slots, saved.clips, saved.missingSlots);
+    pick(["Hook.mp4", "Reveal.mp4"]);
+    await importTemplateVideos({
+      template: hook,
+      slots: targets,
+      source: "Photos",
+      isCurrent: () => true,
+      commit: (clips) => saveTemplateDraft(hook, { ...saved, clips }),
+    });
+    expect(pickOrderedVideos).toHaveBeenCalledWith(2);
+    expect(loadTemplateDraft(hook)).toMatchObject({
+      clips: { clip1: { name: "Hook.mp4" }, clip3: { name: "Reveal.mp4" } },
+      missingSlots: [middleSlot.id],
+    });
+    file.writeSync("original video");
+    expect(loadTemplateDraft(hook)?.clips[middleSlot.id]).toEqual(original);
+  });
+
+  it("leaves the saved draft alone on cancel", async () => {
+    const before = new Map(storage.files);
+    vi.mocked(pickOrderedVideos).mockResolvedValueOnce(null);
+    await run();
+    expect(probeVideo).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+    expect(storage.files).toEqual(before);
+  });
+
+  it.each(["short video", "probe failure", "partial move"])(
+    "identifies the second slot and removes all three picker files and staged media after a %s",
+    async (failure) => {
+      const before = new Map(storage.files);
+      const [, second] = pick(["First.mp4", "Second.mp4", "Third.mp4"]);
+      if (failure === "short video") {
+        vi.mocked(probeVideo)
+          .mockResolvedValueOnce(metadata)
+          .mockResolvedValueOnce({ ...metadata, durationUs: 1 });
+      } else if (failure === "probe failure") {
+        vi.mocked(probeVideo).mockResolvedValueOnce(metadata).mockRejectedValueOnce(new Error("Unreadable video"));
+      } else {
+        vi.spyOn(File.prototype, "move").mockImplementation(async function (this: File, target) {
+          if (this.uri === second!.uri) {
+            (target as File).writeSync("partial file");
+            throw new Error("Storage full");
+          }
+          this.moveSync(target);
+        });
+      }
+
+      await expect(run()).rejects.toMatchObject({ slot: slots[1], message: expect.stringContaining("B-roll") });
+      expect(commit).not.toHaveBeenCalled();
+      expect(storage.files).toEqual(before);
+    },
+  );
+
+  it.each(["picker", "probe", "move"])("cleans up if the operation becomes stale during the %s", async (step) => {
+    const before = new Map(storage.files);
+    pick(["First.mp4", "Second.mp4", "Third.mp4"]);
+    let current = step !== "picker";
+    if (step === "probe") {
+      vi.mocked(probeVideo)
+        .mockResolvedValueOnce(metadata)
+        .mockImplementationOnce(async () => {
+          current = false;
+          return metadata;
+        });
+    } else if (step === "move") {
+      vi.spyOn(File.prototype, "move").mockImplementation(async function (this: File, target) {
+        this.moveSync(target);
+        current = false;
+      });
+    }
+    await run(() => current);
+    expect(commit).not.toHaveBeenCalled();
+    expect(storage.files).toEqual(before);
+  });
+
+  it("keeps external originals and the previous draft when the manifest cannot be published", async () => {
+    const original = { uri: "file:///Documents/Original.mov", name: "Original", draftFileName: "clip.mov" };
+    storage.files.set(original.uri, "original video");
+    const before = new Map(storage.files);
+    vi.mocked(pickOrderedVideos).mockResolvedValueOnce([original]);
+    storage.interruptMove = true;
+    await expect(run()).rejects.toThrow("Interrupted write");
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(storage.files).toEqual(before);
+    expect(loadTemplateDraft(hook)).toMatchObject(draft);
   });
 });

@@ -201,6 +201,14 @@ export function getVideoSlots(template: MobileTemplate): TemplateVideoSlot[] {
     });
 }
 
+export function getEmptyVideoSlots(
+  slots: readonly TemplateVideoSlot[],
+  clips: Readonly<Record<string, TemplateClip>>,
+  missingSlots: readonly string[],
+) {
+  return slots.filter(({ id }) => !Object.hasOwn(clips, id) && !missingSlots.includes(id));
+}
+
 function shortClipError(slot: TemplateVideoSlot): Error {
   return new Error(
     `"${slot.label}" needs at least ${(slot.minDurationUs / US_PER_SECOND).toFixed(2)} seconds of playable video.`,
