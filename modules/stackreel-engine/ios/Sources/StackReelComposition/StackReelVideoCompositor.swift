@@ -12,12 +12,14 @@ extension VideoComposition {
     case unsupportedHold(layerID: String)
     case unsupportedTextAnimation(layerID: String)
     case unableToRasterizeText(layerID: String)
+    case unsupportedStickerAnimation(layerID: String)
+    case invalidStickerPlacement(layerID: String)
     case unsupportedTransition(transitionID: String)
     case unableToCopyAsset
     case unableToExtendAsset
   }
 
-  /// Creates the paired AVFoundation asset and video composition for video and text overlays.
+  /// Creates the paired AVFoundation asset and video composition for video-backed plans.
   public func makeRenderComposition() throws -> (
     asset: AVComposition, videoComposition: AVVideoComposition
   ) {
@@ -25,19 +27,27 @@ extension VideoComposition {
     guard canvas.width > 0, canvas.height > 0, let fps = CMTimeScale(exactly: canvas.fps), fps > 0,
       StackReelVideoCompositor.backgroundColor(canvas.background) != nil
     else { throw RenderError.invalidCanvas }
+    guard !clipsByLayerID.isEmpty else { throw RenderError.noVideoLayers }
     for layer in renderPlan.layers {
+      let id = layer.timing.id
       switch layer.content {
-      case .video:
-        if clipsByLayerID[layer.timing.id]?.holdTimeRange != nil {
-          throw RenderError.unsupportedHold(layerID: layer.timing.id)
+      case .video where clipsByLayerID[id]?.holdTimeRange != nil:
+        throw RenderError.unsupportedHold(layerID: id)
+      case .sticker(let sticker):
+        let placement = sticker.placement
+        guard sticker.widthPx.isFinite, sticker.widthPx > 0, placement.xPx.isFinite,
+          placement.yPx.isFinite, placement.rotationDeg.isFinite
+        else { throw RenderError.invalidStickerPlacement(layerID: id) }
+        let animation = sticker.animation
+        if (animation.in == .typewriter && animation.inDurationUs > 0)
+          || (animation.out == .typewriter && animation.outDurationUs > 0)
+        {
+          throw RenderError.unsupportedStickerAnimation(layerID: id)
         }
-      case .text:
+      case .video, .image, .text:
         break
-      case .image, .sticker:
-        throw RenderError.unsupportedLayer(layerID: layer.timing.id)
       }
     }
-    guard !clipsByLayerID.isEmpty else { throw RenderError.noVideoLayers }
     if let transition = renderPlan.transitions.first(where: {
       $0.type != .crossfade && $0.type != .slide
     }) {
@@ -47,7 +57,8 @@ extension VideoComposition {
     let video = AVMutableVideoComposition()
     video.instructions = try StackReelVideoInstruction.schedule(
       renderPlan, clipsByLayerID: clipsByLayerID,
-      textTexturesByLayerID: TextRasterizer.textures(for: renderPlan))
+      textTexturesByLayerID: TextRasterizer.textures(for: renderPlan),
+      imageTexturesByLayerID: imageTexturesByLayerID)
     video.customVideoCompositorClass = StackReelVideoCompositor.self
     video.renderSize = CGSize(width: canvas.width, height: canvas.height)
     video.frameDuration = CMTime(value: 1, timescale: fps)
@@ -134,7 +145,8 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
 
       for layer in instruction.layers {
         let id = layer.timing.id
-        if case .text(let text) = layer.content {
+        switch layer.content {
+        case .text(let text):
           if let texture = instruction.textTexturesByLayerID[id],
             let overlay = try texture.image(
               for: text, timing: layer.timing, canvas: instruction.canvas, at: timeUs)
@@ -142,6 +154,17 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
             result = overlay.composited(over: result)
           }
           continue
+        case .sticker(let sticker):
+          guard let texture = instruction.imageTexturesByLayerID[id]
+          else { throw FrameError.invalidInstruction }
+          if let overlay = texture.image(
+            for: sticker, timing: layer.timing, canvas: instruction.canvas, at: timeUs)
+          {
+            result = overlay.composited(over: result)
+          }
+          continue
+        case .video, .image:
+          break
         }
         if instruction.transitions.contains(where: { $0.fromLayerId == id }) { continue }
         let incoming = try image(for: layer, in: instruction, request: request, timeUs: timeUs)
@@ -213,17 +236,32 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
     request: AVAsynchronousVideoCompositionRequest, timeUs: Double
   ) throws -> CIImage {
     let id = layer.timing.id
-    guard case .video(let media, _) = layer.content,
-      let input = instruction.videoInputsByLayerID[id], !input.usesHeldFrame
-    else { throw FrameError.invalidInstruction }
-    guard let buffer = request.sourceFrame(byTrackID: input.clip.trackID)
-    else { throw FrameError.missingFrame(layerID: id) }
-    let source = CIImage(cvPixelBuffer: buffer)
+    let source: CIImage
+    let media: Layer.Media
+    let preferredTransform: CGAffineTransform
+    switch layer.content {
+    case .video(let geometry, _):
+      guard let input = instruction.videoInputsByLayerID[id], !input.usesHeldFrame
+      else { throw FrameError.invalidInstruction }
+      guard let buffer = request.sourceFrame(byTrackID: input.clip.trackID)
+      else { throw FrameError.missingFrame(layerID: id) }
+      source = CIImage(cvPixelBuffer: buffer)
+      media = geometry
+      preferredTransform = input.clip.preferredTransform
+    case .image(let geometry, _):
+      guard let texture = instruction.imageTexturesByLayerID[id]
+      else { throw FrameError.invalidInstruction }
+      source = texture.orientedImage
+      media = geometry
+      preferredTransform = .identity
+    case .sticker, .text:
+      throw FrameError.invalidInstruction
+    }
 
     // The plan and preferred transform operate from the top left. Core Image uses the bottom left.
     let toDisplay = CGAffineTransform(
       a: 1, b: 0, c: 0, d: -1, tx: -source.extent.minX, ty: source.extent.maxY
-    ).concatenating(input.clip.preferredTransform)
+    ).concatenating(preferredTransform)
     let displayBounds = source.extent.applying(toDisplay)
     let oriented = source.transformed(
       by: toDisplay.concatenating(
@@ -246,9 +284,7 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
     if media.fadeOutUs > 0 {
       opacity *= min(1, (Double(layer.timing.endUs) - timeUs) / Double(media.fadeOutUs))
     }
-    if opacity >= 1 { return projected }
-    return projected.applyingFilter(
-      "CIColorMatrix", parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: max(0, opacity))])
+    return projected.withOpacity(opacity)
   }
 
   static func backgroundColor(_ hex: String) -> CIColor? {

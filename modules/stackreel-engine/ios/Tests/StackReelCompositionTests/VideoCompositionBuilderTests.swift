@@ -1,5 +1,7 @@
 import AVFoundation
+import ImageIO
 import StackReelPlan
+import UniformTypeIdentifiers
 import XCTest
 
 @testable import StackReelComposition
@@ -10,6 +12,8 @@ final class VideoCompositionBuilderTests: XCTestCase {
     // Encode a portrait display transform into the movie's metadata.
     let rotation = CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: 48, ty: 0)
     let url = try await makeMovie(transform: rotation)
+    let still = url.deletingLastPathComponent().appendingPathComponent("still.png")
+    try writeImage(makeBitmap(width: 32, height: 48) { _, _ in (0, 0, 0, 255) }, to: still)
     let plan = try decodePlan(
       duration: 3_300_000,
       layers: [
@@ -28,10 +32,10 @@ final class VideoCompositionBuilderTests: XCTestCase {
     var loadedURIs: [String] = []
     let result = try await VideoCompositionBuilder.build(plan) { uri in
       loadedURIs.append(uri)
-      return url
+      return uri == "fixture://clip.mov" ? url : still
     }
 
-    XCTAssertEqual(loadedURIs, ["fixture://clip.mov"])
+    XCTAssertEqual(loadedURIs, ["fixture://clip.mov", "fixture://still.jpg"])
     XCTAssertEqual(result.timelineDuration, time(3_300_000))
     XCTAssertEqual(result.composition.tracks.count, 2)
     let outgoing = try XCTUnwrap(result.clipsByLayerID["video/0"])
@@ -173,7 +177,7 @@ final class VideoCompositionBuilderTests: XCTestCase {
     XCTAssertEqual(instructions[0].canvas.background, "#000000")
     XCTAssertTrue(instructions.allSatisfy { $0.requiredSourceTrackIDs == [] })
     XCTAssertThrowsError(try result.makeRenderComposition()) {
-      XCTAssertEqual($0 as? VideoComposition.RenderError, .unsupportedLayer(layerID: "image/0"))
+      XCTAssertEqual($0 as? VideoComposition.RenderError, .noVideoLayers)
     }
   }
 
@@ -540,6 +544,194 @@ final class VideoCompositionBuilderTests: XCTestCase {
     XCTAssertEqual(try pixel(frames[15], x: 14, y: 4), [0, 0, 0])
   }
 
+  @MainActor
+  func testRendersOrientedStillWithCropAlphaAndMediaFades() async throws {
+    let movie = try await makeMovie { _, _ in (0, 0, 255) }
+    let still = movie.deletingLastPathComponent().appendingPathComponent("oriented.tiff")
+    let bitmap = try makeBitmap(width: 18, height: 12) { x, y in
+      if y < 6 { return (0, 255, 0, 255) }
+      return x < 9 ? (255, 0, 0, 128) : (0, 0, 0, 0)
+    }
+    try writeImage(bitmap, to: still, type: .tiff, orientation: .right)
+
+    let video = clip(0, start: 0, end: 1_800_000, sourceStart: 0, sourceEnd: 1_800_000)
+    var overlay = image(start: 400_000, end: 1_600_000)
+    overlay["sourceSize"] = ["width": 12, "height": 18]
+    overlay["cropPx"] = ["x": 2, "y": 4, "width": 8, "height": 10]
+    overlay["transform"] = [2, 0, 4, 0, 2, 6, 0, 0, 1]
+    overlay["opacity"] = 0.5
+    overlay["fadeInUs"] = 400_000
+    overlay["fadeOutUs"] = 400_000
+    let plan = try decodePlan(duration: 1_800_000, layers: [overlay, video])
+    let result = try await VideoCompositionBuilder.build(plan) {
+      $0 == "fixture://clip.mov" ? movie : still
+    }
+    let frames = try readFrames(result.makeRenderComposition(), at: [11, 12, 18, 24, 42, 48])
+    let blue = try pixel(frames[11], x: 21, y: 19)
+    assertPixel(blue, near: [0, 0, 245])
+    for frame in [11, 12, 48] {
+      XCTAssertEqual(try pixel(frames[frame], x: 21, y: 19), blue)
+    }
+    for frame in [18, 42] {
+      assertPixel(
+        try pixel(frames[frame], x: 21, y: 19), near: blend(blue, [0, 255, 0], progress: 0.25))
+    }
+    assertPixel(
+      try pixel(frames[24], x: 21, y: 19), near: blend(blue, [0, 255, 0], progress: 0.5))
+    assertPixel(
+      try pixel(frames[24], x: 12, y: 19), near: blend(blue, [255, 0, 0], progress: 0.25))
+    XCTAssertEqual(try pixel(frames[24], x: 12, y: 29), blue)
+    for (x, y) in [(6, 19), (25, 19), (21, 12), (21, 35)] {
+      XCTAssertEqual(try pixel(frames[24], x: x, y: y), blue)
+    }
+  }
+
+  @MainActor
+  func testRendersStickersInLayerOrderAndSharesDecodedFiles() async throws {
+    let movie = try await makeMovie { _, _ in (0, 0, 255) }
+    let badge = movie.deletingLastPathComponent().appendingPathComponent("badge.png")
+    let bitmap = try makeBitmap(width: 20, height: 10) { x, y in
+      if x >= 10 { return (0, 0, 0, 0) }
+      return y < 5 ? (255, 255, 0, 255) : (255, 0, 255, 255)
+    }
+    try writeImage(bitmap, to: badge)
+
+    let video = clip(0, start: 0, end: 800_000, sourceStart: 0, sourceEnd: 800_000)
+    var foreground = video
+    foreground["id"] = "foreground/0"
+    foreground["trackId"] = "foreground"
+    foreground["z"] = 3
+    foreground["cropPx"] = ["x": 0, "y": 0, "width": 4, "height": 6]
+    foreground["transform"] = [1, 0, 16, 0, 1, 6, 0, 0, 1]
+    var still = image(start: 400_000, end: 1_600_000)
+    still["assetUri"] = "fixture://badge.png"
+    still["sourceSize"] = ["width": 20, "height": 10]
+    still["cropPx"] = ["x": 0, "y": 0, "width": 9, "height": 8]
+    still["transform"] = [1, 0, 0, 0, 1, 35, 0, 0, 1]
+    let lower = sticker(0, start: 400_000, end: 1_600_000, x: 14, y: 8)
+    var rotated = sticker(
+      1, start: 400_000, end: 1_400_000, x: 24, y: 22, rotation: 90, anchor: "top-right")
+    rotated["opacity"] = 0.5
+    rotated["animation"] = [
+      "in": "fade", "out": "none", "inDurationUs": 400_000, "outDurationUs": 0,
+    ]
+    let plan = try decodePlan(
+      duration: 1_800_000, layers: [rotated, foreground, lower, still, video])
+    var resolved: [String] = []
+    let result = try await VideoCompositionBuilder.build(plan) { identifier in
+      resolved.append(identifier)
+      return identifier == "fixture://clip.mov" ? movie : badge
+    }
+    let render = try result.makeRenderComposition()
+    XCTAssertEqual(resolved, ["fixture://clip.mov", "badge", "fixture://badge.png"])
+    let instruction = try XCTUnwrap(
+      render.videoComposition.instructions[1] as? StackReelVideoInstruction)
+    XCTAssertTrue(instruction.containsTweening)
+    let textures = instruction.imageTexturesByLayerID
+    let shared = try XCTUnwrap(textures["image/0"]?.bitmap)
+    XCTAssertTrue(textures["stickers/0"]?.bitmap === shared)
+    XCTAssertTrue(textures["stickers/1"]?.bitmap === shared)
+
+    let frames = try readFrames(render, at: [11, 12, 18, 23, 36, 42, 48])
+    let blue = try pixel(frames[11], x: 23, y: 10)
+    let yellow = [255, 255, 0]
+    let magenta = [255, 0, 255]
+    let black = [0, 0, 0]
+    XCTAssertEqual(try pixel(frames[12], x: 23, y: 10), blue)
+    assertPixel(
+      try pixel(frames[18], x: 23, y: 10), near: blend(blue, yellow, progress: 0.25))
+    XCTAssertEqual(try pixel(frames[23], x: 17, y: 9), blue)
+    XCTAssertEqual(try pixel(frames[23], x: 23, y: 19), blue)
+    assertPixel(
+      try pixel(frames[36], x: 21, y: 13), near: blend(magenta, yellow, progress: 0.5))
+    assertPixel(
+      try pixel(frames[36], x: 17, y: 9), near: blend(yellow, magenta, progress: 0.5))
+    XCTAssertEqual(try pixel(frames[36], x: 23, y: 19), black)
+    XCTAssertEqual(try pixel(frames[36], x: 25, y: 10), black)
+    XCTAssertEqual(try pixel(frames[36], x: 3, y: 36), yellow)
+    XCTAssertEqual(try pixel(frames[42], x: 21, y: 13), magenta)
+    XCTAssertEqual(try pixel(frames[42], x: 23, y: 10), black)
+    XCTAssertEqual(try pixel(frames[48], x: 21, y: 13), black)
+  }
+
+  @MainActor
+  func testCrossfadesFromVideoToStillAndKeepsRenderingTheStill() async throws {
+    let movie = try await makeMovie { _, _ in (0, 0, 255) }
+    let still = movie.deletingLastPathComponent().appendingPathComponent("green.png")
+    try writeImage(makeBitmap(width: 32, height: 48) { _, _ in (0, 255, 0, 255) }, to: still)
+    let video = clip(0, start: 0, end: 1_000_000, sourceStart: 0, sourceEnd: 1_000_000)
+    var overlay = image(1, start: 600_000, end: 1_400_000)
+    overlay["trackId"] = "video"
+    overlay["z"] = 0
+    let plan = try decodePlan(
+      duration: 1_400_000, layers: [video, overlay],
+      transitions: [
+        [
+          "id": "image/1", "trackId": "video", "z": 0, "type": "crossfade", "startUs": 600_000,
+          "endUs": 1_000_000, "fromLayerId": "video/0", "toLayerId": "image/1",
+        ]
+      ])
+    let result = try await VideoCompositionBuilder.build(plan) {
+      $0 == "fixture://clip.mov" ? movie : still
+    }
+    let frames = try readFrames(result.makeRenderComposition(), at: [17, 18, 24, 30, 41])
+    let blue = try pixel(frames[17])
+    let green = [0, 255, 0]
+    assertPixel(blue, near: [0, 0, 245])
+    XCTAssertEqual(try pixel(frames[18]), blue)
+    assertPixel(try pixel(frames[24]), near: blend(blue, green, progress: 0.5))
+    XCTAssertEqual(try pixel(frames[30]), green)
+    XCTAssertEqual(try pixel(frames[41]), green)
+  }
+
+  @MainActor
+  func testRejectsNonFileUnreadableAndMultiImageAssets() async throws {
+    let movie = try await makeMovie()
+    let directory = movie.deletingLastPathComponent()
+    let unreadable = directory.appendingPathComponent("bad.png")
+    try Data("invalid image".utf8).write(to: unreadable)
+    let animated = directory.appendingPathComponent("animated.gif")
+    try writeImage(
+      makeBitmap(width: 8, height: 8) { _, _ in (255, 0, 0, 255) },
+      to: animated, type: .gif, count: 2)
+    let video = clip(0, start: 0, end: 1_000_000, sourceStart: 0, sourceEnd: 1_000_000)
+    let plan = try decodePlan(
+      duration: 1_000_000, layers: [video, image(start: 0, end: 1_000_000)])
+    let uri = "fixture://still.jpg"
+    let inputs: [(URL, VideoCompositionBuilder.BuildError)] = [
+      (try XCTUnwrap(URL(string: "https://example.com/still.png")), .nonFileURL(assetURI: uri)),
+      (directory.appendingPathComponent("missing.png"), .unableToDecodeImage(assetURI: uri)),
+      (unreadable, .unableToDecodeImage(assetURI: uri)),
+      (animated, .unsupportedMultiImageAsset(assetURI: uri)),
+    ]
+    for (url, expected) in inputs {
+      do {
+        _ = try await VideoCompositionBuilder.build(plan) { $0 == uri ? url : movie }
+        XCTFail("Expected \(expected)")
+      } catch {
+        XCTAssertEqual(error as? VideoCompositionBuilder.BuildError, expected)
+      }
+    }
+  }
+
+  @MainActor
+  func testRejectsStickerTypewriterAnimation() async throws {
+    let movie = try await makeMovie()
+    let badge = movie.deletingLastPathComponent().appendingPathComponent("badge.png")
+    try writeImage(makeBitmap(width: 8, height: 8) { _, _ in (255, 0, 0, 255) }, to: badge)
+    let video = clip(0, start: 0, end: 1_000_000, sourceStart: 0, sourceEnd: 1_000_000)
+    var overlay = sticker(0, start: 0, end: 1_000_000, x: 4, y: 4)
+    overlay["animation"] = [
+      "in": "typewriter", "out": "none", "inDurationUs": 400_000, "outDurationUs": 0,
+    ]
+    let plan = try decodePlan(duration: 1_000_000, layers: [video, overlay])
+    let result = try await VideoCompositionBuilder.build(plan) { $0 == "badge" ? badge : movie }
+    XCTAssertThrowsError(try result.makeRenderComposition()) {
+      XCTAssertEqual(
+        $0 as? VideoComposition.RenderError, .unsupportedStickerAnimation(layerID: "stickers/0"))
+    }
+  }
+
   func testScheduleRejectsTransitionWithInactiveSource() throws {
     let plan = try decodePlan(
       duration: 2_000_000,
@@ -661,6 +853,19 @@ final class VideoCompositionBuilderTests: XCTestCase {
     ]
   }
 
+  private func sticker(
+    _ index: Int, start: Int64, end: Int64, x: Int, y: Int, rotation: Int = 0,
+    anchor: String = "top-left"
+  ) -> [String: Any] {
+    [
+      "id": "stickers/\(index)", "trackId": "stickers", "itemIndex": index, "z": 2,
+      "startUs": start,
+      "endUs": end, "opacity": 1, "kind": "sticker", "asset": "badge", "widthPx": 16,
+      "placement": ["xPx": x, "yPx": y, "rotationDeg": rotation, "anchor": anchor],
+      "animation": ["in": "none", "out": "none", "inDurationUs": 0, "outDurationUs": 0],
+    ]
+  }
+
   private func time(_ us: Int64) -> CMTime {
     CMTime(value: us, timescale: 1_000_000)
   }
@@ -675,6 +880,39 @@ final class VideoCompositionBuilderTests: XCTestCase {
     case cannotWriteMovie
     case writerTimedOut
     case cannotReadComposition
+    case cannotWriteImage
+  }
+
+  private func makeBitmap(
+    width: Int, height: Int, pixel: (Int, Int) -> (UInt8, UInt8, UInt8, UInt8)
+  ) throws -> CGImage {
+    var bytes = Data()
+    for y in 0..<height {
+      for x in 0..<width {
+        let (r, g, b, a) = pixel(x, y)
+        bytes.append(contentsOf: [r, g, b, a])
+      }
+    }
+    let provider = try XCTUnwrap(CGDataProvider(data: bytes as CFData))
+    return try XCTUnwrap(
+      CGImage(
+        width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: 4 * width,
+        space: StackReelVideoCompositor.sRGB,
+        bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue),
+        provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent))
+  }
+
+  private func writeImage(
+    _ image: CGImage, to url: URL, type: UTType = .png,
+    orientation: CGImagePropertyOrientation = .up, count: Int = 1
+  ) throws {
+    let destination = try XCTUnwrap(
+      CGImageDestinationCreateWithURL(url as CFURL, type.identifier as CFString, count, nil))
+    let properties = [kCGImagePropertyOrientation: orientation.rawValue] as CFDictionary
+    for _ in 0..<count {
+      CGImageDestinationAddImage(destination, image, properties)
+    }
+    guard CGImageDestinationFinalize(destination) else { throw TestError.cannotWriteImage }
   }
 
   @MainActor
