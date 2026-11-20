@@ -8,17 +8,26 @@ export function Screen({
   page,
   title = "StackReel",
   scrollEnabled = true,
+  adjustForKeyboard = false,
 }: {
   children: ReactNode;
   page?: string;
   title?: string;
   scrollEnabled?: boolean;
+  adjustForKeyboard?: boolean;
 }) {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" />
-        <ScrollView key={page} contentContainerStyle={styles.scroll} scrollEnabled={scrollEnabled}>
+        <ScrollView
+          key={page}
+          contentContainerStyle={styles.scroll}
+          scrollEnabled={scrollEnabled}
+          automaticallyAdjustKeyboardInsets={adjustForKeyboard}
+          keyboardDismissMode={adjustForKeyboard ? "interactive" : "none"}
+          keyboardShouldPersistTaps={adjustForKeyboard ? "always" : "never"}
+        >
           <View style={styles.content}>
             <Text accessibilityRole="header" style={styles.title}>
               {title}
