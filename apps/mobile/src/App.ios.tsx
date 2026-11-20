@@ -215,13 +215,11 @@ export default function App() {
   }
 
   function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft) {
+    if (draft.loadError) throw new Error(draft.loadError);
     const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
     const outputUri = source === draft.source ? draft.outputUri : null;
     saveTemplateDraft(template, draft);
-    setTemplateDrafts((drafts) => {
-      const { loadError: _loadError, ...updated } = draft;
-      return { ...drafts, [template.id]: { ...updated, source, outputUri } };
-    });
+    setTemplateDrafts((drafts) => ({ ...drafts, [template.id]: { ...draft, source, outputUri } }));
     if (outputUri !== draft.outputUri) removeCachedFile(draft.outputUri);
   }
 
@@ -462,6 +460,35 @@ export default function App() {
     );
   }
 
+  const fromProjects = homeTab === "projects";
+  const backLabel = fromProjects ? "Back to projects" : "Back to templates";
+  if (template && templateDraft.loadError) {
+    return (
+      <Screen page={template.id}>
+        <Text accessibilityRole="header" style={textStyles.heading}>
+          {template.name}
+        </Text>
+        <Text accessibilityRole="alert" style={textStyles.error}>
+          {templateDraft.loadError}
+        </Text>
+        <Text style={textStyles.body}>
+          To start over, delete this draft from Projects. Your original files will stay in place.
+        </Text>
+        {!fromProjects && (
+          <Action
+            label="Go to Projects"
+            onPress={() => {
+              setHomeTab("projects");
+              navigate(null);
+            }}
+            primary
+          />
+        )}
+        <Action label={backLabel} onPress={() => navigate(null)} />
+      </Screen>
+    );
+  }
+
   const importing = activity?.kind === "import";
   const exporting = activity?.kind === "export";
   const trimming = activity?.kind === "trim";
@@ -492,11 +519,7 @@ export default function App() {
         />
       )}
       <View style={styles.navigation}>
-        <Action
-          label={homeTab === "projects" ? "Back to projects" : "Back to templates"}
-          onPress={() => navigate(null)}
-          disabled={busy}
-        />
+        <Action label={backLabel} onPress={() => navigate(null)} disabled={busy} />
       </View>
       <View style={styles.details}>
         <Text accessibilityRole="header" style={textStyles.heading}>
@@ -511,11 +534,6 @@ export default function App() {
           </Text>
         )}
       </View>
-      {template && templateDraft.loadError && (
-        <Text accessibilityRole="alert" style={textStyles.error}>
-          {templateDraft.loadError}
-        </Text>
-      )}
       {template && textFields.length > 0 && (
         <View style={styles.navigation}>
           <Action
