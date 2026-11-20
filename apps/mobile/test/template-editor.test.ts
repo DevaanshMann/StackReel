@@ -7,14 +7,16 @@ import {
   createTemplateSource,
   defaultTemplateReframe,
   getTemplateCrop,
+  getTemplateTextFields,
   getTemplateTrimWindow,
   getVideoSlots,
   maxTemplateReframeZoom,
   mobileTemplates,
   setTemplateClipReframe,
   setTemplateClipTrim,
+  setTemplateText,
 } from "../src/template-editor";
-import type { MobileTemplate, TemplateClip } from "../src/template-editor";
+import type { MobileTemplate, TemplateClip, TemplateTextOverrides } from "../src/template-editor";
 
 const beforeAfter = mobileTemplates[0]!;
 const hookAndReveal = mobileTemplates[1]!;
@@ -54,6 +56,134 @@ describe("mobile template catalog", () => {
       { id: "clip2", label: "B-roll", minDurationUs: 2_200_000 },
       { id: "clip3", label: "The reveal", minDurationUs: 4_000_000 },
     ]);
+  });
+});
+
+describe("template text editing", () => {
+  it("exposes the bundled field labels, defaults, and limits at the mobile item keys", () => {
+    expect(getTemplateTextFields(beforeAfter)).toEqual([
+      { id: "labels/0", label: "Before label", defaultText: "BEFORE", maxChars: 12 },
+      { id: "labels/1", label: "After label", defaultText: "AFTER", maxChars: 12 },
+      { id: "labels/2", label: "Caption", defaultText: "3 months of consistency", maxChars: 40 },
+    ]);
+    expect(getTemplateTextFields(hookAndReveal)).toEqual([
+      { id: "text/0", label: "Hook text", defaultText: "Wait for it…", maxChars: 40 },
+    ]);
+  });
+
+  it.each(mobileTemplates)("changes only the text of each targeted item in $name", (template) => {
+    const clips = fillSlots(template);
+    const initial = parseSource(createTemplateSource(template, clips));
+    for (const field of getTemplateTextFields(template)) {
+      const text = "  New 💡  ";
+      const overrides = setTemplateText(field, {}, text);
+      const changed = parseSource(createTemplateSource(template, clips, overrides));
+      expect(changed).toEqual({
+        ...initial,
+        plan: {
+          ...initial.plan,
+          layers: initial.plan.layers.map((layer) => (layer.id === field.id ? { ...layer, text } : layer)),
+        },
+      });
+      expect(checkPlanInvariants(changed.plan)).toEqual([]);
+    }
+  });
+
+  it("preserves override identity for no-ops and removes only the field restored to its default", () => {
+    const [before, after] = getTemplateTextFields(beforeAfter);
+    const initial = {};
+    expect(setTemplateText(before!, initial, "BEFORE")).toBe(initial);
+    const edited = setTemplateText(before!, initial, "Week 1");
+    expect(setTemplateText(before!, edited, "Week 1")).toBe(edited);
+    const both = setTemplateText(after!, edited, "Week 12");
+    const reset = setTemplateText(before!, both, "BEFORE");
+    expect(reset).toEqual({ "labels/1": "Week 12" });
+    expect(both).toEqual({ "labels/0": "Week 1", "labels/1": "Week 12" });
+    expect(initial).toEqual({});
+
+    const clips = fillSlots(beforeAfter);
+    expect(createTemplateSource(beforeAfter, clips, setTemplateText(after!, reset, "AFTER"))).toBe(
+      createTemplateSource(beforeAfter, clips),
+    );
+  });
+
+  it("stores and renders blank edits as empty and keeps the same override for another blank edit", () => {
+    const [field] = getTemplateTextFields(beforeAfter);
+    const whitespace = " \n\t ";
+    const overrides = setTemplateText(field!, {}, whitespace);
+    expect(overrides).toEqual({ "labels/0": "" });
+    expect(setTemplateText(field!, overrides, "")).toBe(overrides);
+    expect(setTemplateText(field!, overrides, whitespace)).toBe(overrides);
+    expect(() => setTemplateText(field!, overrides, " ".repeat(13))).toThrow(RangeError);
+
+    const clips = fillSlots(beforeAfter);
+    const source = createTemplateSource(beforeAfter, clips, overrides);
+    expect(createTemplateSource(beforeAfter, clips, { "labels/0": whitespace })).toBe(source);
+    const { plan } = parseSource(source);
+    expect(plan.layers.find((layer) => layer.id === "labels/0")).toMatchObject({ kind: "text", text: "" });
+    expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
+  it("counts Unicode code points and rejects oversized edits and raw overrides", () => {
+    const [field] = getTemplateTextFields(beforeAfter);
+    const text = "💡".repeat(12);
+    expect(setTemplateText(field!, {}, text)).toEqual({ "labels/0": text });
+    const clips = fillSlots(beforeAfter);
+    const { plan } = parseSource(createTemplateSource(beforeAfter, clips, { "labels/0": text }));
+    expect(plan.layers.find((layer) => layer.id === "labels/0")).toMatchObject({ text });
+    const oversized = text + "!";
+    expect(() => setTemplateText(field!, {}, oversized)).toThrow(RangeError);
+    expect(() => createTemplateSource(beforeAfter, clips, { "labels/0": oversized })).toThrow(RangeError);
+  });
+
+  it("uses the narrower item or slot limit and only exposes editable items", () => {
+    const template: MobileTemplate = {
+      ...beforeAfter,
+      slots: [...beforeAfter.slots, { id: "short-text", kind: "text", label: "Short text", maxChars: 4 }],
+      tracks: [
+        ...beforeAfter.tracks,
+        {
+          id: "additional-text",
+          type: "overlay",
+          items: [
+            { kind: "text", startUs: 0, durationUs: 100_000, slot: "short-text", text: { default: "Old" } },
+            {
+              kind: "text",
+              startUs: 100_000,
+              durationUs: 100_000,
+              slot: "short-text",
+              text: { default: "Old", editable: true, maxChars: 8 },
+            },
+            {
+              kind: "text",
+              startUs: 200_000,
+              durationUs: 100_000,
+              slot: "short-text",
+              text: { default: "Old", editable: true, maxChars: 3 },
+            },
+          ],
+        },
+      ],
+    };
+    expect(getTemplateTextFields(template).slice(3)).toEqual([
+      { id: "additional-text/1", label: "Short text", defaultText: "Old", maxChars: 4 },
+      { id: "additional-text/2", label: "Short text", defaultText: "Old", maxChars: 3 },
+    ]);
+    const clips = fillSlots(template);
+    expect(() => createTemplateSource(template, clips, { "additional-text/0": "New" })).toThrow("editable text field");
+    expect(() => createTemplateSource(template, clips, { "additional-text/1": "12345" })).toThrow(RangeError);
+    expect(() => createTemplateSource(template, clips, { "additional-text/2": "1234" })).toThrow(RangeError);
+  });
+
+  it.each(["caption", "main/0", "labels/3"])("rejects raw overrides for unsupported key %s", (id) => {
+    expect(() => createTemplateSource(beforeAfter, fillSlots(beforeAfter), { [id]: "New text" })).toThrow(
+      `No editable text field at "${id}".`,
+    );
+  });
+
+  it("rejects a non-string raw override", () => {
+    const overrides = JSON.parse('{"labels/0":null}') as TemplateTextOverrides;
+    expect(() => createTemplateSource(beforeAfter, fillSlots(beforeAfter), overrides)).toThrow(TypeError);
   });
 });
 
