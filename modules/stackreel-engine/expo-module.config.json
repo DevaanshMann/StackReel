@@ -1,0 +1,8 @@
+{
+  "platforms": ["ios"],
+  "apple": {
+    "modules": ["StackReelExpo.StackReelEngineModule"],
+    "podspecPath": ["ios/StackReelPlan.podspec", "ios/StackReelComposition.podspec", "ios/StackReelExpo.podspec"],
+    "swiftModuleName": ["StackReelExpo"]
+  }
+}

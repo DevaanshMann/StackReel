@@ -2,12 +2,54 @@
 
 The hardware-accelerated render engine, exposed to React Native through the **Expo Modules API**.
 
-| Platform             | Composition            | Effects / compositing                  | Encode                                    |
-| -------------------- | ---------------------- | -------------------------------------- | ----------------------------------------- |
-| iOS (`ios/`)         | `AVMutableComposition` | Custom `AVVideoCompositing` + Metal    | `AVAssetWriter` (VideoToolbox HEVC/H.264) |
-| Android (`android/`) | Media3 `Composition`   | Media3 `Effect` / `OverlayEffect` (GL) | Media3 `Transformer` (MediaCodec)         |
+| Platform             | Composition            | Effects / compositing                  | Encode                               |
+| -------------------- | ---------------------- | -------------------------------------- | ------------------------------------ |
+| iOS (`ios/`)         | `AVMutableComposition` | Custom `AVVideoCompositing` + Metal    | `AVAssetWriter` (VideoToolbox H.264) |
+| Android (`android/`) | Media3 `Composition`   | Media3 `Effect` / `OverlayEffect` (GL) | Media3 `Transformer` (MediaCodec)    |
 
 Both engines take the same **render plan** (from `@stackreel/core`) and must pass the same golden-frame tests.
+
+## Expo integration on iOS
+
+Add `@stackreel/engine` as a workspace dependency and use an iOS native build with Expo SDK 58. Expo
+autolinks the bridge, plan, and composition pods and bundles the composition fonts. Rebuild the native
+app after changing the module. Import the package from iOS entry points.
+
+Pass the same source string to preview and export. Use the asset identifiers from the RenderPlan v1
+object as keys, including sticker assets and audio sources. Each value must be an absolute local
+`file:` URL readable by the app.
+
+```ts
+import { addExportProgressListener, exportMP4, probeVideo } from "@stackreel/engine";
+
+const metadata = await probeVideo(uri);
+const source = JSON.stringify({ plan, assets: { [assetId]: uri } });
+const subscription = addExportProgressListener(({ exportId: id, progress }) => {
+  if (id === exportId) updateProgress(progress);
+});
+
+try {
+  const { uri: outputUri } = await exportMP4(source, exportId);
+  await shareVideo(outputUri);
+} finally {
+  subscription.remove();
+}
+```
+
+`probeVideo` returns width and height in pixels after applying the first video track's preferred
+transform. `startUs` and `durationUs` describe that track's time range in microseconds.
+
+`StackReelPreviewView` accepts React Native view props, `source`, `playing`, and optional `looping`.
+`onReady` reports `nativeEvent.durationSeconds` when the player is available. `onPositionChange`
+reports `nativeEvent.positionSeconds`. `onError` reports `nativeEvent.message` for source or playback
+failures. After `onReady`, call `seekTo(seconds)` on the `StackReelPreviewViewRef`. Seeking clamps the
+position to the timeline. Changing `source` or removing the view releases the active preview and
+interrupts pending seeks.
+
+Use a fresh `exportId` for each job. Progress events carry that ID and a fraction from 0 to 1.
+`cancelExport` requests cancellation and the export promise rejects with `ERR_EXPORT_CANCELLED` if
+cancellation takes effect. A successful export returns a temporary `file:` URI in the app cache.
+The caller may delete the MP4 after using it.
 
 ## Swift render plan and composition
 
