@@ -6,7 +6,7 @@ import { File, Paths } from "expo-file-system";
 import { Asset, requestPermissionsAsync } from "expo-media-library";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { TemplateMusicControls } from "./TemplateMusicControls";
@@ -414,26 +414,29 @@ export default function App() {
   async function saveVideoToPhotos() {
     const operation = { kind: "save-photos" } as const;
     if (!outputUri || !begin(operation)) return;
+
+    function reportResult(kind: Feedback["kind"], message: string) {
+      if (activeOperation.current !== operation) return;
+      setFeedback({ kind, message });
+      AccessibilityInfo.announceForAccessibilityWithOptions(message, { queue: true });
+    }
+
     try {
       const { granted, canAskAgain } = await requestPermissionsAsync(true);
       if (activeOperation.current !== operation) return;
       if (!granted) {
-        setFeedback({
-          kind: "error",
-          message: canAskAgain
+        reportResult(
+          "error",
+          canAskAgain
             ? "Allow Photos access to save the video, or use Share MP4."
             : "Allow StackReel to add to Photos in Settings, or use Share MP4.",
-        });
+        );
         return;
       }
       await Asset.create(outputUri);
-      if (activeOperation.current === operation) {
-        setFeedback({ kind: "status", message: "Saved to Photos." });
-      }
+      reportResult("status", "Saved to Photos.");
     } catch (cause) {
-      if (activeOperation.current === operation) {
-        setFeedback({ kind: "error", message: errorMessage("Couldn’t save the MP4 to Photos.", cause) });
-      }
+      reportResult("error", errorMessage("Couldn’t save the MP4 to Photos.", cause));
     } finally {
       finish(operation);
     }
