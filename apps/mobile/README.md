@@ -30,6 +30,9 @@ changes. If you apply a different framing, export the template again before shar
 Choose **Single-clip editor** from the gallery to preview and export one local video at 720 × 1280 and 30 fps.
 The video fits inside the vertical frame without cropping, and the export includes the clip’s audio when present.
 
+After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
+iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
+
 StackReel automatically saves a separate draft for each template. Open the **Projects** tab to see saved drafts and
 how many videos each one has. Tap a draft to resume with its videos, trims, framing, edited text, and music.
 Tap **Rename** to give a saved draft a name you can recognize in Projects. The template name is shown below it.
@@ -67,8 +70,9 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
    Fill **Before**, open **Trim**, and move the slider. Play the selected segment and check
    its audio, then apply and confirm the slot shows the new source times. Fill **After** and confirm that **Play**,
    **Pause**, and **Video position** preview the edit across the cut.
-3. Tap **Export MP4** and check the progress indicator. Tap **Share MP4** and save the video from the share sheet. Return
-   to the draft and cancel a replacement in Files, then try replacing a slot with the short clip. Confirm the previous
+3. Tap **Export MP4** and check the progress indicator. Tap **Save to Photos**, grant add-only access, and play the
+   exported video in Photos. Repeat with Photos access denied and confirm **Share MP4** still opens the share sheet.
+   Return to the draft and cancel a replacement in Files, then try replacing a slot with the short clip. Confirm the previous
    selection and export are still available after both attempts. Replace the slot with a valid clip and verify that
    the preview starts over and sharing requires a new export.
 4. Export the draft and reopen **Trim**. Move the slider and cancel, then reopen and apply the existing window. Check

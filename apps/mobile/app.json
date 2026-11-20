@@ -10,8 +10,23 @@
       "userInterfaceStyle": "dark"
     },
     "android": {
-      "package": "com.stackreel.mobile"
+      "package": "com.stackreel.mobile",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
+    "plugins": [
+      [
+        "expo-media-library",
+        {
+          "photosPermission": false,
+          "savePhotosPermission": "Allow StackReel to save exported videos to Photos.",
+          "granularPermissions": []
+        }
+      ]
+    ],
     "web": {
       "bundler": "metro"
     }

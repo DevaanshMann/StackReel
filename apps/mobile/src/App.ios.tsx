@@ -3,6 +3,7 @@ import { darkColors, fontSize, radius, space } from "@stackreel/ui";
 import { randomUUID } from "expo-crypto";
 import { getDocumentAsync } from "expo-document-picker";
 import { File, Paths } from "expo-file-system";
+import { Asset, requestPermissionsAsync } from "expo-media-library";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
@@ -50,7 +51,11 @@ type SlotEdit = { kind: "trim" | "reframe"; template: MobileTemplate; slot: Temp
 type TextEdit = { kind: "text"; template: MobileTemplate; textOverrides: TemplateTextOverrides };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
 type Operation =
-  ImportOperation | SlotEdit | TextEdit | { kind: "import-music" | "remove-music" | "share" } | ExportJob;
+  | ImportOperation
+  | SlotEdit
+  | TextEdit
+  | { kind: "import-music" | "remove-music" | "share" | "save-photos" }
+  | ExportJob;
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
 type Feedback = { kind: "error" | "status"; message: string; slotId?: string; scope?: "music" };
 
@@ -406,6 +411,34 @@ export default function App() {
     }
   }
 
+  async function saveVideoToPhotos() {
+    const operation = { kind: "save-photos" } as const;
+    if (!outputUri || !begin(operation)) return;
+    try {
+      const { granted, canAskAgain } = await requestPermissionsAsync(true);
+      if (activeOperation.current !== operation) return;
+      if (!granted) {
+        setFeedback({
+          kind: "error",
+          message: canAskAgain
+            ? "Allow Photos access to save the video, or use Share MP4."
+            : "Allow StackReel to add to Photos in Settings, or use Share MP4.",
+        });
+        return;
+      }
+      await Asset.create(outputUri);
+      if (activeOperation.current === operation) {
+        setFeedback({ kind: "status", message: "Saved to Photos." });
+      }
+    } catch (cause) {
+      if (activeOperation.current === operation) {
+        setFeedback({ kind: "error", message: errorMessage("Couldn’t save the MP4 to Photos.", cause) });
+      }
+    } finally {
+      finish(operation);
+    }
+  }
+
   if (!editor) {
     return (
       <Screen page={homeTab} footer={templateDrafts && <HomeTabBar activeTab={homeTab} onSelect={setHomeTab} />}>
@@ -545,12 +578,19 @@ export default function App() {
           </>
         )}
         {outputUri && (
-          <Action
-            label={activity?.kind === "share" ? "Sharing…" : "Share MP4"}
-            onPress={shareVideo}
-            disabled={busy}
-            primary
-          />
+          <>
+            <Action
+              label={activity?.kind === "save-photos" ? "Saving to Photos…" : "Save to Photos"}
+              onPress={saveVideoToPhotos}
+              disabled={busy}
+            />
+            <Action
+              label={activity?.kind === "share" ? "Sharing…" : "Share MP4"}
+              onPress={shareVideo}
+              disabled={busy}
+              primary
+            />
+          </>
         )}
         {(editor.kind === "template" || source) && !exporting && (
           <Action
