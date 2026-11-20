@@ -13,6 +13,8 @@ public final class StackReelPreviewPlayer {
   public var isLooping = false
   /// Receives periodic playback positions and the position after a completed seek on the main actor.
   public var onPositionChange: (@MainActor (CMTime) -> Void)?
+  /// Receives player item failures on the main actor.
+  public var onPlaybackError: (@MainActor (Error) -> Void)?
 
   let player: AVPlayer
   private var observers: Observers?
@@ -45,7 +47,20 @@ public final class StackReelPreviewPlayer {
     ) { [weak self] _ in
       Task { @MainActor in self?.didReachEnd() }
     }
-    observers = Observers(player: player, position: position, end: end)
+    let status = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
+      guard item.status == .failed else { return }
+      let error = item.error ?? CocoaError(.fileReadUnknown)
+      Task { @MainActor in self?.onPlaybackError?(error) }
+    }
+    let failure = NotificationCenter.default.addObserver(
+      forName: AVPlayerItem.failedToPlayToEndTimeNotification, object: item, queue: nil
+    ) { [weak self] notification in
+      let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+        ?? CocoaError(.fileReadUnknown)
+      Task { @MainActor in self?.onPlaybackError?(error) }
+    }
+    observers = Observers(
+      player: player, position: position, notifications: [end, failure], status: status)
   }
 
   /// Starts or resumes playback, rewinding first if the preview is at its end.
@@ -107,17 +122,22 @@ public final class StackReelPreviewPlayer {
   private final class Observers {
     let player: AVPlayer
     let position: Any
-    let end: NSObjectProtocol
+    let notifications: [NSObjectProtocol]
+    let status: NSKeyValueObservation
 
-    init(player: AVPlayer, position: Any, end: NSObjectProtocol) {
+    init(
+      player: AVPlayer, position: Any, notifications: [NSObjectProtocol], status: NSKeyValueObservation
+    ) {
       self.player = player
       self.position = position
-      self.end = end
+      self.notifications = notifications
+      self.status = status
     }
 
     deinit {
       player.removeTimeObserver(position)
-      NotificationCenter.default.removeObserver(end)
+      for notification in notifications { NotificationCenter.default.removeObserver(notification) }
+      status.invalidate()
     }
   }
 }

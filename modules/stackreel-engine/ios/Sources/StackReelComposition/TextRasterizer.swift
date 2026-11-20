@@ -17,8 +17,22 @@ struct TextTexture: Sendable {
 }
 
 enum TextRasterizer {
-  private static let bundledFontURLs =
-    Bundle.module.urls(forResourcesWithExtension: "ttf", subdirectory: "Fonts") ?? []
+  private static let bundledFontURLs: [URL] = {
+    #if SWIFT_PACKAGE
+      Bundle.module.urls(forResourcesWithExtension: "ttf", subdirectory: "Fonts") ?? []
+    #else
+      let name = "StackReelCompositionFonts"
+      let bundleURL =
+        Bundle(for: FontBundleLocator.self).url(forResource: name, withExtension: "bundle")
+        ?? Bundle.main.url(forResource: name, withExtension: "bundle")
+      return bundleURL.flatMap(Bundle.init(url:))?.urls(
+        forResourcesWithExtension: "ttf", subdirectory: nil) ?? []
+    #endif
+  }()
+
+  #if !SWIFT_PACKAGE
+    private final class FontBundleLocator {}
+  #endif
 
   fileprivate struct Line {
     let layout: CTLine
