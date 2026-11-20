@@ -2,6 +2,7 @@ import { randomUUID } from "expo-crypto";
 import { Directory, File, Paths } from "expo-file-system";
 import {
   createTemplateMusic,
+  createTemplateSource,
   getTemplateCrop,
   getTemplateTextFields,
   getTemplateTrimWindow,
@@ -148,6 +149,21 @@ export function saveTemplateDraft(
 
   keep.add(commitDraftManifest(directory, snapshot?.revision ?? 0, manifest));
   pruneDraftFiles(directory, keep);
+}
+
+export function commitTemplateDraftUpdate(
+  template: MobileTemplate,
+  draft: TemplateDraftEdits & { source: string | null; outputUri: string | null },
+) {
+  const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
+  const outputUri = source === draft.source ? draft.outputUri : null;
+  saveTemplateDraft(template, draft);
+  return { source, outputUri };
+}
+
+export function clearTemplateVideoSlot(draft: TemplateDraftEdits, slotId: string) {
+  const { [slotId]: _cleared, ...clips } = draft.clips;
+  return { clips, missingSlots: (draft.missingSlots ?? []).filter((id) => id !== slotId) };
 }
 
 function record(value: unknown): value is Record<string, unknown> {

@@ -2,6 +2,8 @@ import { probeVideo } from "@stackreel/engine";
 import { File } from "expo-file-system";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  clearTemplateVideoSlot,
+  commitTemplateDraftUpdate,
   createDraftMediaFile,
   deleteTemplateDraft,
   loadTemplateDraft,
@@ -285,6 +287,56 @@ describe("template draft storage", () => {
     });
   });
 
+  it("reopens a cleared slot as empty, keeping the original and the other draft edits", () => {
+    const { edits, beforeFile, afterFile, musicFile } = fixture();
+    const name = "Weekend cut";
+    const original = new File("file:///Documents/After.mov");
+    original.writeSync("original video");
+    saveTemplateDraft(beforeAfter, { ...edits, name });
+
+    const draft = loadTemplateDraft(beforeAfter)!;
+    const source = createTemplateSource(beforeAfter, draft.clips, draft.textOverrides, draft.music);
+    expect(source).not.toBeNull();
+    const cleared = clearTemplateVideoSlot(draft, after.id);
+    const render = commitTemplateDraftUpdate(beforeAfter, {
+      ...draft,
+      ...cleared,
+      source,
+      outputUri: "file:///Caches/export.mp4",
+    });
+
+    expect(render).toEqual({ source: null, outputUri: null });
+    const reopened = loadTemplateDraft(beforeAfter)!;
+    expect(reopened).toEqual({ ...draft, clips: { [before.id]: edits.clips[before.id] } });
+    expect(getEmptyVideoSlots([before, after], reopened.clips, reopened.missingSlots)).toEqual([after]);
+    expect(afterFile.exists).toBe(false);
+    expect(beforeFile.exists && musicFile.exists).toBe(true);
+    expect(original.textSync()).toBe("original video");
+  });
+
+  it("keeps the saved clips, render source, and previous export when clearing cannot commit", () => {
+    const { edits } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const draft = loadTemplateDraft(beforeAfter)!;
+    const source = createTemplateSource(beforeAfter, draft.clips, draft.textOverrides, draft.music);
+    expect(source).not.toBeNull();
+    const output = new File("file:///Caches/export.mp4");
+    output.writeSync("saved export");
+    const files = new Map(storage.files);
+    const cleared = clearTemplateVideoSlot(draft, after.id);
+
+    storage.interruptMove = true;
+    expect(() =>
+      commitTemplateDraftUpdate(beforeAfter, { ...draft, ...cleared, source, outputUri: output.uri }),
+    ).toThrow("Interrupted write");
+
+    expect(storage.files).toEqual(files);
+    const reopened = loadTemplateDraft(beforeAfter)!;
+    expect(reopened).toEqual(draft);
+    expect(createTemplateSource(beforeAfter, reopened.clips, reopened.textOverrides, reopened.music)).toBe(source);
+    expect(output.textSync()).toBe("saved export");
+  });
+
   it("preserves missing media and its settings when a caption autosaves", () => {
     const { edits, beforeFile, musicFile } = fixture();
     saveTemplateDraft(beforeAfter, { ...edits, name: "Weekend cut" });
@@ -510,6 +562,53 @@ describe("ordered template video import", () => {
     });
     file.writeSync("original video");
     expect(loadTemplateDraft(hook)?.clips[middleSlot.id]).toEqual(original);
+  });
+
+  it("releases a cleared missing video for ordered import after reopening", async () => {
+    const [first, middle, last] = slots;
+    const missing = createDraftMediaFile(hook, "Missing.mp4");
+    const reveal = createDraftMediaFile(hook, "Reveal.mp4");
+    missing.writeSync("missing video");
+    reveal.writeSync("reveal video");
+    saveTemplateDraft(hook, {
+      ...draft,
+      clips: {
+        [middle!.id]: createTemplateClip(middle!, missing.uri, "Missing.mp4", metadata),
+        [last!.id]: createTemplateClip(last!, reveal.uri, "Reveal.mp4", metadata),
+      },
+    });
+    missing.delete();
+    const saved = loadTemplateDraft(hook)!;
+    expect(saved.missingSlots).toEqual([middle!.id]);
+    expect(getEmptyVideoSlots(slots, saved.clips, saved.missingSlots)).toEqual([first]);
+
+    commitTemplateDraftUpdate(hook, {
+      ...saved,
+      ...clearTemplateVideoSlot(saved, middle!.id),
+      source: null,
+      outputUri: null,
+    });
+    missing.writeSync("recovered video");
+    const reopened = loadTemplateDraft(hook)!;
+    expect(reopened).toEqual({ ...saved, missingSlots: [] });
+    expect(missing.exists).toBe(false);
+    const targets = getEmptyVideoSlots(slots, reopened.clips, reopened.missingSlots);
+    expect(targets).toEqual([first, middle]);
+
+    pick(["Hook.mp4", "B-roll.mp4"]);
+    await importTemplateVideos({
+      template: hook,
+      slots: targets,
+      source: "Photos",
+      isCurrent: () => true,
+      commit: (clips) => saveTemplateDraft(hook, { ...reopened, clips: { ...reopened.clips, ...clips } }),
+    });
+    expect(pickOrderedVideos).toHaveBeenCalledWith(2);
+    expect(loadTemplateDraft(hook)?.clips).toMatchObject({
+      clip1: { name: "Hook.mp4" },
+      clip2: { name: "B-roll.mp4" },
+      clip3: { name: "Reveal.mp4" },
+    });
   });
 
   it("leaves the saved draft alone on cancel", async () => {
