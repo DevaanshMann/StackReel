@@ -3,6 +3,7 @@ import {
   createDraftMediaFile,
   deleteTemplateDraft,
   loadTemplateDraft,
+  renameTemplateDraft,
   saveTemplateDraft,
 } from "../src/template-drafts";
 import {
@@ -195,12 +196,54 @@ describe("template draft storage", () => {
     musicFile.delete();
 
     expect(loadTemplateDraft(beforeAfter)).toEqual({
+      name: null,
       clips: { [after.id]: edits.clips[after.id] },
       textOverrides: edits.textOverrides,
       music: null,
       missingSlots: [before.id],
       missingMusic: true,
     });
+  });
+
+  it("renames a legacy draft and carries the name through later edits", () => {
+    const { edits } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    expect(loadTemplateDraft(beforeAfter)?.name).toBeNull();
+
+    renameTemplateDraft(beforeAfter, "  Weekend cut  ");
+    const renamed = loadTemplateDraft(beforeAfter)!;
+    expect(renamed).toMatchObject({ ...edits, name: "Weekend cut" });
+
+    saveTemplateDraft(beforeAfter, { ...renamed, music: null });
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject({ name: "Weekend cut", music: null });
+  });
+
+  it("preserves missing media references when renaming a draft", () => {
+    const { edits, beforeFile, musicFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    beforeFile.delete();
+    musicFile.delete();
+
+    renameTemplateDraft(beforeAfter, "Weekend cut");
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject({
+      name: "Weekend cut",
+      missingSlots: [before.id],
+      missingMusic: true,
+    });
+
+    beforeFile.writeSync("fixture");
+    musicFile.writeSync("fixture");
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject({ ...edits, missingSlots: [], missingMusic: false });
+  });
+
+  it("keeps the last name when a rename is blank or its write is interrupted", () => {
+    const { edits } = fixture();
+    saveTemplateDraft(beforeAfter, { ...edits, name: "Original cut" });
+
+    expect(() => renameTemplateDraft(beforeAfter, "   ")).toThrow("Enter a name");
+    storage.interruptMove = true;
+    expect(() => renameTemplateDraft(beforeAfter, "Weekend cut")).toThrow("Interrupted write");
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject({ ...edits, name: "Original cut" });
   });
 
   it("deletes an unreadable draft and its imported copies without affecting other files", () => {

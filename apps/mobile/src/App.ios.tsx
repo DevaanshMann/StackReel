@@ -19,6 +19,7 @@ import {
   deleteTemplateDraft,
   loadTemplateDraft,
   removeDraftFile,
+  renameTemplateDraft,
   saveTemplateDraft,
 } from "./template-drafts";
 import type { TemplateDraftEdits } from "./template-drafts";
@@ -145,12 +146,45 @@ export default function App() {
     navigate({ kind: "template", template, slots });
   }
 
+  function promptRenameDraft(template: MobileTemplate) {
+    const draft = templateDrafts?.[template.id];
+    if (!draft || draft.loadError) return;
+    const currentName = draft.name ?? template.name;
+
+    Alert.prompt(
+      "Rename draft",
+      undefined,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Save",
+          onPress: (input) => {
+            const name = input?.trim();
+            if (!name) {
+              Alert.alert("Enter a name for the draft.");
+              return;
+            }
+            if (name === currentName) return;
+            try {
+              renameTemplateDraft(template, name);
+              setTemplateDrafts((drafts) => ({ ...drafts, [template.id]: { ...draft, name } }));
+            } catch {
+              Alert.alert("Couldn’t rename the draft", "Try again from Projects.");
+            }
+          },
+        },
+      ],
+      "plain-text",
+      currentName,
+    );
+  }
+
   function confirmDeleteDraft(template: MobileTemplate) {
     const draft = templateDrafts?.[template.id];
     if (!draft) return;
 
     Alert.alert(
-      `Delete ${template.name} draft?`,
+      `Delete ${draft.name ?? template.name} draft?`,
       "Your edits and StackReel’s copies of the videos and music will be removed. Your original files will stay in place.",
       [
         { text: "Cancel", style: "cancel" },
@@ -381,6 +415,7 @@ export default function App() {
           <TemplateProjects
             drafts={templateDrafts}
             onSelectTemplate={openTemplate}
+            onRenameDraft={promptRenameDraft}
             onDeleteDraft={confirmDeleteDraft}
             onBrowseTemplates={() => setHomeTab("templates")}
           />
@@ -429,7 +464,7 @@ export default function App() {
       </View>
       <View style={styles.details}>
         <Text accessibilityRole="header" style={textStyles.heading}>
-          {template?.name ?? "Single-clip editor"}
+          {templateDraft.name ?? template?.name ?? "Single-clip editor"}
         </Text>
         <Text style={textStyles.muted}>
           {canvas.width} × {canvas.height} · {canvas.fps} fps

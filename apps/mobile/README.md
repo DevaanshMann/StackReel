@@ -32,6 +32,7 @@ The video fits inside the vertical frame without cropping, and the export includ
 
 StackReel automatically saves a separate draft for each template. Open the **Projects** tab to see saved drafts and
 how many videos each one has. Tap a draft to resume with its videos, trims, framing, edited text, and music.
+Tap **Rename** to give a saved draft a name you can recognize in Projects. The template name is shown below it.
 Tap **Delete** beside a draft and confirm to remove its edits and imported media copies. Your original files stay in
 place, and the next time you open that template it starts fresh.
 If an imported copy is missing, use the editor’s Files picker to replace it. Export again after relaunch, or use

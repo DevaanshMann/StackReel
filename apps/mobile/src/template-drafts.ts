@@ -11,6 +11,7 @@ import {
 import type { MobileTemplate, TemplateClip, TemplateMusic, TemplateTextOverrides } from "./template-editor";
 
 export type TemplateDraftEdits = {
+  name?: string | null;
   clips: Readonly<Record<string, TemplateClip>>;
   textOverrides: TemplateTextOverrides;
   music: TemplateMusic | null;
@@ -69,11 +70,35 @@ export function deleteTemplateDraft(template: MobileTemplate) {
   pruneDraftFiles(directory, new Set());
 }
 
-export function saveTemplateDraft(template: MobileTemplate, { clips, textOverrides, music }: TemplateDraftEdits) {
+function commitDraftManifest(directory: Directory, revision: number, manifest: unknown) {
+  const next = new File(directory, `draft-${revision + 1}.json`);
+  // Publish by renaming to a new path so the last committed snapshot survives a failed write.
+  const pending = new File(directory, pendingName);
+  pending.writeSync(JSON.stringify(manifest));
+  pending.moveSync(next);
+  return next.name;
+}
+
+export function renameTemplateDraft(template: MobileTemplate, name: string) {
+  const trimmedName = name.trim();
+  if (!trimmedName) throw new Error("Enter a name for the draft.");
+
+  const directory = draftDirectory(template);
+  const snapshots = draftSnapshots(directory);
+  const snapshot = snapshots.at(-1);
+  if (!snapshot) throw new Error("The saved draft is unavailable.");
+  const { saved } = readDraftManifest(snapshot.file);
+
+  // Keep the stored edits and media references, including files the editor could not reopen.
+  commitDraftManifest(directory, snapshot.revision, { ...saved, name: trimmedName });
+  for (const { file } of snapshots) removeDraftFile(file);
+}
+
+export function saveTemplateDraft(template: MobileTemplate, { name, clips, textOverrides, music }: TemplateDraftEdits) {
   const directory = draftDirectory(template);
   directory.create({ intermediates: true, idempotent: true });
-  const next = new File(directory, `draft-${(draftSnapshots(directory).at(-1)?.revision ?? 0) + 1}.json`);
-  const keep = new Set([next.name]);
+  const revision = draftSnapshots(directory).at(-1)?.revision ?? 0;
+  const keep = new Set<string>();
   function storeAsset<T extends TemplateClip | TemplateMusic>({ uri, ...settings }: T) {
     const file = new File(uri).name;
     if (!mediaName.test(file) || new File(directory, file).uri !== uri) {
@@ -84,21 +109,26 @@ export function saveTemplateDraft(template: MobileTemplate, { clips, textOverrid
   }
   const manifest = {
     version: 1,
+    name: name ?? undefined,
     clips: Object.fromEntries(Object.entries(clips).map(([slot, clip]) => [slot, storeAsset(clip)])),
     textOverrides,
     music: music ? storeAsset(music) : null,
   };
 
-  // Expo's write can leave a partial file. Publish by renaming to a new path so the last
-  // committed snapshot remains readable until the new one is in place.
-  const pending = new File(directory, pendingName);
-  pending.writeSync(JSON.stringify(manifest));
-  pending.moveSync(next);
+  keep.add(commitDraftManifest(directory, revision, manifest));
   pruneDraftFiles(directory, keep);
 }
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readDraftManifest(snapshot: File) {
+  const saved: unknown = JSON.parse(snapshot.textSync());
+  if (!record(saved) || saved.version !== 1 || !record(saved.clips) || !record(saved.textOverrides)) {
+    throw new Error("The saved draft has an unsupported format.");
+  }
+  return { saved, clips: saved.clips, textOverrides: saved.textOverrides };
 }
 
 function readAsset(value: unknown, directory: Directory, keep: Set<string>) {
@@ -133,15 +163,13 @@ export function loadTemplateDraft(template: MobileTemplate) {
     return null;
   }
   keep.add(snapshot.file.name);
-  const saved: unknown = JSON.parse(snapshot.file.textSync());
-  if (!record(saved) || saved.version !== 1 || !record(saved.clips) || !record(saved.textOverrides)) {
-    throw new Error("The saved draft has an unsupported format.");
-  }
+  const { saved, clips: savedClips, textOverrides: savedText } = readDraftManifest(snapshot.file);
+  const name = typeof saved.name === "string" ? saved.name.trim() || null : null;
 
   const clips: Record<string, TemplateClip> = {};
   const missingSlots: string[] = [];
   for (const slot of getVideoSlots(template)) {
-    const value = saved.clips[slot.id];
+    const value = savedClips[slot.id];
     if (value === undefined) continue;
     try {
       if (
@@ -182,7 +210,7 @@ export function loadTemplateDraft(template: MobileTemplate) {
 
   let textOverrides: TemplateTextOverrides = {};
   for (const field of getTemplateTextFields(template)) {
-    const value = saved.textOverrides[field.id];
+    const value = savedText[field.id];
     if (typeof value === "string" && [...value].length <= (field.maxChars ?? Infinity)) {
       textOverrides = setTemplateText(field, textOverrides, value);
     }
@@ -200,5 +228,5 @@ export function loadTemplateDraft(template: MobileTemplate) {
   }
 
   if (missingSlots.length === 0 && !missingMusic) pruneDraftFiles(directory, keep);
-  return { clips, textOverrides, music, missingSlots, missingMusic };
+  return { name, clips, textOverrides, music, missingSlots, missingMusic };
 }
