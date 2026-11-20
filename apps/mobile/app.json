@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "StackReel",
+    "slug": "stackreel",
+    "version": "0.1.0",
+    "scheme": "stackreel",
+    "orientation": "portrait",
+    "ios": {
+      "bundleIdentifier": "com.stackreel.mobile",
+      "userInterfaceStyle": "dark"
+    },
+    "android": {
+      "package": "com.stackreel.mobile"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

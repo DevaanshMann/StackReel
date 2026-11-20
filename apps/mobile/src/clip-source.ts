@@ -1,0 +1,77 @@
+import { RENDER_PLAN_VERSION, cropRect, fitMatrix, frameToUs, usToFrame } from "@stackreel/core";
+import type { AudioEntry, PlanCanvas, RenderPlan, SourceTiming, VideoLayer } from "@stackreel/core";
+
+export const canvas = { width: 720, height: 1280, fps: 30, background: "#000000" } satisfies PlanCanvas;
+
+export function createClipSource(
+  uri: string,
+  { width, height, startUs, durationUs }: { width: number; height: number; startUs: number; durationUs: number },
+): string {
+  const endUs = startUs + durationUs;
+  if (
+    !Number.isFinite(width) ||
+    width <= 0 ||
+    !Number.isFinite(height) ||
+    height <= 0 ||
+    !Number.isSafeInteger(startUs) ||
+    !Number.isSafeInteger(durationUs) ||
+    durationUs <= 0 ||
+    !Number.isSafeInteger(endUs) ||
+    endUs <= 0
+  ) {
+    throw new Error("This video has invalid dimensions or timing.");
+  }
+
+  const firstFrame = usToFrame(Math.max(0, startUs), canvas.fps, "ceil");
+  const endFrame = usToFrame(endUs, canvas.fps, "floor");
+  if (endFrame <= firstFrame) throw new Error("This video is too short for a 30 fps export.");
+
+  const sourceStartUs = frameToUs(firstFrame, canvas.fps);
+  const sourceEndUs = frameToUs(endFrame, canvas.fps);
+  const timelineEndUs = frameToUs(endFrame - firstFrame, canvas.fps);
+  const assetId = "clip";
+  const source: SourceTiming = {
+    assetUri: assetId,
+    sourceStartUs,
+    sourceEndUs,
+    // A nonzero start can shift rounding by one microsecond at 30 fps.
+    rate: (sourceEndUs - sourceStartUs) / timelineEndUs,
+    afterEnd: "hold",
+    fitMode: "trim",
+  };
+  const sourceSize = { width, height };
+  const cropPx = cropRect(sourceSize);
+  const clip = {
+    id: "video/0",
+    kind: "video",
+    slotId: assetId,
+    startUs: 0,
+    endUs: timelineEndUs,
+    source,
+    gainDb: 0,
+    fadeInUs: 0,
+    fadeOutUs: 0,
+  } as const satisfies AudioEntry;
+  const layer: VideoLayer = {
+    ...clip,
+    trackId: "video",
+    itemIndex: 0,
+    z: 0,
+    opacity: 1,
+    fit: "contain",
+    sourceSize,
+    cropPx,
+    transform: fitMatrix(sourceSize, canvas, "contain", cropPx),
+  };
+  const plan: RenderPlan = {
+    renderPlanVersion: RENDER_PLAN_VERSION,
+    templateId: "single-clip",
+    canvas,
+    durationUs: timelineEndUs,
+    layers: [layer],
+    transitions: [],
+    audio: [clip],
+    warnings: [],
+  };
+  return JSON.stringify({ plan, assets: { [assetId]: uri } });
+}
