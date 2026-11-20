@@ -1,4 +1,4 @@
-import { addExportProgressListener, cancelExport, exportMP4, probeVideo } from "@stackreel/engine";
+import { addExportProgressListener, cancelExport, exportMP4, probeAudio, probeVideo } from "@stackreel/engine";
 import { darkColors, radius, space } from "@stackreel/ui";
 import { randomUUID } from "expo-crypto";
 import { getDocumentAsync } from "expo-document-picker";
@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
+import { TemplateMusicControls } from "./TemplateMusicControls";
 import { TemplateReframe } from "./TemplateReframe";
 import { TemplateGallery, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
@@ -15,18 +16,26 @@ import { TemplateTrim } from "./TemplateTrim";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
 import {
   createTemplateClip,
+  createTemplateMusic,
   createTemplateSource,
   getTemplateTextFields,
   setTemplateClipReframe,
   setTemplateClipTrim,
 } from "./template-editor";
-import type { MobileTemplate, TemplateClip, TemplateTextOverrides, TemplateVideoSlot } from "./template-editor";
+import type {
+  MobileTemplate,
+  TemplateClip,
+  TemplateMusic,
+  TemplateTextOverrides,
+  TemplateVideoSlot,
+} from "./template-editor";
 
 type Clip = { name: string; uri: string; source: string };
 type SingleDraft = { clip: Clip | null; outputUri: string | null };
 type TemplateDraft = {
   clips: Readonly<Record<string, TemplateClip>>;
   textOverrides: TemplateTextOverrides;
+  music: TemplateMusic | null;
   source: string | null;
   outputUri: string | null;
 };
@@ -36,11 +45,12 @@ type ImportOperation = { kind: "import"; slotId?: string };
 type SlotEdit = { kind: "trim" | "reframe"; template: MobileTemplate; slot: TemplateVideoSlot; clip: TemplateClip };
 type TextEdit = { kind: "text"; template: MobileTemplate; textOverrides: TemplateTextOverrides };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
-type Operation = ImportOperation | SlotEdit | TextEdit | { kind: "share" } | ExportJob;
+type Operation =
+  ImportOperation | SlotEdit | TextEdit | { kind: "import-music" | "remove-music" | "share" } | ExportJob;
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
-type Feedback = { kind: "error" | "status"; message: string; slotId?: string };
+type Feedback = { kind: "error" | "status"; message: string; slotId?: string; scope?: "music" };
 
-const emptyTemplateDraft: TemplateDraft = { clips: {}, textOverrides: {}, source: null, outputUri: null };
+const emptyTemplateDraft: TemplateDraft = { clips: {}, textOverrides: {}, music: null, source: null, outputUri: null };
 
 export default function App() {
   const activeOperation = useRef<Operation | null>(null);
@@ -97,11 +107,23 @@ export default function App() {
     setEditor(next);
   }
 
-  function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft) {
+  function removeUnusedCachedFile(uri: string | null | undefined, drafts = templateDrafts) {
+    if (!uri || uri === singleDraft.clip?.uri || uri === singleDraft.outputUri) return;
+    const inUse = Object.values(drafts).some(
+      ({ clips, music, outputUri }) =>
+        uri === music?.uri || uri === outputUri || Object.values(clips).some((clip) => uri === clip.uri),
+    );
+    if (!inUse) removeCachedFile(uri);
+  }
+
+  function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft, previousInputUri?: string) {
     // Resolve before committing so a failed edit leaves the draft and export intact.
-    const source = createTemplateSource(template, draft.clips, draft.textOverrides);
-    setTemplateDrafts((drafts) => ({ ...drafts, [template.id]: { ...draft, source, outputUri: null } }));
-    removeCachedFile(draft.outputUri);
+    const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
+    const outputUri = source === draft.source ? draft.outputUri : null;
+    const drafts = { ...templateDrafts, [template.id]: { ...draft, source, outputUri } };
+    setTemplateDrafts(drafts);
+    removeUnusedCachedFile(draft.outputUri, drafts);
+    removeUnusedCachedFile(previousInputUri, drafts);
   }
 
   function openSlotEdit(kind: SlotEdit["kind"], slot: TemplateVideoSlot) {
@@ -153,22 +175,19 @@ export default function App() {
       const metadata = await probeVideo(pickedUri);
       if (activeOperation.current !== operation) return;
 
-      let previousUri: string | undefined;
       if (target.kind === "template") {
         const { template, slot } = target;
         const draft = templateDrafts[template.id] ?? emptyTemplateDraft;
         const clip = createTemplateClip(slot, pickedUri, asset.name, metadata);
         const clips = { ...draft.clips, [slot.id]: clip };
-        updateTemplateDraft(template, { ...draft, clips });
-        previousUri = draft.clips[slot.id]?.uri;
+        updateTemplateDraft(template, { ...draft, clips }, draft.clips[slot.id]?.uri);
       } else {
         const source = createClipSource(pickedUri, metadata);
         setSingleDraft({ clip: { name: asset.name, uri: pickedUri, source }, outputUri: null });
-        previousUri = singleDraft.clip?.uri;
+        if (singleDraft.clip?.uri !== pickedUri) removeCachedFile(singleDraft.clip?.uri);
         removeCachedFile(outputUri);
       }
 
-      if (previousUri !== pickedUri) removeCachedFile(previousUri);
       pickedUri = undefined;
     } catch (cause) {
       if (activeOperation.current === operation) {
@@ -176,7 +195,49 @@ export default function App() {
         setFeedback({ ...operation, kind: "error", message });
       }
     } finally {
-      removeCachedFile(pickedUri);
+      removeUnusedCachedFile(pickedUri);
+      finish(operation);
+    }
+  }
+
+  async function selectMusic(template: MobileTemplate) {
+    const operation = { kind: "import-music" } as const;
+    if (!begin(operation)) return;
+    let pickedUri: string | undefined;
+    try {
+      const result = await getDocumentAsync({ type: "audio/*", copyToCacheDirectory: true });
+      if (result.canceled) return;
+      const [asset] = result.assets;
+      if (!asset) throw new Error("Files did not return an audio file.");
+      pickedUri = asset.uri;
+      if (activeOperation.current !== operation) return;
+
+      const metadata = await probeAudio(pickedUri);
+      if (activeOperation.current !== operation) return;
+
+      const draft = templateDrafts[template.id] ?? emptyTemplateDraft;
+      const music = createTemplateMusic(pickedUri, asset.name, metadata);
+      updateTemplateDraft(template, { ...draft, music }, draft.music?.uri);
+      pickedUri = undefined;
+    } catch (cause) {
+      if (activeOperation.current === operation) {
+        setFeedback({ kind: "error", scope: "music", message: errorMessage("Couldn’t import the music.", cause) });
+      }
+    } finally {
+      removeUnusedCachedFile(pickedUri);
+      finish(operation);
+    }
+  }
+
+  function removeMusic(template: MobileTemplate) {
+    const draft = templateDrafts[template.id];
+    const operation = { kind: "remove-music" } as const;
+    if (!draft?.music || !begin(operation)) return;
+    try {
+      updateTemplateDraft(template, { ...draft, music: null }, draft.music.uri);
+    } catch (cause) {
+      setFeedback({ kind: "error", scope: "music", message: errorMessage("Couldn’t remove the music.", cause) });
+    } finally {
       finish(operation);
     }
   }
@@ -311,7 +372,7 @@ export default function App() {
           clips={templateDraft.clips}
           busy={busy}
           importingSlotId={importing ? activity.slotId : undefined}
-          importError={feedback?.kind === "error" ? feedback : null}
+          importError={feedback?.kind === "error" && feedback.slotId !== undefined ? feedback : null}
           onSelect={(slot) => selectVideo({ kind: "template", template: editor.template, slot })}
           onTrim={(slot) => openSlotEdit("trim", slot)}
           onReframe={(slot) => openSlotEdit("reframe", slot)}
@@ -326,8 +387,18 @@ export default function App() {
       {editor.kind === "template" && !source && (
         <Text style={textStyles.muted}>Add all required videos to preview and export.</Text>
       )}
+      {editor.kind === "template" && editor.template.audio?.music && (
+        <TemplateMusicControls
+          music={templateDraft.music}
+          busy={busy}
+          importing={activity?.kind === "import-music"}
+          error={feedback?.scope === "music" ? feedback.message : undefined}
+          onSelect={() => selectMusic(editor.template)}
+          onRemove={() => removeMusic(editor.template)}
+        />
+      )}
       <View style={styles.actions}>
-        {feedback && feedback.slotId === undefined && (
+        {feedback && feedback.slotId === undefined && feedback.scope !== "music" && (
           <Text accessibilityRole="alert" style={feedback.kind === "error" ? textStyles.error : textStyles.muted}>
             {feedback.message}
           </Text>
