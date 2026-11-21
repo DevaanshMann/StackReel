@@ -57,12 +57,13 @@ After exporting a single clip or a template, tap **Save to Photos** to add the M
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
 
 You can make several reels from the same template. Open a template and make an edit to save your first draft.
-To start another, go back to **Templates** and tap **New draft** on that template’s card.
+To start another, go back to **Templates** and tap **New draft** on that template’s card. When a template has
+several drafts, tapping its card lets you choose which reel to open.
 Open **Projects** to see each reel by name and how many video slots it has filled. Tap a reel to resume with
 its own videos, trims, framing, edited text, and music, even after relaunching the app.
 Tap **Rename** to give a saved draft a name you can recognize in Projects. The template name is shown below it.
 Tap **Delete** beside a draft and confirm to remove its edits and imported media copies. Your other drafts and the
-original files stay in place.
+original files stay in place. [See two Before / After reels in Projects](../../docs/ios-multiple-template-drafts.png).
 If an imported video is missing, choose a replacement from Photos or Files or clear its slot. Export again after
 relaunch, or use **Save to Files** in the share sheet to keep a finished MP4.
 If StackReel can’t reopen a draft, the recovery screen preserves its saved edits and media copies. You can
