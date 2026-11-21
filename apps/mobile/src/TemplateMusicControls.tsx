@@ -5,6 +5,7 @@ import type { TemplateMusic } from "./template-editor";
 
 export function TemplateMusicControls({
   music,
+  missingMusic,
   busy,
   importing,
   error,
@@ -12,6 +13,7 @@ export function TemplateMusicControls({
   onRemove,
 }: {
   music: TemplateMusic | null;
+  missingMusic: boolean;
   busy: boolean;
   importing: boolean;
   error: string | undefined;
@@ -45,8 +47,20 @@ export function TemplateMusicControls({
           onPress={onSelect}
           disabled={busy}
         />
-        {music && <Action label="Remove music" testID="remove-template-music" onPress={onRemove} disabled={busy} />}
+        {(music || missingMusic) && (
+          <Action
+            label={missingMusic ? "Remove missing music" : "Remove music"}
+            testID={missingMusic ? "remove-missing-template-music" : "remove-template-music"}
+            onPress={onRemove}
+            disabled={busy}
+          />
+        )}
       </View>
+      {missingMusic && (
+        <Text testID="template-music-missing" accessibilityRole="alert" style={textStyles.error}>
+          Saved music is missing.
+        </Text>
+      )}
       {error && (
         <Text testID="template-music-error" accessibilityRole="alert" style={textStyles.error}>
           {error}

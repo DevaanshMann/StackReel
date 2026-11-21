@@ -17,6 +17,7 @@ import { TemplateTrim } from "./TemplateTrim";
 import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
 import {
+  clearTemplateMusic,
   clearTemplateVideoSlot,
   commitTemplateDraftUpdate,
   createDraftMediaFile,
@@ -434,9 +435,9 @@ export default function App() {
   function removeMusic(template: MobileTemplate) {
     const draft = templateDrafts?.[template.id];
     const operation = { kind: "remove-music" } as const;
-    if (!draft?.music || !begin(operation)) return;
+    if (!draft || (!draft.music && !draft.missingMusic) || !begin(operation)) return;
     try {
-      updateTemplateDraft(template, { ...draft, music: null });
+      updateTemplateDraft(template, clearTemplateMusic(draft));
     } catch (cause) {
       setFeedback({ kind: "error", scope: "music", message: errorMessage("Couldn’t remove the music.", cause) });
     } finally {
@@ -681,15 +682,10 @@ export default function App() {
       {editor.kind === "template" && editor.template.audio?.music && (
         <TemplateMusicControls
           music={templateDraft.music}
+          missingMusic={templateDraft.missingMusic}
           busy={busy}
           importing={activity?.kind === "import-music"}
-          error={
-            feedback?.scope === "music"
-              ? feedback.message
-              : templateDraft.missingMusic
-                ? "Saved music is missing. Choose a replacement from Files."
-                : undefined
-          }
+          error={feedback?.scope === "music" ? feedback.message : undefined}
           onSelect={() => selectMusic(editor.template)}
           onRemove={() => removeMusic(editor.template)}
         />

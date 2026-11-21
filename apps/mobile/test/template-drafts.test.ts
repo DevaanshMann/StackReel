@@ -2,6 +2,7 @@ import { probeVideo } from "@stackreel/engine";
 import { File } from "expo-file-system";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  clearTemplateMusic,
   clearTemplateVideoSlot,
   commitTemplateDraftUpdate,
   createDraftMediaFile,
@@ -387,6 +388,55 @@ describe("template draft storage", () => {
     const music = createTemplateMusic(soundtrack.uri, "Replacement.m4a", { startUs: 0, durationUs: 2_000_000 });
     saveTemplateDraft(beforeAfter, { ...reopened, music, missingMusic: false });
     expect(loadTemplateDraft(beforeAfter)).toEqual({ ...reopened, music, missingMusic: false });
+  });
+
+  it("forgets missing music and keeps the rendered export and draft edits", () => {
+    const { edits, musicFile } = fixture();
+    const name = "Weekend cut";
+    saveTemplateDraft(beforeAfter, { ...edits, name });
+    musicFile.delete();
+
+    const draft = loadTemplateDraft(beforeAfter)!;
+    expect(draft).toMatchObject({ music: null, missingMusic: true });
+    const source = createTemplateSource(beforeAfter, draft.clips, draft.textOverrides, draft.music);
+    expect(source).not.toBeNull();
+    const outputUri = "file:///Caches/export.mp4";
+    const render = commitTemplateDraftUpdate(beforeAfter, clearTemplateMusic({ ...draft, source, outputUri }));
+    expect(render).toEqual({ source, outputUri });
+
+    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...draft, missingMusic: false });
+    musicFile.writeSync("restored music copy");
+    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...draft, missingMusic: false });
+  });
+
+  it("can retry a failed missing music removal and keeps missing video references", () => {
+    const { edits, afterFile, musicFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    afterFile.delete();
+    musicFile.delete();
+
+    const draft = loadTemplateDraft(beforeAfter)!;
+    expect(draft).toMatchObject({ missingSlots: [after.id], missingMusic: true });
+    const files = new Map(storage.files);
+    const removeMusic = () =>
+      commitTemplateDraftUpdate(beforeAfter, clearTemplateMusic({ ...draft, source: null, outputUri: null }));
+
+    storage.interruptMove = true;
+    expect(removeMusic).toThrow("Interrupted write");
+    expect(storage.files).toEqual(files);
+    expect(loadTemplateDraft(beforeAfter)).toEqual(draft);
+
+    storage.interruptMove = false;
+    removeMusic();
+    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...draft, missingMusic: false });
+
+    afterFile.writeSync("restored video copy");
+    expect(loadTemplateDraft(beforeAfter)).toEqual({
+      ...draft,
+      clips: edits.clips,
+      missingSlots: [],
+      missingMusic: false,
+    });
   });
 
   it("renames a legacy draft and carries the name through later edits", () => {
