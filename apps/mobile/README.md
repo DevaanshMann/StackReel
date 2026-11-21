@@ -62,6 +62,8 @@ several drafts, tapping its card lets you choose which reel to open.
 Open **Projects** to see each reel by name and how many video slots it has filled. Tap a reel to resume with
 its own videos, trims, framing, edited text, and music, even after relaunching the app.
 Tap **Rename** to give a saved draft a name you can recognize in Projects. The template name is shown below it.
+Tap **Duplicate** to try a different cut. Projects adds a named copy with its own videos and music, the same
+trim, framing, and text edits, and any missing-media warnings. You can edit or delete either version independently.
 Tap **Delete** beside a draft and confirm to remove its edits and imported media copies. Your other drafts and the
 original files stay in place. [See two Before / After reels in Projects](../../docs/ios-multiple-template-drafts.png).
 If an imported video is missing, choose a replacement from Photos or Files or clear its slot. Export again after

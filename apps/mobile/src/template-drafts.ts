@@ -25,6 +25,7 @@ const snapshotName = /^draft-(\d{1,15})\.json$/;
 const pendingName = "pending.json";
 const mediaName = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}(?:\.[a-z0-9]{1,10})?$/i;
 const draftUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
+const copyingDirectories = new Set<string>();
 
 function templateDirectory(template: MobileTemplate, root: "StackReelDrafts" | "StackReelDraftInstances") {
   return new Directory(Paths.document, root, Id.parse(template.id));
@@ -79,6 +80,8 @@ export function removeDraftFile(file: File) {
 }
 
 function pruneDraftFiles(directory: Directory, keep: ReadonlySet<string>) {
+  // Discovery can run while a duplicate is still copying media into its unpublished folder.
+  if (copyingDirectories.has(directory.uri)) return;
   try {
     for (const entry of directory.list()) {
       if (!(entry instanceof File) || keep.has(entry.name)) continue;
@@ -138,6 +141,43 @@ export function renameTemplateDraft(template: MobileTemplate, name: string, draf
   for (const { file } of snapshots) removeDraftFile(file);
 }
 
+export async function duplicateTemplateDraft(template: MobileTemplate, sourceId: string, name: string) {
+  const trimmedName = name.trim();
+  if (!trimmedName) throw new Error("Enter a name for the draft.");
+  const original = draftDirectory(template, sourceId);
+  const snapshot = draftSnapshots(original).at(-1);
+  if (!snapshot) throw new Error("The saved draft is unavailable.");
+  const manifest = readDraftManifest(template, snapshot.file);
+  const saved = { ...manifest.saved, name: trimmedName };
+  const files = new Set<string>();
+  for (const reference of [...Object.values(manifest.clips), manifest.saved.music]) {
+    if (hasDraftMediaFile(reference)) files.add(reference.file);
+  }
+
+  const instances = templateDirectory(template, "StackReelDraftInstances");
+  instances.create({ intermediates: true, idempotent: true });
+  let draftId = randomUUID();
+  while (draftId === template.id || new Directory(instances, draftId).exists) draftId = randomUUID();
+  const destination = new Directory(instances, draftId);
+  destination.create();
+  copyingDirectories.add(destination.uri);
+  let committed = false;
+  try {
+    for (const basename of files) {
+      const file = new File(original, basename);
+      if (file.exists) await file.copy(new File(destination, basename));
+    }
+    const draft = restoreDraftEdits(template, destination, { ...manifest, saved }, new Set());
+    const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
+    commitDraftManifest(destination, 0, saved);
+    committed = true;
+    return { draftId, draft, source };
+  } finally {
+    copyingDirectories.delete(destination.uri);
+    if (!committed) pruneDraftFiles(destination, new Set());
+  }
+}
+
 export function saveTemplateDraft(
   template: MobileTemplate,
   { name, clips, textOverrides, music, missingSlots = [], missingMusic = false }: TemplateDraftEdits,
@@ -158,7 +198,7 @@ export function saveTemplateDraft(
     return { ...settings, file };
   }
   function preserveAsset(reference: unknown) {
-    if (record(reference) && typeof reference.file === "string" && mediaName.test(reference.file)) {
+    if (hasDraftMediaFile(reference)) {
       keep.add(reference.file);
     }
     return reference;
@@ -216,6 +256,10 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function hasDraftMediaFile(value: unknown): value is Record<string, unknown> & { file: string } {
+  return record(value) && typeof value.file === "string" && mediaName.test(value.file);
+}
+
 function readDraftManifest(template: MobileTemplate, snapshot: File) {
   const saved: unknown = JSON.parse(snapshot.textSync());
   if (!record(saved) || saved.version !== 1 || !record(saved.clips) || !record(saved.textOverrides)) {
@@ -232,7 +276,7 @@ function readDraftManifest(template: MobileTemplate, snapshot: File) {
 }
 
 function readAsset(value: unknown, directory: Directory, keep: Set<string>) {
-  if (!record(value) || typeof value.file !== "string" || !mediaName.test(value.file)) {
+  if (!hasDraftMediaFile(value)) {
     throw new Error("Invalid draft media reference.");
   }
   const file = new File(directory, value.file);
@@ -263,7 +307,17 @@ export function loadTemplateDraft(template: MobileTemplate, draftId = template.i
     return null;
   }
   keep.add(snapshot.file.name);
-  const { saved, clips: savedClips, textOverrides: savedText } = readDraftManifest(template, snapshot.file);
+  const draft = restoreDraftEdits(template, directory, readDraftManifest(template, snapshot.file), keep);
+  if (draft.missingSlots.length === 0 && !draft.missingMusic) pruneDraftFiles(directory, keep);
+  return draft;
+}
+
+function restoreDraftEdits(
+  template: MobileTemplate,
+  directory: Directory,
+  { saved, clips: savedClips, textOverrides: savedText }: ReturnType<typeof readDraftManifest>,
+  keep: Set<string>,
+) {
   const name = typeof saved.name === "string" ? saved.name.trim() || null : null;
 
   const clips: Record<string, TemplateClip> = {};
@@ -327,6 +381,5 @@ export function loadTemplateDraft(template: MobileTemplate, draftId = template.i
     }
   }
 
-  if (missingSlots.length === 0 && !missingMusic) pruneDraftFiles(directory, keep);
   return { name, clips, textOverrides, music, missingSlots, missingMusic };
 }
