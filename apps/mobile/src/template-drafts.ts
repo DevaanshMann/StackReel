@@ -166,6 +166,14 @@ export function clearTemplateVideoSlot(draft: TemplateDraftEdits, slotId: string
   return { clips, missingSlots: (draft.missingSlots ?? []).filter((id) => id !== slotId) };
 }
 
+export function clearTemplateMusic<T extends TemplateDraftEdits>({
+  music: _music,
+  missingMusic: _missingMusic,
+  ...draft
+}: T) {
+  return { ...draft, music: null, missingMusic: false };
+}
+
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
