@@ -121,6 +121,7 @@ vi.mock("expo-file-system", () => {
 });
 
 const beforeAfter = mobileTemplates.find(({ id }) => id === "before-after")!;
+const beforeAfterWithoutMusic = { ...beforeAfter, audio: {} };
 const hook = mobileTemplates.find(({ id }) => id === "hook-and-reveal")!;
 const [before, after] = getVideoSlots(beforeAfter) as [
   ReturnType<typeof getVideoSlots>[number],
@@ -389,7 +390,7 @@ describe("template draft storage", () => {
   });
 
   it("renames a legacy draft and carries the name through later edits", () => {
-    const { edits } = fixture();
+    const { edits, musicFile } = fixture();
     saveTemplateDraft(beforeAfter, edits);
     expect(loadTemplateDraft(beforeAfter)?.name).toBeNull();
 
@@ -399,6 +400,7 @@ describe("template draft storage", () => {
 
     saveTemplateDraft(beforeAfter, { ...renamed, music: null });
     expect(loadTemplateDraft(beforeAfter)).toMatchObject({ name: "Weekend cut", music: null });
+    expect(musicFile.exists).toBe(false);
   });
 
   it("preserves missing media references when renaming a draft", () => {
@@ -493,6 +495,47 @@ describe("template draft storage", () => {
 
       expect(storage.files).toEqual(originalFiles);
       expect(loadTemplateDraft(beforeAfter)).toEqual({ ...edits, name, missingSlots: [], missingMusic: false });
+    },
+  );
+
+  it.each(["loading", "renaming", "saving directly"] as const)(
+    "preserves a version-one draft when %s after the template drops music support",
+    (action) => {
+      const { edits, musicFile } = fixture();
+      const name = "Weekend cut";
+      musicFile.writeSync("imported soundtrack");
+      saveTemplateDraft(beforeAfter, { ...edits, name });
+      const originalFiles = new Map(storage.files);
+
+      const attempts = {
+        loading: () => loadTemplateDraft(beforeAfterWithoutMusic),
+        renaming: () => renameTemplateDraft(beforeAfterWithoutMusic, "New name"),
+        "saving directly": () => saveTemplateDraft(beforeAfterWithoutMusic, { ...edits, music: null }),
+      };
+      expect(attempts[action]).toThrow("The saved draft references music that is unavailable in this template.");
+
+      expect(storage.files).toEqual(originalFiles);
+      expect(musicFile.textSync()).toBe("imported soundtrack");
+      expect(loadTemplateDraft(beforeAfter)).toEqual({ ...edits, name, missingSlots: [], missingMusic: false });
+    },
+  );
+
+  it.each([null, undefined])(
+    "reopens and edits a draft with saved music %s after the template drops support",
+    (music) => {
+      const { edits } = fixture();
+      saveTemplateDraft(beforeAfter, { ...edits, music: null });
+      const manifest = new File(`${storage.document}/StackReelDrafts/${beforeAfter.id}/draft-1.json`);
+      manifest.writeSync(JSON.stringify({ ...JSON.parse(manifest.textSync()), music }));
+
+      const restored = loadTemplateDraft(beforeAfterWithoutMusic)!;
+      expect(restored).toEqual({ ...edits, name: null, music: null, missingSlots: [], missingMusic: false });
+
+      const name = "Weekend cut";
+      renameTemplateDraft(beforeAfterWithoutMusic, name);
+      const textOverrides = setTemplateText(getTemplateTextFields(beforeAfterWithoutMusic)[0]!, {}, "New caption");
+      saveTemplateDraft(beforeAfterWithoutMusic, { ...restored, name, textOverrides });
+      expect(loadTemplateDraft(beforeAfterWithoutMusic)).toEqual({ ...restored, name, textOverrides });
     },
   );
 

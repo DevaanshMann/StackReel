@@ -179,6 +179,9 @@ function readDraftManifest(template: MobileTemplate, snapshot: File) {
   if (Object.keys(saved.clips).some((id) => !videoSlotIds.has(id))) {
     throw new Error("The saved draft references a video slot that is unavailable in this template.");
   }
+  if (saved.music !== undefined && saved.music !== null && !template.audio?.music) {
+    throw new Error("The saved draft references music that is unavailable in this template.");
+  }
   return { saved, clips: saved.clips, textOverrides: saved.textOverrides };
 }
 
@@ -269,7 +272,7 @@ export function loadTemplateDraft(template: MobileTemplate) {
 
   let music: TemplateMusic | null = null;
   let missingMusic = false;
-  if (saved.music && template.audio?.music) {
+  if (saved.music) {
     try {
       const { uri, name, sourceStartUs, sourceEndUs } = readAsset(saved.music, directory, keep);
       music = createTemplateMusic(uri, name, { startUs: sourceStartUs, durationUs: sourceEndUs - sourceStartUs });
