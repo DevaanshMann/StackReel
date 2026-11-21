@@ -219,6 +219,28 @@ describe("template draft storage", () => {
     }
   });
 
+  it.each([
+    [firstDraftId, secondDraftId],
+    [secondDraftId, firstDraftId],
+  ] as const)("deletes %s while keeping reel %s ready to export after relaunch", (deletedId, survivorId) => {
+    const deleted = fixture(deletedId);
+    const survivor = fixture(survivorId);
+    saveTemplateDraft(beforeAfter, { ...deleted.edits, name: "Opening" }, deletedId);
+    const edits = { ...survivor.edits, name: "Closing" };
+    saveTemplateDraft(beforeAfter, edits, survivorId);
+    const expectedSource = createTemplateSource(beforeAfter, edits.clips, edits.textOverrides, edits.music);
+    expect(expectedSource).not.toBeNull();
+
+    deleteTemplateDraft(beforeAfter, deletedId);
+    expect(listTemplateDraftIds(beforeAfter)).toEqual([survivorId]);
+    const restored = loadTemplateDraft(beforeAfter, survivorId)!;
+    expect(restored.name).toBe("Closing");
+    expect(createTemplateSource(beforeAfter, restored.clips, restored.textOverrides, restored.music)).toBe(
+      expectedSource,
+    );
+    expect(deleted.beforeFile.parentDirectory.exists).toBe(false);
+  });
+
   it.each([true, false])(
     "preserves a version-one draft in place and deletes independently (legacy first: %s)",
     (legacyFirst) => {
