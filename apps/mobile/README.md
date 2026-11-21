@@ -68,6 +68,7 @@ trim, framing, and text edits, and any missing-media warnings. You can edit or d
 Tap **Delete** beside a draft and confirm to remove its edits and imported media copies. Your other drafts and the
 original files stay in place. [See two Before / After reels in Projects](../../docs/ios-multiple-template-drafts.png).
 When drafts share a name, the delete confirmation also shows the selected draft’s template.
+[See the confirmation for a Before / After draft](../../docs/ios-same-name-delete-confirmation.png).
 If an imported video is missing, choose a replacement from Photos or Files or clear its slot. Export again after
 relaunch, or use **Save to Files** in the share sheet to keep a finished MP4.
 If StackReel can’t reopen a draft, the recovery screen preserves its saved edits and media copies. You can
