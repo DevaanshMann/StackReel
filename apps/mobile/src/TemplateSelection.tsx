@@ -18,10 +18,16 @@ type ProjectDraft = {
   loadError?: string;
 };
 
+type ProjectDrafts = Readonly<Record<string, Readonly<Record<string, ProjectDraft>>>>;
+
 export function TemplateGallery({
+  drafts,
+  onNewDraft,
   onSelectTemplate,
   onSelectSingleClip,
 }: {
+  drafts: ProjectDrafts;
+  onNewDraft: SelectTemplate;
   onSelectTemplate: SelectTemplate;
   onSelectSingleClip: () => void;
 }) {
@@ -31,15 +37,28 @@ export function TemplateGallery({
         Templates
       </Text>
       <View style={styles.list}>
-        {choices.map(({ template, slots }) => (
-          <GalleryCard
-            key={template.id}
-            label={template.name}
-            details={`${slots.length} videos · ${secondsLabel(template.durationUs)}`}
-            description={template.description}
-            onPress={() => onSelectTemplate(template, slots)}
-          />
-        ))}
+        {choices.map(({ template, slots }) => {
+          const count = Object.keys(drafts[template.id] ?? {}).length;
+          const details = `${slots.length} videos · ${secondsLabel(template.durationUs)}`;
+          return (
+            <GalleryCard
+              key={template.id}
+              label={template.name}
+              details={count > 1 ? `${details} · Choose from ${count} drafts` : details}
+              description={template.description}
+              onPress={() => onSelectTemplate(template, slots)}
+              actions={
+                count > 0 && (
+                  <Action
+                    label="New draft"
+                    accessibilityLabel={`New draft for ${template.name}`}
+                    onPress={() => onNewDraft(template, slots)}
+                  />
+                )
+              }
+            />
+          );
+        })}
       </View>
       <GalleryCard label="Single-clip editor" details="Preview and export one video" onPress={onSelectSingleClip} />
     </>
@@ -48,36 +67,56 @@ export function TemplateGallery({
 
 export function TemplateProjects({
   drafts,
-  onSelectTemplate,
+  filter,
+  onShowAll,
+  onOpenDraft,
   onRenameDraft,
   onDeleteDraft,
   onBrowseTemplates,
 }: {
-  drafts: Readonly<Record<string, ProjectDraft>>;
-  onSelectTemplate: SelectTemplate;
-  onRenameDraft: (template: MobileTemplate) => void;
-  onDeleteDraft: (template: MobileTemplate) => void;
+  drafts: ProjectDrafts;
+  filter: MobileTemplate | undefined;
+  onShowAll: () => void;
+  onOpenDraft: (template: MobileTemplate, slots: TemplateVideoSlot[], draftId: string) => void;
+  onRenameDraft: (template: MobileTemplate, draftId: string) => void;
+  onDeleteDraft: (template: MobileTemplate, draftId: string, label: string) => void;
   onBrowseTemplates: () => void;
 }) {
   const projects = choices.flatMap(({ template, slots }) => {
-    const draft = drafts[template.id];
-    return draft ? [{ template, slots, draft }] : [];
+    if (filter && filter.id !== template.id) return [];
+    const siblings = Object.entries(drafts[template.id] ?? {});
+    const idsByName = new Map<string, string[]>();
+    for (const [draftId, draft] of siblings) {
+      const name = (draft.name ?? template.name).toLowerCase();
+      const ids = idsByName.get(name);
+      if (ids) ids.push(draftId);
+      else idsByName.set(name, [draftId]);
+    }
+    for (const ids of idsByName.values()) ids.sort();
+    return siblings.map(([draftId, draft]) => {
+      const name = draft.name ?? template.name;
+      // Keep identically named cards and their confirmation dialogs distinguishable after relaunch.
+      const ids = idsByName.get(name.toLowerCase())!;
+      const label = ids.length > 1 ? `${name} (${ids.indexOf(draftId) + 1} of ${ids.length})` : name;
+      return { template, slots, draftId, draft, label };
+    });
   });
 
   return (
     <>
       <Text accessibilityRole="header" style={textStyles.heading}>
-        Projects
+        {filter ? `${filter.name} drafts` : "Projects"}
       </Text>
+      {filter && <Action label="Show all projects" onPress={onShowAll} />}
       {projects.length === 0 ? (
         <View style={[styles.panel, styles.emptyProjects]}>
-          <Text style={styles.cardTitle}>No saved drafts yet</Text>
+          <Text style={styles.cardTitle}>{filter ? `No saved ${filter.name} drafts` : "No saved drafts yet"}</Text>
           <Text style={textStyles.muted}>Make an edit in a template to start a draft.</Text>
           <Action label="Browse templates" onPress={onBrowseTemplates} />
         </View>
       ) : (
         <View style={styles.list}>
-          {projects.map(({ template, slots, draft }) => {
+          {projects.map(({ template, slots, draftId, draft, label }) => {
             const name = draft.name ?? template.name;
             const filled = slots.filter(({ id }) => draft.clips[id]).length;
             const missingMedia = draft.missingSlots.length > 0 || draft.missingMusic;
@@ -85,24 +124,24 @@ export function TemplateProjects({
             const details = name === template.name ? progress : `${template.name} · ${progress}`;
             return (
               <GalleryCard
-                key={template.id}
-                label={name}
+                key={`${template.id}/${draftId}`}
+                label={label}
                 details={draft.loadError ? "Couldn’t load draft" : details}
                 description={missingMedia ? "Missing media" : undefined}
-                onPress={() => onSelectTemplate(template, slots)}
+                onPress={() => onOpenDraft(template, slots, draftId)}
                 actions={
                   <>
                     {!draft.loadError && (
                       <Action
                         label="Rename"
-                        accessibilityLabel={`Rename ${name} draft`}
-                        onPress={() => onRenameDraft(template)}
+                        accessibilityLabel={`Rename ${label} draft`}
+                        onPress={() => onRenameDraft(template, draftId)}
                       />
                     )}
                     <Action
                       label="Delete"
-                      accessibilityLabel={`Delete ${name} draft`}
-                      onPress={() => onDeleteDraft(template)}
+                      accessibilityLabel={`Delete ${label} draft`}
+                      onPress={() => onDeleteDraft(template, draftId, label)}
                     />
                   </>
                 }
