@@ -68,20 +68,25 @@ export function TemplateGallery({
 export function TemplateProjects({
   drafts,
   filter,
+  duplicating,
   onShowAll,
   onOpenDraft,
+  onDuplicateDraft,
   onRenameDraft,
   onDeleteDraft,
   onBrowseTemplates,
 }: {
   drafts: ProjectDrafts;
   filter: MobileTemplate | undefined;
+  duplicating: { templateId: string; draftId: string } | null;
   onShowAll: () => void;
   onOpenDraft: (template: MobileTemplate, slots: TemplateVideoSlot[], draftId: string) => void;
+  onDuplicateDraft: (template: MobileTemplate, draftId: string) => void;
   onRenameDraft: (template: MobileTemplate, draftId: string) => void;
   onDeleteDraft: (template: MobileTemplate, draftId: string, label: string) => void;
   onBrowseTemplates: () => void;
 }) {
+  const busy = duplicating !== null;
   const projects = choices.flatMap(({ template, slots }) => {
     if (filter && filter.id !== template.id) return [];
     const siblings = Object.entries(drafts[template.id] ?? {});
@@ -107,7 +112,7 @@ export function TemplateProjects({
       <Text accessibilityRole="header" style={textStyles.heading}>
         {filter ? `${filter.name} drafts` : "Projects"}
       </Text>
-      {filter && <Action label="Show all projects" onPress={onShowAll} />}
+      {filter && <Action label="Show all projects" onPress={onShowAll} disabled={busy} />}
       {projects.length === 0 ? (
         <View style={[styles.panel, styles.emptyProjects]}>
           <Text style={styles.cardTitle}>{filter ? `No saved ${filter.name} drafts` : "No saved drafts yet"}</Text>
@@ -122,25 +127,37 @@ export function TemplateProjects({
             const missingMedia = draft.missingSlots.length > 0 || draft.missingMusic;
             const progress = `${filled} of ${slots.length} videos`;
             const details = name === template.name ? progress : `${template.name} · ${progress}`;
+            const copying = duplicating?.templateId === template.id && duplicating.draftId === draftId;
             return (
               <GalleryCard
                 key={`${template.id}/${draftId}`}
                 label={label}
                 details={draft.loadError ? "Couldn’t load draft" : details}
                 description={missingMedia ? "Missing media" : undefined}
+                disabled={busy}
                 onPress={() => onOpenDraft(template, slots, draftId)}
                 actions={
                   <>
                     {!draft.loadError && (
-                      <Action
-                        label="Rename"
-                        accessibilityLabel={`Rename ${label} draft`}
-                        onPress={() => onRenameDraft(template, draftId)}
-                      />
+                      <>
+                        <Action
+                          label={copying ? "Duplicating…" : "Duplicate"}
+                          accessibilityLabel={`${copying ? "Duplicating" : "Duplicate"} ${label} draft`}
+                          disabled={busy}
+                          onPress={() => onDuplicateDraft(template, draftId)}
+                        />
+                        <Action
+                          label="Rename"
+                          accessibilityLabel={`Rename ${label} draft`}
+                          disabled={busy}
+                          onPress={() => onRenameDraft(template, draftId)}
+                        />
+                      </>
                     )}
                     <Action
                       label="Delete"
                       accessibilityLabel={`Delete ${label} draft`}
+                      disabled={busy}
                       onPress={() => onDeleteDraft(template, draftId, label)}
                     />
                   </>
@@ -158,12 +175,14 @@ function GalleryCard({
   label,
   details,
   description,
+  disabled = false,
   onPress,
   actions,
 }: {
   label: string;
   details: string;
   description?: string | undefined;
+  disabled?: boolean;
   onPress: () => void;
   actions?: ReactNode;
 }) {
@@ -172,6 +191,8 @@ function GalleryCard({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
         accessibilityHint={`${details}.${description ? ` ${description}` : ""}`}
         onPress={onPress}
         style={({ pressed }) => [styles.card, pressed && styles.pressed]}

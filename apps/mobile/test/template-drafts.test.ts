@@ -1,4 +1,5 @@
 import { probeVideo } from "@stackreel/engine";
+import { randomUUID } from "expo-crypto";
 import { Directory, File } from "expo-file-system";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -7,6 +8,7 @@ import {
   commitTemplateDraftUpdate,
   createDraftMediaFile,
   deleteTemplateDraft,
+  duplicateTemplateDraft,
   listTemplateDraftIds,
   loadTemplateDraft,
   renameTemplateDraft,
@@ -27,6 +29,7 @@ import {
 } from "../src/template-editor";
 
 import type { TemplateClip } from "../src/template-editor";
+import * as templateEditor from "../src/template-editor";
 import { importTemplateVideos } from "../src/template-video-import";
 import { pickOrderedVideos } from "../src/video-picker";
 
@@ -44,7 +47,7 @@ const storage = vi.hoisted(() => ({
 }));
 
 vi.mock("expo-crypto", () => ({
-  randomUUID: () => `00000000-0000-4000-8000-${String(++storage.nextMedia).padStart(12, "0")}`,
+  randomUUID: vi.fn(() => `00000000-0000-4000-8000-${String(++storage.nextMedia).padStart(12, "0")}`),
 }));
 
 vi.mock("expo-file-system", () => {
@@ -185,6 +188,165 @@ beforeEach(() => {
   storage.interruptMove = false;
   storage.blockedDeletion = "";
   storage.blockedListing = "";
+});
+
+describe("duplicating a template draft", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([
+    [beforeAfter.id, true],
+    [beforeAfter.id, false],
+    [firstDraftId, true],
+    [firstDraftId, false],
+  ] as const)("copies %s independently (delete source first: %s)", async (sourceId, deleteSource) => {
+    const { edits, beforeFile, afterFile, musicFile } = fixture(sourceId);
+    for (const file of [beforeFile, afterFile, musicFile]) file.writeSync(file.name);
+    saveTemplateDraft(beforeAfter, edits, sourceId);
+    renameTemplateDraft(beforeAfter, "Original", sourceId);
+    // Restore the files a previous cleanup may have left. Only the newest manifest and its assets belong in the copy.
+    const original = beforeFile.parentDirectory;
+    new File(original, "draft-1.json").writeSync("old");
+    new File(original, "pending.json").writeSync("staging");
+    createDraftMediaFile(beforeAfter, "unused.mov", sourceId).writeSync("unused");
+    const originalFiles = new Map(storage.files);
+    vi.mocked(randomUUID).mockReturnValueOnce(sourceId).mockReturnValueOnce(secondDraftId);
+    const { draftId, draft, source } = await duplicateTemplateDraft(beforeAfter, sourceId, " Copy ");
+    expect(draftId).toBe(secondDraftId);
+    expect(draft.name).toBe("Copy");
+    expect(draft.textOverrides).toEqual(edits.textOverrides);
+    expect(draft.missingSlots).toEqual([]);
+    expect(draft.missingMusic).toBe(false);
+    const destination = new Directory(storage.document, "StackReelDraftInstances", beforeAfter.id, draftId);
+    for (const [asset, file, copied] of [
+      [edits.clips[before.id], beforeFile, draft.clips[before.id]],
+      [edits.clips[after.id], afterFile, draft.clips[after.id]],
+      [edits.music, musicFile, draft.music],
+    ] as const) {
+      const expected = new File(destination, file.name);
+      expect(copied).toEqual({ ...asset, uri: expected.uri });
+      expect(expected.textSync()).toBe(file.name);
+    }
+    expect(source).not.toBeNull();
+    expect(source).toBe(createTemplateSource(beforeAfter, draft.clips, draft.textOverrides, draft.music));
+    expect(source).not.toContain(original.uri + "/");
+    expect(destination.list()).toHaveLength(4);
+    for (const [uri, bytes] of originalFiles) expect(storage.files.get(uri)).toBe(bytes);
+    expect(loadTemplateDraft(beforeAfter, draftId)).toEqual(draft);
+
+    const removedId = deleteSource ? sourceId : draftId;
+    const survivorId = deleteSource ? draftId : sourceId;
+    const survivor = loadTemplateDraft(beforeAfter, survivorId)!;
+    const removed = loadTemplateDraft(beforeAfter, removedId)!;
+    saveTemplateDraft(beforeAfter, { ...removed, ...clearTemplateVideoSlot(removed, before.id) }, removedId);
+    deleteTemplateDraft(beforeAfter, removedId);
+    expect(listTemplateDraftIds(beforeAfter)).toEqual([survivorId]);
+    expect(loadTemplateDraft(beforeAfter, survivorId)).toEqual(survivor);
+    for (const asset of [...Object.values(survivor.clips), survivor.music!]) {
+      const file = new File(asset.uri);
+      expect(file.textSync()).toBe(file.name);
+    }
+  });
+
+  it("copies a shared basename once and keeps the copy undiscoverable while staging", async () => {
+    const { edits, beforeFile } = fixture(firstDraftId);
+    const shared = {
+      ...edits,
+      clips: { ...edits.clips, [after.id]: { ...edits.clips[after.id]!, uri: beforeFile.uri } },
+      music: { ...edits.music, uri: beforeFile.uri },
+    };
+    saveTemplateDraft(beforeAfter, shared, firstDraftId);
+    const copy = vi.spyOn(File.prototype, "copy").mockImplementation(async function (this: File, target) {
+      new File(target.uri).writeSync(this.textSync());
+      expect(listTemplateDraftIds(beforeAfter)).toEqual([firstDraftId]);
+    });
+    const { draftId, draft } = await duplicateTemplateDraft(beforeAfter, firstDraftId, "Shared copy");
+    expect(copy).toHaveBeenCalledTimes(1);
+    const uri = new File(
+      new Directory(storage.document, "StackReelDraftInstances", beforeAfter.id, draftId),
+      beforeFile.name,
+    ).uri;
+    expect(draft.clips[before.id]?.uri).toBe(uri);
+    expect(draft.clips[after.id]?.uri).toBe(uri);
+    expect(draft.music?.uri).toBe(uri);
+  });
+
+  it("retains missing media settings and unsafe references without accessing unsafe paths", async () => {
+    const { edits, beforeFile, afterFile, musicFile } = fixture(firstDraftId);
+    saveTemplateDraft(beforeAfter, edits, firstDraftId);
+    const manifest = new File(beforeFile.parentDirectory, "draft-1.json");
+    const stored = JSON.parse(manifest.textSync());
+    stored.clips[after.id].file = "../elsewhere.mov";
+    stored.extraSetting = "preserved";
+    manifest.writeSync(JSON.stringify(stored));
+    beforeFile.delete();
+    musicFile.delete();
+    const reads = vi.spyOn(File.prototype, "exists", "get");
+    const copy = vi.spyOn(File.prototype, "copy");
+    const { draftId, draft, source } = await duplicateTemplateDraft(beforeAfter, firstDraftId, "Partial");
+    expect(copy).not.toHaveBeenCalled();
+    expect(reads.mock.contexts).not.toContainEqual(
+      expect.objectContaining({ uri: expect.stringContaining("elsewhere") }),
+    );
+    expect(source).toBeNull();
+    expect(draft).toMatchObject({
+      missingSlots: [before.id, after.id],
+      missingMusic: true,
+      textOverrides: edits.textOverrides,
+    });
+    const destination = new Directory(storage.document, "StackReelDraftInstances", beforeAfter.id, draftId);
+    const saved = new File(destination, "draft-1.json");
+    expect(JSON.parse(saved.textSync())).toEqual({ ...stored, name: "Partial" });
+    expect(afterFile.exists).toBe(true);
+    for (const file of [beforeFile, musicFile]) new File(destination, file.name).writeSync("recovered");
+    expect(loadTemplateDraft(beforeAfter, draftId)).toMatchObject({
+      clips: { [before.id]: { ...edits.clips[before.id], uri: new File(destination, beforeFile.name).uri } },
+      missingSlots: [after.id],
+      missingMusic: false,
+    });
+    expect(beforeFile.exists || musicFile.exists).toBe(false);
+  });
+
+  it.each(["media copy", "preview", "manifest"])("rolls back a failed %s and allows retry", async (step) => {
+    const { edits } = fixture(firstDraftId);
+    saveTemplateDraft(beforeAfter, edits, firstDraftId);
+    const files = new Map(storage.files);
+    const directories = new Set(storage.directories);
+    if (step === "media copy") {
+      vi.spyOn(File.prototype, "copy")
+        .mockImplementationOnce(async function (this: File, target) {
+          new File(target.uri).writeSync(this.textSync());
+        })
+        .mockImplementationOnce(async (target) => {
+          new File(target.uri).writeSync("partial");
+          throw new Error("Interrupted copy");
+        });
+    } else if (step === "preview") {
+      vi.spyOn(templateEditor, "createTemplateSource").mockImplementationOnce(() => {
+        throw new Error("Invalid preview");
+      });
+    } else {
+      storage.interruptMove = true;
+    }
+    await expect(duplicateTemplateDraft(beforeAfter, firstDraftId, "Copy")).rejects.toThrow();
+    expect(storage.files).toEqual(files);
+    expect(storage.directories).toEqual(directories);
+    expect(listTemplateDraftIds(beforeAfter)).toEqual([firstDraftId]);
+    storage.interruptMove = false;
+    const copy = await duplicateTemplateDraft(beforeAfter, firstDraftId, "Copy");
+    expect(loadTemplateDraft(beforeAfter, copy.draftId)).toEqual(copy.draft);
+  });
+
+  it("rejects a blank name or unreadable latest manifest before allocating a destination", async () => {
+    const { edits, beforeFile } = fixture(firstDraftId);
+    saveTemplateDraft(beforeAfter, edits, firstDraftId);
+    await expect(duplicateTemplateDraft(beforeAfter, firstDraftId, "  ")).rejects.toThrow("name");
+    new File(beforeFile.parentDirectory, "draft-2.json").writeSync("broken");
+    const files = new Map(storage.files);
+    const directories = new Set(storage.directories);
+    await expect(duplicateTemplateDraft(beforeAfter, firstDraftId, "Copy")).rejects.toThrow();
+    expect(storage.files).toEqual(files);
+    expect(storage.directories).toEqual(directories);
+  });
 });
 
 describe("template draft storage", () => {

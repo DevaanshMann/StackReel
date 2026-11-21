@@ -16,12 +16,14 @@ import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
 import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
+import { nextDraftName } from "./draft-names";
 import {
   clearTemplateMusic,
   clearTemplateVideoSlot,
   commitTemplateDraftUpdate,
   createDraftMediaFile,
   deleteTemplateDraft,
+  duplicateTemplateDraft,
   listTemplateDraftIds,
   loadTemplateDraft,
   removeDraftFile,
@@ -71,6 +73,7 @@ type Operation =
   | SlotEdit
   | SlotSwap
   | TextEdit
+  | { kind: "duplicate"; templateId: string; draftId: string }
   | { kind: "clear-video" | "import-music" | "remove-music" | "share" | "save-photos" | "rename" | "delete" }
   | ExportJob;
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
@@ -98,14 +101,6 @@ function getEditorDraft(drafts: TemplateDrafts | null, editor: Editor) {
   return editor.kind === "template"
     ? (drafts?.[editor.template.id]?.[editor.draftId] ?? emptyTemplateDraft)
     : emptyTemplateDraft;
-}
-
-function nextDraftName(template: MobileTemplate, siblings: Readonly<Record<string, TemplateDraft>>) {
-  const names = new Set(Object.values(siblings).map((draft) => (draft.name ?? template.name).toLowerCase()));
-  if (!names.size) return template.name;
-  let number = 2;
-  while (names.has(`${template.name} ${number}`.toLowerCase())) number++;
-  return `${template.name} ${number}`;
 }
 
 export default function App() {
@@ -246,13 +241,32 @@ export default function App() {
   function createDraft(template: MobileTemplate, slots: TemplateVideoSlot[]) {
     if (editor.kind !== "home" || activeOperation.current || !isCurrentScreen()) return;
     const next: TemplateEditor = { kind: "template", template, slots, draftId: randomUUID(), home: editor };
-    const name = nextDraftName(template, templateDrafts?.[template.id] ?? {});
+    const name = nextDraftName(template.name, templateDrafts?.[template.id] ?? {});
     try {
       updateTemplateDraft(next, { ...emptyTemplateDraft, name });
       navigate(next);
       AccessibilityInfo.announceForAccessibilityWithOptions(`Created ${name}.`, { queue: true });
     } catch {
       Alert.alert("Couldn’t create the draft", "Try again from Templates.");
+    }
+  }
+
+  async function duplicateDraft(template: MobileTemplate, draftId: string) {
+    const siblings = templateDrafts?.[template.id];
+    const original = siblings?.[draftId];
+    const operation = { kind: "duplicate", templateId: template.id, draftId } as const;
+    if (!siblings || !original || original.loadError || !begin(operation)) return;
+
+    try {
+      const name = nextDraftName(template.name, siblings, original.name ?? template.name);
+      const copy = await duplicateTemplateDraft(template, draftId, name);
+      if (!isCurrentOperation(operation)) return;
+      storeTemplateDraft({ template, draftId: copy.draftId }, { ...copy.draft, source: copy.source, outputUri: null });
+      AccessibilityInfo.announceForAccessibilityWithOptions(`Created ${name}.`, { queue: true });
+    } catch {
+      if (isCurrentOperation(operation)) Alert.alert("Couldn’t duplicate the draft", "Try again from Projects.");
+    } finally {
+      finish(operation);
     }
   }
 
@@ -623,7 +637,7 @@ export default function App() {
     return (
       <Screen
         page={editor.filter?.id ?? homeTab}
-        footer={templateDrafts && <HomeTabBar activeTab={homeTab} onSelect={selectHomeTab} />}
+        footer={templateDrafts && <HomeTabBar activeTab={homeTab} disabled={busy} onSelect={selectHomeTab} />}
       >
         {discoveryErrors.length > 0 && (
           <Text accessibilityRole="alert" style={textStyles.error}>
@@ -636,8 +650,10 @@ export default function App() {
           <TemplateProjects
             drafts={templateDrafts}
             filter={editor.filter}
+            duplicating={activity?.kind === "duplicate" ? activity : null}
             onShowAll={() => selectHomeTab("projects")}
             onOpenDraft={openDraft}
+            onDuplicateDraft={duplicateDraft}
             onRenameDraft={promptRenameDraft}
             onDeleteDraft={confirmDeleteDraft}
             onBrowseTemplates={() => selectHomeTab("templates")}
@@ -840,7 +856,15 @@ export default function App() {
   );
 }
 
-function HomeTabBar({ activeTab, onSelect }: { activeTab: HomeTab; onSelect: (tab: HomeTab) => void }) {
+function HomeTabBar({
+  activeTab,
+  disabled,
+  onSelect,
+}: {
+  activeTab: HomeTab;
+  disabled: boolean;
+  onSelect: (tab: HomeTab) => void;
+}) {
   return (
     <View style={styles.tabBar}>
       <View accessibilityRole="tablist" style={styles.tabRow}>
@@ -851,7 +875,8 @@ function HomeTabBar({ activeTab, onSelect }: { activeTab: HomeTab; onSelect: (ta
               key={id}
               testID={`home-tab-${id}`}
               accessibilityRole="tab"
-              accessibilityState={{ selected }}
+              accessibilityState={{ selected, disabled }}
+              disabled={disabled}
               onPress={() => onSelect(id)}
               style={({ pressed }) => [styles.tab, (selected || pressed) && styles.activeTab]}
             >
