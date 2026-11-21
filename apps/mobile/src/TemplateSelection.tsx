@@ -1,6 +1,7 @@
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { getDraftProjects } from "./draft-names";
 import { Action, textStyles } from "./Screen";
 import { trimTimeLabel } from "./TemplateTrim";
 import { VideoImportActions } from "./VideoImportActions";
@@ -83,29 +84,11 @@ export function TemplateProjects({
   onOpenDraft: (template: MobileTemplate, slots: TemplateVideoSlot[], draftId: string) => void;
   onDuplicateDraft: (template: MobileTemplate, draftId: string) => void;
   onRenameDraft: (template: MobileTemplate, draftId: string) => void;
-  onDeleteDraft: (template: MobileTemplate, draftId: string, label: string) => void;
+  onDeleteDraft: (template: MobileTemplate, draftId: string, deleteTarget: string) => void;
   onBrowseTemplates: () => void;
 }) {
   const busy = duplicating !== null;
-  const projects = choices.flatMap(({ template, slots }) => {
-    if (filter && filter.id !== template.id) return [];
-    const siblings = Object.entries(drafts[template.id] ?? {});
-    const idsByName = new Map<string, string[]>();
-    for (const [draftId, draft] of siblings) {
-      const name = (draft.name ?? template.name).toLowerCase();
-      const ids = idsByName.get(name);
-      if (ids) ids.push(draftId);
-      else idsByName.set(name, [draftId]);
-    }
-    for (const ids of idsByName.values()) ids.sort();
-    return siblings.map(([draftId, draft]) => {
-      const name = draft.name ?? template.name;
-      // Keep identically named cards and their confirmation dialogs distinguishable after relaunch.
-      const ids = idsByName.get(name.toLowerCase())!;
-      const label = ids.length > 1 ? `${name} (${ids.indexOf(draftId) + 1} of ${ids.length})` : name;
-      return { template, slots, draftId, draft, label };
-    });
-  });
+  const projects = getDraftProjects(choices, drafts, filter?.id);
 
   return (
     <>
@@ -121,7 +104,7 @@ export function TemplateProjects({
         </View>
       ) : (
         <View style={styles.list}>
-          {projects.map(({ template, slots, draftId, draft, label }) => {
+          {projects.map(({ template, slots, draftId, draft, label, deleteTarget }) => {
             const name = draft.name ?? template.name;
             const filled = slots.filter(({ id }) => draft.clips[id]).length;
             const missingMedia = draft.missingSlots.length > 0 || draft.missingMusic;
@@ -156,9 +139,9 @@ export function TemplateProjects({
                     )}
                     <Action
                       label="Delete"
-                      accessibilityLabel={`Delete ${label} draft`}
+                      accessibilityLabel={`Delete ${deleteTarget}`}
                       disabled={busy}
-                      onPress={() => onDeleteDraft(template, draftId, label)}
+                      onPress={() => onDeleteDraft(template, draftId, deleteTarget)}
                     />
                   </>
                 }
