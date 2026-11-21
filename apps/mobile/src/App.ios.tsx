@@ -293,13 +293,13 @@ export default function App() {
     );
   }
 
-  function confirmDeleteDraft(template: MobileTemplate, draftId: string) {
+  function confirmDeleteDraft(template: MobileTemplate, draftId: string, label: string) {
     const draft = templateDrafts?.[template.id]?.[draftId];
     const operation = { kind: "delete" } as const;
     if (!draft || !begin(operation)) return;
 
     Alert.alert(
-      `Delete ${draft.name ?? template.name} draft?`,
+      `Delete ${label} draft?`,
       "Your edits and StackReel’s copies of the videos and music will be removed. Your original files will stay in place.",
       [
         { text: "Cancel", style: "cancel", onPress: () => finish(operation) },
@@ -315,7 +315,7 @@ export default function App() {
               delete siblings[draftId];
               storeTemplateDrafts({ ...currentTemplateDrafts.current, [template.id]: siblings });
               removeCachedFile(draft.outputUri);
-              AccessibilityInfo.announceForAccessibilityWithOptions(`Deleted ${draft.name ?? template.name}.`, {
+              AccessibilityInfo.announceForAccessibilityWithOptions(`Deleted ${label}.`, {
                 queue: true,
               });
             } catch {

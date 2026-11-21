@@ -79,12 +79,27 @@ export function TemplateProjects({
   onShowAll: () => void;
   onOpenDraft: (template: MobileTemplate, slots: TemplateVideoSlot[], draftId: string) => void;
   onRenameDraft: (template: MobileTemplate, draftId: string) => void;
-  onDeleteDraft: (template: MobileTemplate, draftId: string) => void;
+  onDeleteDraft: (template: MobileTemplate, draftId: string, label: string) => void;
   onBrowseTemplates: () => void;
 }) {
   const projects = choices.flatMap(({ template, slots }) => {
     if (filter && filter.id !== template.id) return [];
-    return Object.entries(drafts[template.id] ?? {}).map(([draftId, draft]) => ({ template, slots, draftId, draft }));
+    const siblings = Object.entries(drafts[template.id] ?? {});
+    const idsByName = new Map<string, string[]>();
+    for (const [draftId, draft] of siblings) {
+      const name = (draft.name ?? template.name).toLowerCase();
+      const ids = idsByName.get(name);
+      if (ids) ids.push(draftId);
+      else idsByName.set(name, [draftId]);
+    }
+    for (const ids of idsByName.values()) ids.sort();
+    return siblings.map(([draftId, draft]) => {
+      const name = draft.name ?? template.name;
+      // Keep identically named cards and their confirmation dialogs distinguishable after relaunch.
+      const ids = idsByName.get(name.toLowerCase())!;
+      const label = ids.length > 1 ? `${name} (${ids.indexOf(draftId) + 1} of ${ids.length})` : name;
+      return { template, slots, draftId, draft, label };
+    });
   });
 
   return (
@@ -101,7 +116,7 @@ export function TemplateProjects({
         </View>
       ) : (
         <View style={styles.list}>
-          {projects.map(({ template, slots, draftId, draft }) => {
+          {projects.map(({ template, slots, draftId, draft, label }) => {
             const name = draft.name ?? template.name;
             const filled = slots.filter(({ id }) => draft.clips[id]).length;
             const missingMedia = draft.missingSlots.length > 0 || draft.missingMusic;
@@ -110,7 +125,7 @@ export function TemplateProjects({
             return (
               <GalleryCard
                 key={`${template.id}/${draftId}`}
-                label={name}
+                label={label}
                 details={draft.loadError ? "Couldn’t load draft" : details}
                 description={missingMedia ? "Missing media" : undefined}
                 onPress={() => onOpenDraft(template, slots, draftId)}
@@ -119,14 +134,14 @@ export function TemplateProjects({
                     {!draft.loadError && (
                       <Action
                         label="Rename"
-                        accessibilityLabel={`Rename ${name} draft`}
+                        accessibilityLabel={`Rename ${label} draft`}
                         onPress={() => onRenameDraft(template, draftId)}
                       />
                     )}
                     <Action
                       label="Delete"
-                      accessibilityLabel={`Delete ${name} draft`}
-                      onPress={() => onDeleteDraft(template, draftId)}
+                      accessibilityLabel={`Delete ${label} draft`}
+                      onPress={() => onDeleteDraft(template, draftId, label)}
                     />
                   </>
                 }
