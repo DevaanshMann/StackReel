@@ -1,3 +1,4 @@
+import { Id } from "@stackreel/template-schema";
 import { randomUUID } from "expo-crypto";
 import { Directory, File, Paths } from "expo-file-system";
 import {
@@ -23,9 +24,42 @@ export type TemplateDraftEdits = {
 const snapshotName = /^draft-(\d{1,15})\.json$/;
 const pendingName = "pending.json";
 const mediaName = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}(?:\.[a-z0-9]{1,10})?$/i;
+const draftUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 
-function draftDirectory(template: MobileTemplate) {
-  return new Directory(Paths.document, "StackReelDrafts", template.id);
+function templateDirectory(template: MobileTemplate, root: "StackReelDrafts" | "StackReelDraftInstances") {
+  return new Directory(Paths.document, root, Id.parse(template.id));
+}
+
+function draftDirectory(template: MobileTemplate, draftId: string) {
+  if (draftId === template.id) return templateDirectory(template, "StackReelDrafts");
+  if (!draftUuid.test(draftId)) throw new Error("Invalid draft ID.");
+  return new Directory(templateDirectory(template, "StackReelDraftInstances"), draftId);
+}
+
+function hasDiscoverableDraft(directory: Directory) {
+  try {
+    if (directory.list().some((entry) => entry instanceof File && snapshotName.test(entry.name))) return true;
+  } catch {
+    // Keep an inaccessible directory visible so its individual load can report the failure.
+    return true;
+  }
+  // Startup can find staging files left behind before a first commit or after a deletion.
+  pruneDraftFiles(directory, new Set());
+  return false;
+}
+
+export function listTemplateDraftIds(template: MobileTemplate): string[] {
+  const legacy = draftDirectory(template, template.id);
+  const ids = legacy.exists && hasDiscoverableDraft(legacy) ? [template.id] : [];
+  const instances = templateDirectory(template, "StackReelDraftInstances");
+  if (instances.exists) {
+    const saved = instances.list().flatMap((entry) => {
+      if (!(entry instanceof Directory) || entry.name === template.id || !draftUuid.test(entry.name)) return [];
+      return hasDiscoverableDraft(entry) ? [entry.name] : [];
+    });
+    ids.push(...saved.sort());
+  }
+  return ids;
 }
 
 function draftSnapshots(directory: Directory) {
@@ -52,20 +86,22 @@ function pruneDraftFiles(directory: Directory, keep: ReadonlySet<string>) {
         removeDraftFile(entry);
       }
     }
+    // Directory.delete() is recursive. Leave any unrecognized file or subdirectory in place.
+    if (keep.size === 0 && directory.list().length === 0) directory.delete();
   } catch {
     // Cleanup must not turn a committed save into a failed edit.
   }
 }
 
-export function createDraftMediaFile(template: MobileTemplate, importedName: string) {
-  const directory = draftDirectory(template);
+export function createDraftMediaFile(template: MobileTemplate, importedName: string, draftId = template.id) {
+  const directory = draftDirectory(template, draftId);
   directory.create({ intermediates: true, idempotent: true });
   const extension = /\.[a-z0-9]{1,10}$/i.exec(importedName)?.[0] ?? "";
   return new File(directory, `${randomUUID()}${extension.toLowerCase()}`);
 }
 
-export function deleteTemplateDraft(template: MobileTemplate) {
-  const directory = draftDirectory(template);
+export function deleteTemplateDraft(template: MobileTemplate, draftId = template.id) {
+  const directory = draftDirectory(template, draftId);
   if (!directory.exists) return;
 
   // Delete the current snapshot last so an interrupted deletion cannot restore an older revision.
@@ -87,11 +123,11 @@ function commitDraftManifest(directory: Directory, revision: number, manifest: u
   return next.name;
 }
 
-export function renameTemplateDraft(template: MobileTemplate, name: string) {
+export function renameTemplateDraft(template: MobileTemplate, name: string, draftId = template.id) {
   const trimmedName = name.trim();
   if (!trimmedName) throw new Error("Enter a name for the draft.");
 
-  const directory = draftDirectory(template);
+  const directory = draftDirectory(template, draftId);
   const snapshots = draftSnapshots(directory);
   const snapshot = snapshots.at(-1);
   if (!snapshot) throw new Error("The saved draft is unavailable.");
@@ -105,8 +141,9 @@ export function renameTemplateDraft(template: MobileTemplate, name: string) {
 export function saveTemplateDraft(
   template: MobileTemplate,
   { name, clips, textOverrides, music, missingSlots = [], missingMusic = false }: TemplateDraftEdits,
+  draftId = template.id,
 ) {
-  const directory = draftDirectory(template);
+  const directory = draftDirectory(template, draftId);
   directory.create({ intermediates: true, idempotent: true });
   const snapshot = draftSnapshots(directory).at(-1);
   // Read the current snapshot before writing or pruning so an unreadable draft stays recoverable.
@@ -154,10 +191,11 @@ export function saveTemplateDraft(
 export function commitTemplateDraftUpdate(
   template: MobileTemplate,
   draft: TemplateDraftEdits & { source: string | null; outputUri: string | null },
+  draftId = template.id,
 ) {
   const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
   const outputUri = source === draft.source ? draft.outputUri : null;
-  saveTemplateDraft(template, draft);
+  saveTemplateDraft(template, draft, draftId);
   return { source, outputUri };
 }
 
@@ -215,8 +253,8 @@ function readAsset(value: unknown, directory: Directory, keep: Set<string>) {
   };
 }
 
-export function loadTemplateDraft(template: MobileTemplate) {
-  const directory = draftDirectory(template);
+export function loadTemplateDraft(template: MobileTemplate, draftId = template.id) {
+  const directory = draftDirectory(template, draftId);
   if (!directory.exists) return null;
   const snapshot = draftSnapshots(directory).at(-1);
   const keep = new Set<string>();

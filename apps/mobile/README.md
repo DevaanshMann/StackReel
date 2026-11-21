@@ -56,16 +56,17 @@ the clip’s audio when present.
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
 
-You can make several reels from the same template. StackReel saves each draft on your device as you edit.
-Open the **Projects** tab to see your drafts and
-how many videos each one has. Tap a draft to resume with its videos, trims, framing, edited text, and music.
+You can make several reels from the same template. Open a template and make an edit to save your first draft.
+To start another, go back to **Templates** and tap **New draft** on that template’s card.
+Open **Projects** to see each reel by name and how many video slots it has filled. Tap a reel to resume with
+its own videos, trims, framing, edited text, and music, even after relaunching the app.
 Tap **Rename** to give a saved draft a name you can recognize in Projects. The template name is shown below it.
 Tap **Delete** beside a draft and confirm to remove its edits and imported media copies. Your other drafts and the
 original files stay in place.
 If an imported video is missing, choose a replacement from Photos or Files or clear its slot. Export again after
 relaunch, or use **Save to Files** in the share sheet to keep a finished MP4.
-If StackReel can’t reopen a draft, the recovery screen preserves its saved edits and media copies. To start fresh,
-delete the draft from **Projects** and open the template again.
+If StackReel can’t reopen a draft, the recovery screen preserves its saved edits and media copies. You can
+start a new reel from **Templates** or delete the unreadable draft from **Projects**.
 
 ## Run on iOS
 
@@ -137,7 +138,7 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     relaunch StackReel. Reopen both drafts from **Projects** and verify that their videos and edits are restored
     independently. Check that **Back to projects**
     returns to the list. Preview and export a restored template. In a test installation, remove one imported copy
-    from the app’s `StackReelDrafts` documents folder. Relaunch, check that **Projects** marks the draft as missing
+    from that draft’s folder in the app’s Documents directory. Relaunch, check that **Projects** marks the draft as missing
     media, and confirm the editor prompts for a replacement while the other edits remain available.
 11. In **Projects**, tap **Delete** beside a draft. Cancel and check that the draft still opens. Confirm deletion,
     relaunch, and verify that the draft is gone and the other draft still opens. Check that the original files are
@@ -157,17 +158,17 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     Verify that **After** is still empty, the other edits are present, and the original video is still available
     in Photos or Files. Fill **After** and check that preview returns and a new export enables sharing.
 14. In a test installation with **Hook & Reveal**, leave **Your hook shot** empty and fill **B-roll** and
-    **The reveal**. Remove B-roll’s imported copy from the app’s `StackReelDrafts` documents folder and relaunch.
+    **The reveal**. Remove B-roll’s imported copy from that draft’s folder and relaunch.
     Confirm that the missing **B-roll** slot offers **Clear video** and that the ordered Photos button is absent.
     Clear **B-roll**, reopen the draft from **Projects**, and verify that the warning is gone. Check that
     **Choose videos from Photos** lists **Your hook shot** followed by **B-roll** and leaves **The reveal** filled.
-15. In a test installation with a complete draft and imported music, remove the imported music copy from the app’s
-    `StackReelDrafts` documents folder and relaunch. Reopen the draft from **Projects** and check that
+15. In a test installation with a complete draft and imported music, remove the imported music copy from that
+    draft’s folder and relaunch. Reopen the draft from **Projects** and check that
     **Choose music from Files** and **Remove missing music** are both available. Export the draft, tap
     **Remove missing music**, and check that the warning clears and **Share MP4** is still available. Relaunch and
     verify that the warning stays gone and the videos and text edits are still present.
-
-16. Make two **Before / After** drafts with different names, clips, and captions. Quit and relaunch StackReel.
+16. Edit a **Before / After** reel, return to **Templates**, and tap **New draft** on **Before / After**.
+    Give the two drafts different names, clips, and captions. Quit and relaunch StackReel.
     Open each reel from **Projects** and check its name, caption, and clips in preview. Delete one reel, relaunch,
     and export the surviving reel. Check that the deleted draft is gone and the exported MP4 contains the survivor’s edits.
 

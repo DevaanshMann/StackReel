@@ -22,6 +22,7 @@ import {
   commitTemplateDraftUpdate,
   createDraftMediaFile,
   deleteTemplateDraft,
+  listTemplateDraftIds,
   loadTemplateDraft,
   removeDraftFile,
   renameTemplateDraft,
@@ -50,20 +51,27 @@ type TemplateDraft = TemplateDraftEdits & {
   missingMusic: boolean;
   loadError?: string;
 };
-type TemplateDrafts = Readonly<Record<string, TemplateDraft>>;
-type TemplateEditor = { kind: "template"; template: MobileTemplate; slots: TemplateVideoSlot[] };
-type Editor = { kind: "single" } | TemplateEditor;
+type TemplateDrafts = Readonly<Record<string, Readonly<Record<string, TemplateDraft>>>>;
+type Home = { kind: "home"; tab: HomeTab; filter?: MobileTemplate };
+type TemplateEditor = {
+  kind: "template";
+  template: MobileTemplate;
+  draftId: string;
+  slots: TemplateVideoSlot[];
+  home: Home;
+};
+type Editor = Home | { kind: "single"; home: Home } | TemplateEditor;
 type ImportOperation = { kind: "import"; source: VideoPickerSource; slotId?: string };
-type SlotEdit = { kind: "trim" | "reframe"; template: MobileTemplate; slot: TemplateVideoSlot; clip: TemplateClip };
+type SlotEdit = { kind: "trim" | "reframe"; editor: TemplateEditor; slot: TemplateVideoSlot; clip: TemplateClip };
 type SlotSwap = { kind: "swap"; editor: TemplateEditor; draft: TemplateDraft };
-type TextEdit = { kind: "text"; template: MobileTemplate; textOverrides: TemplateTextOverrides };
+type TextEdit = { kind: "text"; editor: TemplateEditor; textOverrides: TemplateTextOverrides };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
 type Operation =
   | ImportOperation
   | SlotEdit
   | SlotSwap
   | TextEdit
-  | { kind: "clear-video" | "import-music" | "remove-music" | "share" | "save-photos" }
+  | { kind: "clear-video" | "import-music" | "remove-music" | "share" | "save-photos" | "rename" | "delete" }
   | ExportJob;
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
 type Feedback = { kind: "error" | "status"; message: string; slotId?: string; scope?: "music" | "swap" };
@@ -84,39 +92,70 @@ const emptyTemplateDraft: TemplateDraft = {
   missingMusic: false,
 };
 
+const firstScreen: Home = { kind: "home", tab: "templates" };
+
+function getEditorDraft(drafts: TemplateDrafts | null, editor: Editor) {
+  return editor.kind === "template"
+    ? (drafts?.[editor.template.id]?.[editor.draftId] ?? emptyTemplateDraft)
+    : emptyTemplateDraft;
+}
+
+function nextDraftName(template: MobileTemplate, siblings: Readonly<Record<string, TemplateDraft>>) {
+  const names = new Set(Object.values(siblings).map((draft) => (draft.name ?? template.name).toLowerCase()));
+  if (!names.size) return template.name;
+  let number = 2;
+  while (names.has(`${template.name} ${number}`.toLowerCase())) number++;
+  return `${template.name} ${number}`;
+}
+
 export default function App() {
   const mounted = useRef(false);
   const activeOperation = useRef<Operation | null>(null);
-  const currentEditor = useRef<Editor | null>(null);
+  const currentEditor = useRef<Editor>(firstScreen);
   const currentTemplateDrafts = useRef<TemplateDrafts | null>(null);
-  const [homeTab, setHomeTab] = useState<HomeTab>("templates");
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const [discoveryErrors, setDiscoveryErrors] = useState<string[]>([]);
+  const [editor, setEditor] = useState<Editor>(firstScreen);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [singleDraft, setSingleDraft] = useState<SingleDraft>({ clip: null, outputUri: null });
   const [templateDrafts, setTemplateDrafts] = useState<TemplateDrafts | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
-  const template = editor?.kind === "template" ? editor.template : null;
+  const template = editor.kind === "template" ? editor.template : null;
   const textFields = template ? getTemplateTextFields(template) : [];
-  const templateDraft = template ? (templateDrafts?.[template.id] ?? emptyTemplateDraft) : emptyTemplateDraft;
+  const templateDraft = getEditorDraft(templateDrafts, editor);
   const source = template ? templateDraft.source : (singleDraft.clip?.source ?? null);
   const outputUri = template ? templateDraft.outputUri : singleDraft.outputUri;
   const canvas = template?.canvas ?? singleClipCanvas;
   const busy = activity !== null;
 
   useEffect(() => {
-    const drafts: Record<string, TemplateDraft> = {};
+    const drafts: Record<string, Record<string, TemplateDraft>> = {};
+    const failed: string[] = [];
     for (const template of mobileTemplates) {
+      const siblings: Record<string, TemplateDraft> = {};
+      drafts[template.id] = siblings;
+      let ids: string[];
       try {
-        const saved = loadTemplateDraft(template);
-        if (saved) {
-          const source = createTemplateSource(template, saved.clips, saved.textOverrides, saved.music);
-          drafts[template.id] = { ...saved, source, outputUri: null };
-        }
+        ids = listTemplateDraftIds(template);
       } catch {
-        drafts[template.id] = { ...emptyTemplateDraft, loadError: "Couldn’t reopen the saved draft." };
+        failed.push(template.name);
+        // The original single-draft path can still be opened directly.
+        ids = [template.id];
+      }
+      for (const draftId of ids) {
+        try {
+          const saved = loadTemplateDraft(template, draftId);
+          if (saved) {
+            const source = createTemplateSource(template, saved.clips, saved.textOverrides, saved.music);
+            siblings[draftId] = { ...saved, source, outputUri: null };
+          }
+        } catch {
+          const name = draftId === template.id ? template.name : `${template.name} (${draftId.slice(0, 8)})`;
+          siblings[draftId] = { ...emptyTemplateDraft, name, loadError: "Couldn’t reopen the saved draft." };
+        }
       }
     }
+    setDiscoveryErrors(failed);
     storeTemplateDrafts(drafts);
   }, []);
 
@@ -142,11 +181,19 @@ export default function App() {
     };
   }, []);
 
+  function isCurrentScreen() {
+    if (!mounted.current || currentEditor.current !== editor) return false;
+    // Ignore queued handlers from before a synchronous commit or a change to the Projects list.
+    if (editor.kind === "home") return currentTemplateDrafts.current === templateDrafts;
+    return getEditorDraft(currentTemplateDrafts.current, editor) === templateDraft;
+  }
+
+  function isCurrentOperation(operation: Operation) {
+    return activeOperation.current === operation && isCurrentScreen();
+  }
+
   function begin(operation: Operation) {
-    if (!mounted.current || activeOperation.current || currentEditor.current !== editor) return false;
-    // A queued handler can still see the old render after a synchronous save has changed the draft.
-    if (template && (currentTemplateDrafts.current?.[template.id] ?? emptyTemplateDraft) !== templateDraft)
-      return false;
+    if (activeOperation.current || !isCurrentScreen()) return false;
     activeOperation.current = operation;
     setActivity(operation.kind === "export" ? { ...operation, progress: 0 } : operation);
     setFeedback(null);
@@ -159,11 +206,15 @@ export default function App() {
     setActivity(null);
   }
 
-  function navigate(next: Editor | null) {
+  function navigate(next: Editor) {
     if (!mounted.current || activeOperation.current || currentEditor.current !== editor) return;
     currentEditor.current = next;
     setFeedback(null);
     setEditor(next);
+  }
+
+  function selectHomeTab(tab: HomeTab) {
+    navigate({ kind: "home", tab });
   }
 
   function storeTemplateDrafts(drafts: TemplateDrafts) {
@@ -171,27 +222,56 @@ export default function App() {
     setTemplateDrafts(drafts);
   }
 
-  function storeTemplateDraft(template: MobileTemplate, draft: TemplateDraft) {
-    storeTemplateDrafts({ ...currentTemplateDrafts.current, [template.id]: draft });
+  function storeTemplateDraft(
+    { template, draftId }: Pick<TemplateEditor, "template" | "draftId">,
+    draft: TemplateDraft,
+  ) {
+    const siblings = { ...currentTemplateDrafts.current?.[template.id], [draftId]: draft };
+    storeTemplateDrafts({ ...currentTemplateDrafts.current, [template.id]: siblings });
+  }
+
+  function openDraft(template: MobileTemplate, slots: TemplateVideoSlot[], draftId: string) {
+    if (editor.kind !== "home" || !isCurrentScreen() || !templateDrafts?.[template.id]?.[draftId]) return;
+    navigate({ kind: "template", template, slots, draftId, home: editor });
   }
 
   function openTemplate(template: MobileTemplate, slots: TemplateVideoSlot[]) {
-    navigate({ kind: "template", template, slots });
+    if (editor.kind !== "home" || activeOperation.current || !isCurrentScreen()) return;
+    const ids = Object.keys(templateDrafts?.[template.id] ?? {});
+    if (ids.length > 1) navigate({ kind: "home", tab: "projects", filter: template });
+    else if (ids[0]) openDraft(template, slots, ids[0]);
+    else navigate({ kind: "template", template, slots, draftId: randomUUID(), home: editor });
   }
 
-  function promptRenameDraft(template: MobileTemplate) {
-    const draft = templateDrafts?.[template.id];
-    if (!draft || draft.loadError) return;
+  function createDraft(template: MobileTemplate, slots: TemplateVideoSlot[]) {
+    if (editor.kind !== "home" || activeOperation.current || !isCurrentScreen()) return;
+    const next: TemplateEditor = { kind: "template", template, slots, draftId: randomUUID(), home: editor };
+    const name = nextDraftName(template, templateDrafts?.[template.id] ?? {});
+    try {
+      updateTemplateDraft(next, { ...emptyTemplateDraft, name });
+      navigate(next);
+      AccessibilityInfo.announceForAccessibilityWithOptions(`Created ${name}.`, { queue: true });
+    } catch {
+      Alert.alert("Couldn’t create the draft", "Try again from Templates.");
+    }
+  }
+
+  function promptRenameDraft(template: MobileTemplate, draftId: string) {
+    const draft = templateDrafts?.[template.id]?.[draftId];
+    const operation = { kind: "rename" } as const;
+    if (!draft || draft.loadError || !begin(operation)) return;
     const currentName = draft.name ?? template.name;
 
     Alert.prompt(
       "Rename draft",
       undefined,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Cancel", style: "cancel", onPress: () => finish(operation) },
         {
           text: "Save",
           onPress: (input) => {
+            if (!isCurrentOperation(operation)) return;
+            finish(operation);
             const name = input?.trim();
             if (!name) {
               Alert.alert("Enter a name for the draft.");
@@ -199,8 +279,9 @@ export default function App() {
             }
             if (name === currentName) return;
             try {
-              renameTemplateDraft(template, name);
-              storeTemplateDraft(template, { ...draft, name });
+              renameTemplateDraft(template, name, draftId);
+              storeTemplateDraft({ template, draftId }, { ...draft, name });
+              AccessibilityInfo.announceForAccessibilityWithOptions(`Renamed draft to ${name}.`, { queue: true });
             } catch {
               Alert.alert("Couldn’t rename the draft", "Try again from Projects.");
             }
@@ -212,25 +293,31 @@ export default function App() {
     );
   }
 
-  function confirmDeleteDraft(template: MobileTemplate) {
-    const draft = templateDrafts?.[template.id];
-    if (!draft) return;
+  function confirmDeleteDraft(template: MobileTemplate, draftId: string) {
+    const draft = templateDrafts?.[template.id]?.[draftId];
+    const operation = { kind: "delete" } as const;
+    if (!draft || !begin(operation)) return;
 
     Alert.alert(
       `Delete ${draft.name ?? template.name} draft?`,
       "Your edits and StackReel’s copies of the videos and music will be removed. Your original files will stay in place.",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "Cancel", style: "cancel", onPress: () => finish(operation) },
         {
           text: "Delete",
           style: "destructive",
           onPress: () => {
+            if (!isCurrentOperation(operation)) return;
+            finish(operation);
             try {
-              deleteTemplateDraft(template);
-              const remaining = { ...currentTemplateDrafts.current };
-              delete remaining[template.id];
-              storeTemplateDrafts(remaining);
+              deleteTemplateDraft(template, draftId);
+              const siblings = { ...currentTemplateDrafts.current?.[template.id] };
+              delete siblings[draftId];
+              storeTemplateDrafts({ ...currentTemplateDrafts.current, [template.id]: siblings });
               removeCachedFile(draft.outputUri);
+              AccessibilityInfo.announceForAccessibilityWithOptions(`Deleted ${draft.name ?? template.name}.`, {
+                queue: true,
+              });
             } catch {
               Alert.alert("Couldn’t delete the draft", "Try again from Projects.");
             }
@@ -240,19 +327,19 @@ export default function App() {
     );
   }
 
-  function updateTemplateDraft(template: MobileTemplate, draft: TemplateDraft) {
+  function updateTemplateDraft(editor: TemplateEditor, draft: TemplateDraft) {
     if (draft.loadError) throw new Error(draft.loadError);
-    const { source, outputUri } = commitTemplateDraftUpdate(template, draft);
-    storeTemplateDraft(template, { ...draft, source, outputUri });
+    const edits = { ...draft, name: draft.name ?? editor.template.name };
+    const { source, outputUri } = commitTemplateDraftUpdate(editor.template, edits, editor.draftId);
+    storeTemplateDraft(editor, { ...edits, source, outputUri });
     if (outputUri !== draft.outputUri) removeCachedFile(draft.outputUri);
   }
 
   function confirmClearVideo(slot: TemplateVideoSlot) {
-    if (editor?.kind !== "template") return;
+    if (editor.kind !== "template") return;
     if (!Object.hasOwn(templateDraft.clips, slot.id) && !templateDraft.missingSlots.includes(slot.id)) return;
     const operation = { kind: "clear-video" } as const;
     if (!begin(operation)) return;
-    const { template } = editor;
 
     Alert.alert(
       `Clear video for ${slot.label}?`,
@@ -263,11 +350,9 @@ export default function App() {
           text: "Clear video",
           style: "destructive",
           onPress: () => {
-            if (activeOperation.current !== operation) return;
+            if (!isCurrentOperation(operation)) return;
             try {
-              if (currentEditor.current !== editor || currentTemplateDrafts.current?.[template.id] !== templateDraft)
-                return;
-              updateTemplateDraft(template, { ...templateDraft, ...clearTemplateVideoSlot(templateDraft, slot.id) });
+              updateTemplateDraft(editor, { ...templateDraft, ...clearTemplateVideoSlot(templateDraft, slot.id) });
             } catch (cause) {
               setFeedback({
                 kind: "error",
@@ -285,40 +370,38 @@ export default function App() {
 
   function openSlotEdit(kind: SlotEdit["kind"], slot: TemplateVideoSlot) {
     const clip = templateDraft.clips[slot.id];
-    if (template && clip) begin({ kind, template, slot, clip });
+    if (editor.kind === "template" && clip) begin({ kind, editor, slot, clip });
   }
 
   function applySlotEdit(operation: SlotEdit, update: (clip: TemplateClip) => TemplateClip) {
-    if (activeOperation.current !== operation) return;
-    const { template, slot, clip } = operation;
-    const draft = templateDrafts?.[template.id];
-    if (!draft || draft.clips[slot.id] !== clip) {
+    if (!isCurrentOperation(operation)) return;
+    const { editor, slot, clip } = operation;
+    const draft = getEditorDraft(currentTemplateDrafts.current, editor);
+    if (draft.clips[slot.id] !== clip) {
       throw new Error("This slot changed. Close the editor and open it again.");
     }
 
     const updated = update(clip);
     if (updated !== clip) {
       const clips = { ...draft.clips, [slot.id]: updated };
-      updateTemplateDraft(template, { ...draft, clips });
+      updateTemplateDraft(editor, { ...draft, clips });
     }
     finish(operation);
   }
 
   function startSlotSwap(pair?: readonly [TemplateVideoSlot, TemplateVideoSlot]) {
-    if (editor?.kind !== "template") return;
+    if (editor.kind !== "template") return;
     const operation: SlotSwap = { kind: "swap", editor, draft: templateDraft };
     if (!begin(operation)) return;
     if (pair) applySlotSwap(operation, ...pair);
   }
 
   function applySlotSwap(operation: SlotSwap, first: TemplateVideoSlot, second: TemplateVideoSlot) {
-    if (activeOperation.current !== operation) return;
+    if (!isCurrentOperation(operation)) return;
     const { editor, draft } = operation;
-    const { template } = editor;
     try {
-      if (currentEditor.current !== editor || currentTemplateDrafts.current?.[template.id] !== draft) return;
       const clips = swapTemplateClips(draft.clips, first, second);
-      updateTemplateDraft(template, { ...draft, clips });
+      updateTemplateDraft(editor, { ...draft, clips });
     } catch (cause) {
       setFeedback({ kind: "error", scope: "swap", message: errorMessage("Couldn’t swap the clips.", cause) });
       return;
@@ -331,35 +414,36 @@ export default function App() {
   }
 
   function applyTextEdit(operation: TextEdit, textOverrides: TemplateTextOverrides) {
-    if (activeOperation.current !== operation) return;
-    const { template } = operation;
-    const draft = templateDrafts?.[template.id] ?? emptyTemplateDraft;
+    if (!isCurrentOperation(operation)) return;
+    const { editor } = operation;
+    const draft = getEditorDraft(currentTemplateDrafts.current, editor);
     if (draft.textOverrides !== operation.textOverrides) {
       throw new Error("This template text changed. Close the editor and open it again.");
     }
 
-    if (textOverrides !== draft.textOverrides) updateTemplateDraft(template, { ...draft, textOverrides });
+    if (textOverrides !== draft.textOverrides) updateTemplateDraft(editor, { ...draft, textOverrides });
     finish(operation);
   }
 
   async function selectTemplateVideos(slots: readonly TemplateVideoSlot[], source: VideoPickerSource) {
-    if (!template || !slots.length) return;
+    if (editor.kind !== "template" || !slots.length) return;
     const operation: ImportOperation = { kind: "import", source, ...(slots.length === 1 && { slotId: slots[0]!.id }) };
     if (!begin(operation)) return;
     try {
       await importTemplateVideos({
-        template,
+        template: editor.template,
+        draftId: editor.draftId,
         slots,
         source,
-        isCurrent: () => activeOperation.current === operation,
+        isCurrent: () => isCurrentOperation(operation),
         commit: (imported) => {
           const clips = { ...templateDraft.clips, ...imported };
           const missingSlots = templateDraft.missingSlots.filter((id) => !Object.hasOwn(imported, id));
-          updateTemplateDraft(template, { ...templateDraft, clips, missingSlots });
+          updateTemplateDraft(editor, { ...templateDraft, clips, missingSlots });
         },
       });
     } catch (cause) {
-      if (activeOperation.current === operation) {
+      if (isCurrentOperation(operation)) {
         if (cause instanceof SlotImportError) {
           setFeedback({ kind: "error", slotId: cause.slot.id, message: cause.message });
         } else {
@@ -380,16 +464,16 @@ export default function App() {
       const asset = await pickVideo(source);
       if (!asset) return;
       pickedUri = asset.uri;
-      if (activeOperation.current !== operation) return;
+      if (!isCurrentOperation(operation)) return;
       const metadata = await probeVideo(pickedUri);
-      if (activeOperation.current !== operation) return;
+      if (!isCurrentOperation(operation)) return;
       const clipSource = createClipSource(pickedUri, metadata);
       setSingleDraft({ clip: { name: asset.name, uri: pickedUri, source: clipSource }, outputUri: null });
       if (singleDraft.clip?.uri !== pickedUri) removeCachedFile(singleDraft.clip?.uri);
       removeCachedFile(outputUri);
       pickedUri = undefined;
     } catch (cause) {
-      if (activeOperation.current === operation) {
+      if (isCurrentOperation(operation)) {
         setFeedback({ kind: "error", message: errorMessage("Couldn’t import the video.", cause) });
       }
     } finally {
@@ -398,7 +482,8 @@ export default function App() {
     }
   }
 
-  async function selectMusic(template: MobileTemplate) {
+  async function selectMusic() {
+    if (editor.kind !== "template") return;
     const operation = { kind: "import-music" } as const;
     if (!begin(operation)) return;
     let pickedUri: string | undefined;
@@ -409,20 +494,19 @@ export default function App() {
       const [asset] = result.assets;
       if (!asset) throw new Error("Files did not return an audio file.");
       pickedUri = asset.uri;
-      if (activeOperation.current !== operation) return;
+      if (!isCurrentOperation(operation)) return;
 
       const metadata = await probeAudio(pickedUri);
-      if (activeOperation.current !== operation) return;
+      if (!isCurrentOperation(operation)) return;
 
-      const draft = templateDrafts?.[template.id] ?? emptyTemplateDraft;
       const music = createTemplateMusic(pickedUri, asset.name, metadata);
-      draftMedia = createDraftMediaFile(template, asset.name);
+      draftMedia = createDraftMediaFile(editor.template, asset.name, editor.draftId);
       await new File(pickedUri).move(draftMedia);
-      if (activeOperation.current !== operation) return;
-      updateTemplateDraft(template, { ...draft, music: { ...music, uri: draftMedia.uri }, missingMusic: false });
+      if (!isCurrentOperation(operation)) return;
+      updateTemplateDraft(editor, { ...templateDraft, music: { ...music, uri: draftMedia.uri }, missingMusic: false });
       draftMedia = undefined;
     } catch (cause) {
-      if (activeOperation.current === operation) {
+      if (isCurrentOperation(operation)) {
         setFeedback({ kind: "error", scope: "music", message: errorMessage("Couldn’t import the music.", cause) });
       }
     } finally {
@@ -432,12 +516,12 @@ export default function App() {
     }
   }
 
-  function removeMusic(template: MobileTemplate) {
-    const draft = templateDrafts?.[template.id];
+  function removeMusic() {
+    if (editor.kind !== "template") return;
     const operation = { kind: "remove-music" } as const;
-    if (!draft || (!draft.music && !draft.missingMusic) || !begin(operation)) return;
+    if ((!templateDraft.music && !templateDraft.missingMusic) || !begin(operation)) return;
     try {
-      updateTemplateDraft(template, clearTemplateMusic(draft));
+      updateTemplateDraft(editor, clearTemplateMusic(templateDraft));
     } catch (cause) {
       setFeedback({ kind: "error", scope: "music", message: errorMessage("Couldn’t remove the music.", cause) });
     } finally {
@@ -451,9 +535,9 @@ export default function App() {
     if (!begin(job)) return;
     try {
       const { uri } = await exportMP4(source, job.id);
-      if (activeOperation.current === job) {
-        if (template) {
-          storeTemplateDraft(template, { ...templateDraft, outputUri: uri });
+      if (isCurrentOperation(job)) {
+        if (editor.kind === "template") {
+          storeTemplateDraft(editor, { ...templateDraft, outputUri: uri });
         } else {
           setSingleDraft({ ...singleDraft, outputUri: uri });
         }
@@ -462,7 +546,7 @@ export default function App() {
         removeCachedFile(uri);
       }
     } catch (cause) {
-      if (activeOperation.current === job) {
+      if (isCurrentOperation(job)) {
         if (job.cancelling) setFeedback({ kind: "status", message: "Export cancelled." });
         else setFeedback({ kind: "error", message: errorMessage("Couldn’t export the MP4.", cause) });
       }
@@ -471,16 +555,16 @@ export default function App() {
     }
   }
 
-  async function requestCancel() {
+  async function requestCancel(exportId: string) {
     const job = activeOperation.current;
-    if (job?.kind !== "export" || job.cancelling) return;
+    if (job?.kind !== "export" || job.id !== exportId || job.cancelling || !isCurrentScreen()) return;
     job.cancelling = true;
     setFeedback(null);
     setActivity((current) => (current?.kind === "export" ? { ...current, cancelling: true } : current));
     try {
       await cancelExport(job.id);
     } catch (cause) {
-      if (activeOperation.current === job) {
+      if (isCurrentOperation(job)) {
         job.cancelling = false;
         setActivity((current) => (current?.kind === "export" ? { ...current, cancelling: false } : current));
         setFeedback({ kind: "error", message: errorMessage("Couldn’t cancel the export.", cause) });
@@ -493,9 +577,9 @@ export default function App() {
     if (!outputUri || !begin(operation)) return;
     try {
       if (!(await isAvailableAsync())) throw new Error("Sharing is unavailable on this device.");
-      if (activeOperation.current === operation) await shareAsync(outputUri, { UTI: "public.mpeg-4" });
+      if (isCurrentOperation(operation)) await shareAsync(outputUri, { UTI: "public.mpeg-4" });
     } catch (cause) {
-      if (activeOperation.current === operation) {
+      if (isCurrentOperation(operation)) {
         setFeedback({ kind: "error", message: errorMessage("Couldn’t share the MP4.", cause) });
       }
     } finally {
@@ -508,14 +592,14 @@ export default function App() {
     if (!outputUri || !begin(operation)) return;
 
     function reportResult(kind: Feedback["kind"], message: string) {
-      if (activeOperation.current !== operation) return;
+      if (!isCurrentOperation(operation)) return;
       setFeedback({ kind, message });
       AccessibilityInfo.announceForAccessibilityWithOptions(message, { queue: true });
     }
 
     try {
       const { granted, canAskAgain } = await requestPermissionsAsync(true);
-      if (activeOperation.current !== operation) return;
+      if (!isCurrentOperation(operation)) return;
       if (!granted) {
         reportResult(
           "error",
@@ -534,51 +618,59 @@ export default function App() {
     }
   }
 
-  if (!editor) {
+  if (editor.kind === "home") {
+    const homeTab = editor.tab;
     return (
-      <Screen page={homeTab} footer={templateDrafts && <HomeTabBar activeTab={homeTab} onSelect={setHomeTab} />}>
+      <Screen
+        page={editor.filter?.id ?? homeTab}
+        footer={templateDrafts && <HomeTabBar activeTab={homeTab} onSelect={selectHomeTab} />}
+      >
+        {discoveryErrors.length > 0 && (
+          <Text accessibilityRole="alert" style={textStyles.error}>
+            Couldn’t list all saved drafts for {discoveryErrors.join(", ")}. Reopen StackReel to try again.
+          </Text>
+        )}
         {!templateDrafts ? (
           <Text style={textStyles.muted}>Opening saved drafts…</Text>
         ) : homeTab === "projects" ? (
           <TemplateProjects
             drafts={templateDrafts}
-            onSelectTemplate={openTemplate}
+            filter={editor.filter}
+            onShowAll={() => selectHomeTab("projects")}
+            onOpenDraft={openDraft}
             onRenameDraft={promptRenameDraft}
             onDeleteDraft={confirmDeleteDraft}
-            onBrowseTemplates={() => setHomeTab("templates")}
+            onBrowseTemplates={() => selectHomeTab("templates")}
           />
         ) : (
-          <TemplateGallery onSelectTemplate={openTemplate} onSelectSingleClip={() => navigate({ kind: "single" })} />
+          <TemplateGallery
+            drafts={templateDrafts}
+            onSelectTemplate={openTemplate}
+            onNewDraft={createDraft}
+            onSelectSingleClip={() => navigate({ kind: "single", home: editor })}
+          />
         )}
       </Screen>
     );
   }
 
-  const fromProjects = homeTab === "projects";
+  const fromProjects = editor.home.tab === "projects";
   const backLabel = fromProjects ? "Back to projects" : "Back to templates";
-  if (template && templateDraft.loadError) {
+  if (editor.kind === "template" && templateDraft.loadError) {
     return (
-      <Screen page={template.id}>
+      <Screen page={editor.draftId}>
         <Text accessibilityRole="header" style={textStyles.heading}>
-          {template.name}
+          {templateDraft.name ?? editor.template.name}
         </Text>
         <Text accessibilityRole="alert" style={textStyles.error}>
           {templateDraft.loadError}
         </Text>
         <Text style={textStyles.body}>
-          To start over, delete this draft from Projects. Your original files will stay in place.
+          To keep this draft and start another, choose New draft on the template’s card in Templates. You can also
+          delete this draft from Projects.
         </Text>
-        {!fromProjects && (
-          <Action
-            label="Go to Projects"
-            onPress={() => {
-              setHomeTab("projects");
-              navigate(null);
-            }}
-            primary
-          />
-        )}
-        <Action label={backLabel} onPress={() => navigate(null)} />
+        {!fromProjects && <Action label="Go to Projects" onPress={() => selectHomeTab("projects")} primary />}
+        <Action label={backLabel} onPress={() => navigate({ ...editor.home })} />
       </Screen>
     );
   }
@@ -591,7 +683,7 @@ export default function App() {
   const editingText = activity?.kind === "text";
   const clip = singleDraft.clip;
   const editorScreen = (
-    <Screen page={template?.id ?? "single-clip"}>
+    <Screen page={editor.kind === "template" ? editor.draftId : "single-clip"}>
       {trimming && (
         <TemplateTrim
           slot={activity.slot}
@@ -606,15 +698,15 @@ export default function App() {
         <TemplateReframe
           slot={activity.slot}
           clip={activity.clip}
-          canvas={activity.template.canvas}
+          canvas={activity.editor.template.canvas}
           onApply={(reframe) =>
-            applySlotEdit(activity, (clip) => setTemplateClipReframe(clip, activity.template.canvas, reframe))
+            applySlotEdit(activity, (clip) => setTemplateClipReframe(clip, activity.editor.template.canvas, reframe))
           }
           onCancel={() => finish(activity)}
         />
       )}
       <View style={styles.navigation}>
-        <Action label={backLabel} onPress={() => navigate(null)} disabled={busy} />
+        <Action label={backLabel} onPress={() => navigate({ ...editor.home })} disabled={busy} />
       </View>
       <View style={styles.details}>
         <Text accessibilityRole="header" style={textStyles.heading}>
@@ -629,12 +721,12 @@ export default function App() {
           </Text>
         )}
       </View>
-      {template && textFields.length > 0 && (
+      {editor.kind === "template" && textFields.length > 0 && (
         <View style={styles.navigation}>
           <Action
             label="Edit text"
             testID="edit-template-text"
-            onPress={() => begin({ kind: "text", template, textOverrides: templateDraft.textOverrides })}
+            onPress={() => begin({ kind: "text", editor, textOverrides: templateDraft.textOverrides })}
             disabled={busy}
           />
         </View>
@@ -686,8 +778,8 @@ export default function App() {
           busy={busy}
           importing={activity?.kind === "import-music"}
           error={feedback?.scope === "music" ? feedback.message : undefined}
-          onSelect={() => selectMusic(editor.template)}
-          onRemove={() => removeMusic(editor.template)}
+          onSelect={selectMusic}
+          onRemove={removeMusic}
         />
       )}
       <View style={styles.actions}>
@@ -701,7 +793,7 @@ export default function App() {
             <ExportProgress percentage={Math.floor(activity.progress * 100)} />
             <Action
               label={activity.cancelling ? "Cancelling…" : "Cancel export"}
-              onPress={requestCancel}
+              onPress={() => requestCancel(activity.id)}
               disabled={activity.cancelling}
             />
           </>

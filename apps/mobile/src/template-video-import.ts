@@ -30,12 +30,14 @@ export class SlotImportError extends Error {
 
 export async function importTemplateVideos({
   template,
+  draftId = template.id,
   slots,
   source,
   isCurrent,
   commit,
 }: {
   template: MobileTemplate;
+  draftId?: string;
   slots: readonly TemplateVideoSlot[];
   source: VideoPickerSource;
   isCurrent: () => boolean;
@@ -64,7 +66,7 @@ export async function importTemplateVideos({
         const metadata = await probeVideo(asset.uri);
         if (!isCurrent()) return;
         const clip = createTemplateClip(slot, asset.uri, asset.name, metadata);
-        const target = createDraftMediaFile(template, asset.draftFileName);
+        const target = createDraftMediaFile(template, asset.draftFileName, draftId);
         staged.push(target);
         const file = new File(asset.uri);
         if (isCachedFile(asset.uri)) await file.move(target);

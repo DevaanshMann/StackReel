@@ -59,7 +59,7 @@ vi.mock("expo-file-system", () => {
       return this.uri.slice(this.uri.lastIndexOf("/") + 1);
     }
 
-    get parentDirectory() {
+    get parentDirectory(): Directory {
       return new Directory(this.uri.slice(0, this.uri.lastIndexOf("/")));
     }
   }
@@ -108,7 +108,10 @@ vi.mock("expo-file-system", () => {
     }
 
     create({ intermediates = false, idempotent = false } = {}) {
-      if (this.exists && !idempotent) throw new Error("Directory already exists");
+      if (this.exists) {
+        if (!idempotent) throw new Error("Directory already exists");
+        return;
+      }
       if (!this.parentDirectory.exists) {
         if (!intermediates) throw new Error("Parent directory is missing");
         this.parentDirectory.create({ intermediates, idempotent });
@@ -123,6 +126,11 @@ vi.mock("expo-file-system", () => {
         ...[...storage.directories].filter(isChild).map((uri) => new Directory(uri)),
         ...[...storage.files.keys()].filter(isChild).map((uri) => new File(uri)),
       ];
+    }
+
+    delete() {
+      for (const entry of this.list()) entry.delete();
+      storage.directories.delete(this.uri);
     }
   }
 
@@ -180,6 +188,186 @@ beforeEach(() => {
 });
 
 describe("template draft storage", () => {
+  it("discovers and reopens two independent cuts of the same template", () => {
+    const first = fixture(firstDraftId);
+    const second = fixture(secondDraftId);
+    const field = getTemplateTextFields(beforeAfter)[0]!;
+    const secondEdits = {
+      ...second.edits,
+      name: "Second cut",
+      textOverrides: setTemplateText(field, {}, "Alternate"),
+    };
+    saveTemplateDraft(beforeAfter, secondEdits, secondDraftId);
+    saveTemplateDraft(beforeAfter, first.edits, firstDraftId);
+    renameTemplateDraft(beforeAfter, "First cut", firstDraftId);
+    expect(listTemplateDraftIds(beforeAfter)).toEqual([firstDraftId, secondDraftId]);
+    expect(listTemplateDraftIds(hook)).toEqual([]);
+
+    const firstEdits = loadTemplateDraft(beforeAfter, firstDraftId)!;
+    expect(firstEdits).toMatchObject({ ...first.edits, name: "First cut" });
+    const update = { ...firstEdits, ...clearTemplateVideoSlot(firstEdits, after.id), music: null };
+    commitTemplateDraftUpdate(beforeAfter, { ...update, source: null, outputUri: null }, firstDraftId);
+    expect(loadTemplateDraft(beforeAfter, firstDraftId)).toEqual(update);
+    expect(first.afterFile.exists || first.musicFile.exists).toBe(false);
+    expect(loadTemplateDraft(beforeAfter, secondDraftId)).toEqual({
+      ...secondEdits,
+      missingSlots: [],
+      missingMusic: false,
+    });
+    for (const file of [first.beforeFile, second.beforeFile, second.afterFile, second.musicFile]) {
+      expect(file.textSync()).toBe("fixture");
+    }
+  });
+
+  it.each([true, false])(
+    "preserves a version-one draft in place and deletes independently (legacy first: %s)",
+    (legacyFirst) => {
+      const folder = new Directory(storage.document, "StackReelDrafts", beforeAfter.id);
+      folder.create({ intermediates: true });
+      const soundtrack = new File(folder, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.m4a");
+      soundtrack.writeSync("old soundtrack");
+      const manifest = new File(folder, "draft-7.json");
+      const oldJson = JSON.stringify({
+        version: 1,
+        clips: {},
+        textOverrides: {},
+        music: { file: soundtrack.name, name: "Old song", sourceStartUs: 0, sourceEndUs: 2_000_000 },
+      });
+      manifest.writeSync(oldJson);
+      const second = fixture(secondDraftId);
+      saveTemplateDraft(beforeAfter, second.edits, secondDraftId);
+      expect(listTemplateDraftIds(beforeAfter)).toEqual([beforeAfter.id, secondDraftId]);
+      expect(loadTemplateDraft(beforeAfter, beforeAfter.id)).toMatchObject({
+        name: null,
+        music: { uri: soundtrack.uri, name: "Old song" },
+      });
+      expect(manifest.textSync()).toBe(oldJson);
+
+      const deletedId = legacyFirst ? beforeAfter.id : secondDraftId;
+      const survivorId = legacyFirst ? secondDraftId : beforeAfter.id;
+      const survivor = loadTemplateDraft(beforeAfter, survivorId)!;
+      deleteTemplateDraft(beforeAfter, deletedId);
+      expect(listTemplateDraftIds(beforeAfter)).toEqual([survivorId]);
+      expect(loadTemplateDraft(beforeAfter, deletedId)).toBeNull();
+      expect(loadTemplateDraft(beforeAfter, survivorId)).toEqual(survivor);
+      expect(soundtrack.exists).toBe(!legacyFirst);
+      expect(manifest.exists).toBe(!legacyFirst);
+      expect(second.musicFile.exists).toBe(legacyFirst);
+      deleteTemplateDraft(beforeAfter, survivorId);
+      expect(listTemplateDraftIds(beforeAfter)).toEqual([]);
+      expect(storage.files.size).toBe(0);
+    },
+  );
+
+  it("discovers committed snapshots even when one draft cannot be opened", () => {
+    const good = fixture(firstDraftId);
+    saveTemplateDraft(beforeAfter, good.edits, firstDraftId);
+    const legacy = fixture();
+    saveTemplateDraft(beforeAfter, legacy.edits);
+    const corrupt = fixture(secondDraftId);
+    new File(corrupt.musicFile.parentDirectory, "draft-1.json").writeSync("unreadable JSON");
+    const ids = [beforeAfter.id, firstDraftId, secondDraftId];
+    expect(listTemplateDraftIds(beforeAfter)).toEqual(ids);
+    expect(() => loadTemplateDraft(beforeAfter, secondDraftId)).toThrow();
+    for (const blocked of [legacy, corrupt]) {
+      storage.blockedListing = blocked.musicFile.parentDirectory.uri;
+      expect(listTemplateDraftIds(beforeAfter)).toEqual(ids);
+      expect(() => loadTemplateDraft(beforeAfter, blocked === legacy ? beforeAfter.id : secondDraftId)).toThrow(
+        "Cannot list",
+      );
+      expect(loadTemplateDraft(beforeAfter, firstDraftId)).toMatchObject(good.edits);
+    }
+  });
+
+  it("cleans up interrupted first saves while preserving unrelated files and directories", () => {
+    expect(listTemplateDraftIds(beforeAfter)).toEqual([]);
+    const { edits, musicFile } = fixture(firstDraftId);
+    storage.interruptMove = true;
+    expect(() => saveTemplateDraft(beforeAfter, edits, firstDraftId)).toThrow("Interrupted write");
+    const folder = musicFile.parentDirectory;
+    new File(folder, "pending.json").writeSync("incomplete save");
+    const nested = new Directory(folder, "draft-1.json");
+    nested.create();
+    new File(nested, "draft-2.json").writeSync("nested snapshot");
+    const unrelated = new Directory(folder.parentDirectory, "notes");
+    unrelated.create();
+    new File(unrelated, "draft-1.json").writeSync("unrelated");
+    new File(folder.parentDirectory, secondDraftId).writeSync("a regular file");
+    expect(listTemplateDraftIds(beforeAfter)).toEqual([]);
+    expect(musicFile.exists).toBe(false);
+    expect([...storage.files.values()].sort()).toEqual(["a regular file", "nested snapshot", "unrelated"]);
+    expect(folder.exists).toBe(true);
+  });
+
+  it("retries interrupted deletion cleanup on startup and removes empty draft folders", () => {
+    const old = fixture(firstDraftId);
+    const good = fixture(secondDraftId);
+    saveTemplateDraft(beforeAfter, old.edits, firstDraftId);
+    saveTemplateDraft(beforeAfter, good.edits, secondDraftId);
+    storage.blockedDeletion = old.musicFile.uri;
+    deleteTemplateDraft(beforeAfter, firstDraftId);
+    expect(listTemplateDraftIds(beforeAfter)).toEqual([secondDraftId]);
+    expect(old.musicFile.exists).toBe(true);
+    storage.blockedDeletion = "";
+    expect(listTemplateDraftIds(beforeAfter)).toEqual([secondDraftId]);
+    expect(old.musicFile.parentDirectory.exists).toBe(false);
+    expect(loadTemplateDraft(beforeAfter, secondDraftId)).toMatchObject(good.edits);
+  });
+
+  it("propagates a collection listing failure while leaving the legacy draft accessible", () => {
+    const legacy = fixture();
+    const newer = fixture(firstDraftId);
+    saveTemplateDraft(beforeAfter, legacy.edits);
+    saveTemplateDraft(beforeAfter, newer.edits, firstDraftId);
+    storage.blockedListing = newer.musicFile.parentDirectory.parentDirectory.uri;
+    const files = new Map(storage.files);
+    expect(() => listTemplateDraftIds(beforeAfter)).toThrow("Cannot list directory");
+    expect(storage.files).toEqual(files);
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject(legacy.edits);
+  });
+
+  it("rejects foreign clips and music and preserves both drafts if an update cannot be published", () => {
+    const first = fixture(firstDraftId);
+    const second = fixture(secondDraftId);
+    saveTemplateDraft(beforeAfter, first.edits, firstDraftId);
+    saveTemplateDraft(beforeAfter, second.edits, secondDraftId);
+    const files = new Map(storage.files);
+    for (const foreign of [{ clips: first.edits.clips }, { music: first.edits.music }]) {
+      expect(() => saveTemplateDraft(beforeAfter, { ...second.edits, ...foreign }, secondDraftId)).toThrow(
+        "own folder",
+      );
+    }
+    storage.interruptMove = true;
+    expect(() =>
+      commitTemplateDraftUpdate(
+        beforeAfter,
+        { ...second.edits, music: null, source: null, outputUri: null },
+        secondDraftId,
+      ),
+    ).toThrow("Interrupted write");
+    expect(() => renameTemplateDraft(beforeAfter, "Retitled", secondDraftId)).toThrow("Interrupted write");
+    expect(storage.files).toEqual(files);
+    expect(loadTemplateDraft(beforeAfter, firstDraftId)).toMatchObject(first.edits);
+    expect(loadTemplateDraft(beforeAfter, secondDraftId)).toMatchObject(second.edits);
+  });
+
+  it("rejects unsafe path segments before accessing a draft", () => {
+    const { edits } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const files = new Map(storage.files);
+    const directories = new Set(storage.directories);
+    for (const id of ["..", "../" + beforeAfter.id, "nested/draft", "%2e%2e", "", hook.id]) {
+      expect(() => loadTemplateDraft(beforeAfter, id)).toThrow("Invalid draft ID");
+      expect(() => deleteTemplateDraft(beforeAfter, id)).toThrow("Invalid draft ID");
+      expect(() => createDraftMediaFile(beforeAfter, "Clip.mov", id)).toThrow("Invalid draft ID");
+    }
+    const invalid = { ...beforeAfter, id: "../escape" };
+    expect(() => listTemplateDraftIds(invalid)).toThrow();
+    expect(() => saveTemplateDraft(invalid, edits, firstDraftId)).toThrow();
+    expect(storage.files).toEqual(files);
+    expect(storage.directories).toEqual(directories);
+  });
+
   it("restores edited media, trims, framing, and text after the app sandbox moves", () => {
     const { edits } = fixture();
     saveTemplateDraft(beforeAfter, edits);
@@ -715,6 +903,34 @@ describe("ordered template video import", () => {
     expect(Object.keys(restored.clips)).toEqual(["clip1", "clip2"]);
     expect(storage.files.get(restored.clips.clip1!.uri)).toBe("Zebra.mov");
     expect(storage.files.get(restored.clips.clip2!.uri)).toBe("Acorn.mp4");
+  });
+
+  it("stages ordered videos in the selected draft and preserves its sibling's import", async () => {
+    pick(["Original.mov", "Original B-roll.mp4"]);
+    await run();
+    const legacy = loadTemplateDraft(hook)!;
+
+    pick(["Zebra.mov", "Acorn.mp4"]);
+    await importTemplateVideos({
+      template: hook,
+      draftId: firstDraftId,
+      slots,
+      source: "Photos",
+      isCurrent: () => true,
+      commit: (clips) => saveTemplateDraft(hook, { ...draft, clips }, firstDraftId),
+    });
+    expect(listTemplateDraftIds(hook)).toEqual([hook.id, firstDraftId]);
+    const selected = loadTemplateDraft(hook, firstDraftId)!;
+    expect(Object.values(selected.clips).map((clip) => new File(clip.uri).textSync())).toEqual([
+      "Zebra.mov",
+      "Acorn.mp4",
+    ]);
+    deleteTemplateDraft(hook, firstDraftId);
+    expect(loadTemplateDraft(hook)).toEqual(legacy);
+    expect(Object.values(legacy.clips).map((clip) => new File(clip.uri).textSync())).toEqual([
+      "Original.mov",
+      "Original B-roll.mp4",
+    ]);
   });
 
   it("reserves filled slots and missing-media slots in the displayed order", () => {
