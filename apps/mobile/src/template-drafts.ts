@@ -95,7 +95,7 @@ export function renameTemplateDraft(template: MobileTemplate, name: string) {
   const snapshots = draftSnapshots(directory);
   const snapshot = snapshots.at(-1);
   if (!snapshot) throw new Error("The saved draft is unavailable.");
-  const { saved } = readDraftManifest(snapshot.file);
+  const { saved } = readDraftManifest(template, snapshot.file);
 
   // Keep the stored edits and media references, including files the editor could not reopen.
   commitDraftManifest(directory, snapshot.revision, { ...saved, name: trimmedName });
@@ -110,7 +110,7 @@ export function saveTemplateDraft(
   directory.create({ intermediates: true, idempotent: true });
   const snapshot = draftSnapshots(directory).at(-1);
   // Read the current snapshot before writing or pruning so an unreadable draft stays recoverable.
-  const previous = snapshot ? readDraftManifest(snapshot.file) : null;
+  const previous = snapshot ? readDraftManifest(template, snapshot.file) : null;
   const keep = new Set<string>();
   function storeAsset<T extends TemplateClip | TemplateMusic>({ uri, ...settings }: T) {
     const file = new File(uri).name;
@@ -170,10 +170,14 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function readDraftManifest(snapshot: File) {
+function readDraftManifest(template: MobileTemplate, snapshot: File) {
   const saved: unknown = JSON.parse(snapshot.textSync());
   if (!record(saved) || saved.version !== 1 || !record(saved.clips) || !record(saved.textOverrides)) {
     throw new Error("The saved draft has an unsupported format.");
+  }
+  const videoSlotIds = new Set(template.slots.filter((slot) => slot.kind === "video").map((slot) => slot.id));
+  if (Object.keys(saved.clips).some((id) => !videoSlotIds.has(id))) {
+    throw new Error("The saved draft references a video slot that is unavailable in this template.");
   }
   return { saved, clips: saved.clips, textOverrides: saved.textOverrides };
 }
@@ -210,7 +214,7 @@ export function loadTemplateDraft(template: MobileTemplate) {
     return null;
   }
   keep.add(snapshot.file.name);
-  const { saved, clips: savedClips, textOverrides: savedText } = readDraftManifest(snapshot.file);
+  const { saved, clips: savedClips, textOverrides: savedText } = readDraftManifest(template, snapshot.file);
   const name = typeof saved.name === "string" ? saved.name.trim() || null : null;
 
   const clips: Record<string, TemplateClip> = {};
