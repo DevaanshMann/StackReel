@@ -445,6 +445,79 @@ describe("template draft storage", () => {
     expect(storage.files).toEqual(originalFiles);
   });
 
+  it.each(["loading", "autosaving"])(
+    "preserves a version-one draft when %s after a video slot ID changes",
+    (action) => {
+      const { edits, beforeFile } = fixture();
+      const name = "Weekend cut";
+      beforeFile.writeSync("imported before video");
+      saveTemplateDraft(beforeAfter, { ...edits, name });
+      const originalFiles = new Map(storage.files);
+      const manifest = new File(`${storage.document}/StackReelDrafts/${beforeAfter.id}/draft-1.json`);
+      expect(JSON.parse(manifest.textSync())).toMatchObject({
+        version: 1,
+        clips: { [before.id]: { file: beforeFile.name } },
+      });
+
+      const renamedId = "opening-clip";
+      const updatedTemplate = {
+        ...beforeAfter,
+        slots: beforeAfter.slots.map((slot) => (slot.id === before.id ? { ...slot, id: renamedId } : slot)),
+        tracks: beforeAfter.tracks.map((track) =>
+          track.type === "video"
+            ? {
+                ...track,
+                items: track.items.map((item) => (item.slot === before.id ? { ...item, slot: renamedId } : item)),
+              }
+            : track,
+        ),
+      };
+
+      if (action === "loading") {
+        expect(() => loadTemplateDraft(updatedTemplate)).toThrow();
+      } else {
+        const textOverrides = setTemplateText(
+          getTemplateTextFields(updatedTemplate)[0]!,
+          edits.textOverrides,
+          "New caption",
+        );
+        expect(() =>
+          saveTemplateDraft(updatedTemplate, {
+            ...edits,
+            name,
+            clips: { [after.id]: edits.clips[after.id]! },
+            textOverrides,
+          }),
+        ).toThrow();
+      }
+
+      expect(storage.files).toEqual(originalFiles);
+      expect(loadTemplateDraft(beforeAfter)).toEqual({ ...edits, name, missingSlots: [], missingMusic: false });
+    },
+  );
+
+  it("reopens and autosaves a draft after only a video slot label changes", () => {
+    const { edits, beforeFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+
+    const updatedTemplate = {
+      ...beforeAfter,
+      slots: beforeAfter.slots.map((slot) => (slot.id === before.id ? { ...slot, label: "Opening shot" } : slot)),
+    };
+    const restored = loadTemplateDraft(updatedTemplate)!;
+    expect(restored).toEqual({ ...edits, name: null, missingSlots: [], missingMusic: false });
+
+    const textOverrides = setTemplateText(
+      getTemplateTextFields(updatedTemplate)[0]!,
+      restored.textOverrides,
+      "New caption",
+    );
+    saveTemplateDraft(updatedTemplate, { ...restored, textOverrides });
+
+    expect(loadTemplateDraft(updatedTemplate)).toEqual({ ...restored, textOverrides });
+    expect(beforeFile.textSync()).toBe("fixture");
+  });
+
   it("deletes an unreadable draft and its imported copies without affecting other files", () => {
     const { edits, beforeFile, afterFile, musicFile } = fixture();
     saveTemplateDraft(beforeAfter, edits);
