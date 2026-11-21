@@ -1,5 +1,5 @@
 import { probeVideo } from "@stackreel/engine";
-import { File } from "expo-file-system";
+import { Directory, File } from "expo-file-system";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearTemplateMusic,
@@ -7,6 +7,7 @@ import {
   commitTemplateDraftUpdate,
   createDraftMediaFile,
   deleteTemplateDraft,
+  listTemplateDraftIds,
   loadTemplateDraft,
   renameTemplateDraft,
   saveTemplateDraft,
@@ -38,6 +39,7 @@ const storage = vi.hoisted(() => ({
   directories: new Set<string>(),
   interruptMove: false,
   blockedDeletion: "",
+  blockedListing: "",
   nextMedia: 0,
 }));
 
@@ -55,6 +57,10 @@ vi.mock("expo-file-system", () => {
 
     get name() {
       return this.uri.slice(this.uri.lastIndexOf("/") + 1);
+    }
+
+    get parentDirectory() {
+      return new Directory(this.uri.slice(0, this.uri.lastIndexOf("/")));
     }
   }
 
@@ -75,6 +81,7 @@ vi.mock("expo-file-system", () => {
     }
 
     writeSync(data: string) {
+      if (!this.parentDirectory.exists) throw new Error("Parent directory is missing");
       storage.files.set(this.uri, data);
     }
 
@@ -100,12 +107,22 @@ vi.mock("expo-file-system", () => {
       return storage.directories.has(this.uri);
     }
 
-    create() {
+    create({ intermediates = false, idempotent = false } = {}) {
+      if (this.exists && !idempotent) throw new Error("Directory already exists");
+      if (!this.parentDirectory.exists) {
+        if (!intermediates) throw new Error("Parent directory is missing");
+        this.parentDirectory.create({ intermediates, idempotent });
+      }
       storage.directories.add(this.uri);
     }
 
     list() {
-      return [...storage.files.keys()].filter((uri) => uri.startsWith(`${this.uri}/`)).map((uri) => new File(uri));
+      if (!this.exists || this.uri === storage.blockedListing) throw new Error("Cannot list directory");
+      const isChild = (uri: string) => uri.slice(0, uri.lastIndexOf("/")) === this.uri;
+      return [
+        ...[...storage.directories].filter(isChild).map((uri) => new Directory(uri)),
+        ...[...storage.files.keys()].filter(isChild).map((uri) => new File(uri)),
+      ];
     }
   }
 
@@ -129,11 +146,13 @@ const [before, after] = getVideoSlots(beforeAfter) as [
   ReturnType<typeof getVideoSlots>[number],
 ];
 const metadata = { width: 1920, height: 1080, startUs: 0, durationUs: 9_000_000 };
+const firstDraftId = "11111111-1111-4111-8111-111111111111";
+const secondDraftId = "22222222-2222-4222-8222-222222222222";
 
-function fixture() {
-  const beforeFile = createDraftMediaFile(beforeAfter, "Before.mov");
-  const afterFile = createDraftMediaFile(beforeAfter, "After.mov");
-  const musicFile = createDraftMediaFile(beforeAfter, "Track.m4a");
+function fixture(draftId = beforeAfter.id) {
+  const beforeFile = createDraftMediaFile(beforeAfter, "Before.mov", draftId);
+  const afterFile = createDraftMediaFile(beforeAfter, "After.mov", draftId);
+  const musicFile = createDraftMediaFile(beforeAfter, "Track.m4a", draftId);
   for (const file of [beforeFile, afterFile, musicFile]) file.writeSync("fixture");
   const beforeClip = createTemplateClip(before, beforeFile.uri, "Before.mov", metadata);
   const edits = {
@@ -154,9 +173,10 @@ function fixture() {
 beforeEach(() => {
   storage.document = "file:///Documents";
   storage.files.clear();
-  storage.directories.clear();
+  storage.directories = new Set([storage.document, "file:///Caches", "file:///Caches/ImagePicker"]);
   storage.interruptMove = false;
   storage.blockedDeletion = "";
+  storage.blockedListing = "";
 });
 
 describe("template draft storage", () => {
