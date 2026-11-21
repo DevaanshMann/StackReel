@@ -7,9 +7,11 @@
 A free, open-source, on-device editor for vertical video (Reels, TikTok, YouTube Shorts).
 Pick a template, drop in your clips, and export. Your media never leaves your device.
 
-`iOS` · `Android` · `Web` · `Desktop` · MIT licensed
+**Available on iOS as a development build.** Open **Before / After** or **Hook & Reveal**, add videos from Photos or Files,
+trim and reframe clips, and edit the template text. You can resume a saved draft, preview the reel, and export an H.264 MP4
+to share or save to Photos. Android, web, and desktop editors are planned.
 
-**Status:** 🧱 Phase 0, Foundations. Nothing is usable yet. This README is the plan.
+[Set up and run the iOS editor](#getting-started-developers) · [Try the mobile smoke test](apps/mobile/README.md#smoke-test) · MIT licensed
 
 </div>
 
@@ -78,6 +80,9 @@ Power users can open the same project in Pro mode and edit every layer on a full
 
 ## Architecture overview
 
+The diagram shows the planned architecture across platforms. The iOS development build uses the shared TypeScript
+packages and the Swift engine today.
+
 ```mermaid
 flowchart TB
     subgraph Shared["Shared TypeScript (packages/)"]
@@ -121,11 +126,13 @@ flowchart TB
 2. The user fills the slots, which produces a **project**: the template plus asset bindings and edits.
 3. `@stackreel/core` **resolves** the project into a flat **render plan**: every layer with absolute times, transforms, and effects.
 4. A **platform engine** turns the render plan into preview frames in real time, then into an encoded MP4 on export.
-5. **Golden-frame tests** check that every engine produces visually equivalent output for the same plan.
+5. The iOS tests check rendered frames. As more engines ship, the same plans will serve as references for visual parity.
 
 ---
 
 ## Tech stack
+
+The table includes tools chosen for future roadmap phases.
 
 | Layer             | Choice                                                                                                               | Why                                                                           |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -153,17 +160,17 @@ flowchart TB
 ```
 StackReel/
 ├── apps/
-│   ├── mobile/            # Expo app (iOS + Android)
-│   ├── web/               # Vite + React browser app
-│   └── desktop/           # Tauri shell around apps/web
+│   ├── mobile/            # Expo app with the iOS editor
+│   ├── web/               # Planned browser editor
+│   └── desktop/           # Planned desktop app
 ├── packages/
 │   ├── template-schema/   # The template format: Zod schema, JSON Schema, migrations
 │   ├── core/              # Timeline resolver, time math, undo/redo, project model
-│   └── ui/                # Design tokens & shared primitives
+│   └── ui/                # Design tokens and safe-zone overlays
 ├── modules/
-│   └── stackreel-engine/  # Expo native module: ios/ (Swift+Metal), android/ (Kotlin+Media3)
+│   └── stackreel-engine/  # Expo native module and Swift render engine for iOS
 ├── templates/
-│   └── examples/          # Built-in templates (JSON + preview thumbnails)
+│   └── examples/          # Template JSON examples used by the shared tests
 ├── docs/
 │   └── adr/               # Architecture Decision Records
 ├── .github/               # Issue & PR templates, CI workflows
@@ -239,13 +246,13 @@ Estimates assume a **small team (2–5 people)** working part-time to full-time.
 | 10    | Pro mode                      | 8+ weeks      | 7                     | Multi-track timeline, keyframes, 4K tiers |
 | 11    | Community templates & plugins | ongoing       | 7                     | Template sharing, plugin API              |
 
-**Milestones**
+**Planned milestones**
 
-- 🟢 **M1, "First frame"** (end of Phase 2/3): a hard-coded template renders to MP4 on both phones.
-- 🟢 **M2, "Internal alpha"** (end of Phase 4): the team uses StackReel to make real reels.
-- 🟢 **M3, "v1.0 public"** (end of Phase 7): live on both app stores.
-- 🟢 **M4, "Everywhere"** (end of Phase 9): web and desktop.
-- 🟢 **M5, "Pro"** (Phase 10): full timeline editing.
+- **M1, "First frame"** (end of Phase 2/3): a hard-coded template renders to MP4 on both phones.
+- **M2, "Internal alpha"** (end of Phase 4): the team uses StackReel to make real reels.
+- **M3, "v1.0 public"** (end of Phase 7): live on both app stores.
+- **M4, "Everywhere"** (end of Phase 9): web and desktop.
+- **M5, "Pro"** (Phase 10): full timeline editing.
 
 ---
 
@@ -733,37 +740,34 @@ small CC0 media clips), generated from `@stackreel/core`. Every engine consumes 
 
 ## Getting started (developers)
 
-> ⚠️ The apps are not scaffolded yet (Phase 0 is in progress). These are the target setup steps.
+### Set up the workspace
 
-**Prerequisites**
-
-- Node.js 22 LTS and pnpm 9 (`corepack enable`)
-- **iOS:** macOS, Xcode 16+, CocoaPods
-- **Android:** Android Studio (latest), JDK 17, an emulator or device with USB debugging
-- **Desktop (later):** Rust stable toolchain
-
-**Setup**
+Use Node.js 22.22.1 or a later 22.x release, the release line used in CI. With Corepack enabled, the repository
+selects pnpm 9.15.0 from `package.json`.
 
 ```bash
 git clone https://github.com/DevaanshMann/StackReel.git
 cd StackReel
-corepack enable
-pnpm install
+corepack enable pnpm
+pnpm install --frozen-lockfile
+pnpm format:check
+pnpm lint
+pnpm typecheck
 pnpm test
 ```
 
-**Run the mobile app (after Phase 4 scaffold)**
+### Run the iOS editor
+
+On macOS, install Xcode and CocoaPods and set up an iOS Simulator or connect an iPhone. Run the following command
+from the repository root to build the native app and start Metro.
 
 ```bash
-pnpm --filter mobile ios
-pnpm --filter mobile android
+pnpm --filter @stackreel/mobile ios
 ```
 
-**Run the web app (after Phase 8 scaffold)**
-
-```bash
-pnpm --filter web dev
-```
+The app opens to the template gallery. It uses a custom native engine that requires the development build.
+For later JavaScript or TypeScript edits, start Metro with `pnpm --filter @stackreel/mobile start`.
+Rebuild the app after changing native dependencies. For a first export, follow the [mobile smoke test](apps/mobile/README.md#smoke-test).
 
 ---
 
