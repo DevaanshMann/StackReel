@@ -8,7 +8,7 @@ import {
   getTemplateTextFields,
   getTemplateTrimWindow,
   getVideoSlots,
-  setTemplateText,
+  normalizeTemplateText,
 } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateMusic, TemplateTextOverrides } from "./template-editor";
 
@@ -272,7 +272,15 @@ function readDraftManifest(template: MobileTemplate, snapshot: File) {
   if (saved.music !== undefined && saved.music !== null && !template.audio?.music) {
     throw new Error("The saved draft references music that is unavailable in this template.");
   }
-  return { saved, clips: saved.clips, textOverrides: saved.textOverrides };
+  const fields = getTemplateTextFields(template);
+  const textOverrides: Record<string, string> = {};
+  for (const [id, value] of Object.entries(saved.textOverrides)) {
+    const field = fields.find((field) => field.id === id);
+    if (!field) throw new Error(`The saved draft references an unavailable text field at "${id}".`);
+    // A saved override remains explicit even when a newer template has the same default.
+    textOverrides[id] = normalizeTemplateText(field, value);
+  }
+  return { saved, clips: saved.clips, textOverrides };
 }
 
 function readAsset(value: unknown, directory: Directory, keep: Set<string>) {
@@ -315,7 +323,7 @@ export function loadTemplateDraft(template: MobileTemplate, draftId = template.i
 function restoreDraftEdits(
   template: MobileTemplate,
   directory: Directory,
-  { saved, clips: savedClips, textOverrides: savedText }: ReturnType<typeof readDraftManifest>,
+  { saved, clips: savedClips, textOverrides }: ReturnType<typeof readDraftManifest>,
   keep: Set<string>,
 ) {
   const name = typeof saved.name === "string" ? saved.name.trim() || null : null;
@@ -359,14 +367,6 @@ function restoreDraftEdits(
       clips[slot.id] = clip;
     } catch {
       missingSlots.push(slot.id);
-    }
-  }
-
-  let textOverrides: TemplateTextOverrides = {};
-  for (const field of getTemplateTextFields(template)) {
-    const value = savedText[field.id];
-    if (typeof value === "string" && [...value].length <= (field.maxChars ?? Infinity)) {
-      textOverrides = setTemplateText(field, textOverrides, value);
     }
   }
 

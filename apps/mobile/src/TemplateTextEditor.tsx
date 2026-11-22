@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AccessibilityInfo, Modal, StyleSheet, Text, TextInput, View } from "react-native";
 import { errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
-import { setTemplateText } from "./template-editor";
+import { applyTemplateTextEdits } from "./template-editor";
 import type { TemplateTextField, TemplateTextOverrides } from "./template-editor";
 
 export function TemplateTextEditor({
@@ -32,8 +32,7 @@ export function TemplateTextEditor({
 
   function apply() {
     try {
-      const updated = inputs.reduce((current, { field, value }) => setTemplateText(field, current, value), overrides);
-      onApply(updated);
+      onApply(applyTemplateTextEdits(fields, overrides, values));
     } catch (cause) {
       const message = errorMessage("Couldn’t apply the text.", cause);
       setError(message);

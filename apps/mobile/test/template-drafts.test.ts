@@ -151,6 +151,14 @@ vi.mock("expo-file-system", () => {
 
 const beforeAfter = mobileTemplates.find(({ id }) => id === "before-after")!;
 const beforeAfterWithoutMusic = { ...beforeAfter, audio: {} };
+const beforeAfterRenamedLabels = {
+  ...beforeAfter,
+  tracks: beforeAfter.tracks.map((track) => (track.id === "labels" ? { ...track, id: "corner-labels" } : track)),
+};
+const beforeAfterShorterCaption = {
+  ...beforeAfter,
+  slots: beforeAfter.slots.map((slot) => (slot.id === "caption" ? { ...slot, maxChars: 24 } : slot)),
+};
 const hook = mobileTemplates.find(({ id }) => id === "hook-and-reveal")!;
 const [before, after] = getVideoSlots(beforeAfter) as [
   ReturnType<typeof getVideoSlots>[number],
@@ -1001,6 +1009,53 @@ describe("template draft storage", () => {
 
     expect(loadTemplateDraft(updatedTemplate)).toEqual({ ...restored, textOverrides });
     expect(beforeFile.textSync()).toBe("fixture");
+  });
+
+  it.each([
+    ["the overlay track is renamed", beforeAfterRenamedLabels],
+    ["the caption limit is reduced", beforeAfterShorterCaption],
+  ] as const)("preserves the saved caption and media when %s", async (_change, updatedTemplate) => {
+    const { edits } = fixture(firstDraftId);
+    const caption = getTemplateTextFields(beforeAfter).find((field) => field.label === "Caption")!;
+    const textOverrides = setTemplateText(caption, {}, "Training progress after six weeks");
+    saveTemplateDraft(beforeAfter, { ...edits, textOverrides }, firstDraftId);
+    const originalFiles = new Map(storage.files);
+
+    expect(() => loadTemplateDraft(updatedTemplate, firstDraftId)).toThrow();
+    expect(() => renameTemplateDraft(updatedTemplate, "Updated cut", firstDraftId)).toThrow();
+    await expect(duplicateTemplateDraft(updatedTemplate, firstDraftId, "Copy")).rejects.toThrow();
+    expect(() => saveTemplateDraft(updatedTemplate, { ...edits, textOverrides: {} }, firstDraftId)).toThrow();
+
+    expect(listTemplateDraftIds(updatedTemplate)).toEqual([firstDraftId]);
+    expect(storage.files).toEqual(originalFiles);
+    expect(loadTemplateDraft(beforeAfter, firstDraftId)).toMatchObject({ ...edits, textOverrides });
+  });
+
+  it.each([
+    ["an unedited track is renamed", beforeAfterRenamedLabels, undefined],
+    ["the caption fits the new limit in Unicode code points", beforeAfterShorterCaption, "🎬".repeat(24)],
+  ] as const)("keeps compatible drafts editable when %s", (_change, updatedTemplate, text) => {
+    const { edits } = fixture();
+    const caption = getTemplateTextFields(beforeAfter).find((field) => field.label === "Caption")!;
+    const textOverrides = text === undefined ? {} : setTemplateText(caption, {}, text);
+    saveTemplateDraft(beforeAfter, { ...edits, textOverrides });
+    const restored = loadTemplateDraft(updatedTemplate)!;
+    saveTemplateDraft(updatedTemplate, { ...restored, name: "Final" });
+    expect(loadTemplateDraft(updatedTemplate)).toMatchObject({ ...edits, name: "Final", textOverrides });
+  });
+
+  it("keeps a custom label through an unrelated edit when it matches a new template default", () => {
+    const { edits } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const updatedTemplate = structuredClone(beforeAfter);
+    const labels = updatedTemplate.tracks.find((track) => track.type === "overlay" && track.id === "labels");
+    const item = labels?.items[0];
+    if (!item || !("kind" in item) || item.kind !== "text") throw new Error("Missing Before label");
+    item.text.default = "First cut";
+
+    const restored = loadTemplateDraft(updatedTemplate)!;
+    saveTemplateDraft(updatedTemplate, { ...restored, music: null });
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject({ ...edits, music: null });
   });
 
   it("deletes an unreadable draft and its imported copies without affecting other files", () => {

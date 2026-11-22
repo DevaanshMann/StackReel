@@ -147,7 +147,7 @@ export function getTemplateTextFields(template: MobileTemplate): TemplateTextFie
   return fields;
 }
 
-function normalizeTemplateText({ label, maxChars }: TemplateTextField, value: string): string {
+export function normalizeTemplateText({ label, maxChars }: TemplateTextField, value: unknown): string {
   if (typeof value !== "string") throw new TypeError(`"${label}" must be text.`);
   if (maxChars !== undefined && [...value].length > maxChars) {
     throw new RangeError(`"${label}" must be ${maxChars} characters or fewer.`);
@@ -169,6 +169,21 @@ export function setTemplateText(
   }
   if (hasOverride && overrides[field.id] === text) return overrides;
   return { ...overrides, [field.id]: text };
+}
+
+export function applyTemplateTextEdits(
+  fields: readonly TemplateTextField[],
+  overrides: TemplateTextOverrides,
+  values: TemplateTextOverrides,
+): TemplateTextOverrides {
+  let updated = overrides;
+  for (const field of fields) {
+    const value = values[field.id];
+    // Reset removes the input key, even when the saved override already matches the default.
+    if (value === overrides[field.id]) continue;
+    updated = setTemplateText(field, updated, value ?? field.defaultText);
+  }
+  return updated;
 }
 
 export function getVideoSlots(template: MobileTemplate): TemplateVideoSlot[] {

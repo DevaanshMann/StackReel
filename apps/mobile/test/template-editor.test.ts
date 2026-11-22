@@ -3,6 +3,7 @@ import type { RenderPlan } from "@stackreel/core";
 import { validate } from "@stackreel/template-schema";
 import { describe, expect, it } from "vitest";
 import {
+  applyTemplateTextEdits,
   createTemplateClip,
   createTemplateMusic,
   createTemplateSource,
@@ -192,6 +193,16 @@ describe("template text editing", () => {
     expect(createTemplateSource(beforeAfter, clips, setTemplateText(after!, reset, "AFTER"))).toBe(
       createTemplateSource(beforeAfter, clips),
     );
+  });
+
+  it("keeps a saved label matching the new default when editing another label and clears it on Reset", () => {
+    const fields = getTemplateTextFields(beforeAfter);
+    const [before, after] = fields;
+    const saved = { [before!.id]: before!.defaultText };
+    const values = { ...saved, [after!.id]: "Week 12" };
+    expect(applyTemplateTextEdits(fields, saved, saved)).toBe(saved);
+    expect(applyTemplateTextEdits(fields, saved, values)).toEqual(values);
+    expect(applyTemplateTextEdits(fields, values, {})).toEqual({});
   });
 
   it("stores and renders blank edits as empty and keeps the same override for another blank edit", () => {
