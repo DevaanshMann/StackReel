@@ -43,10 +43,12 @@ struct ExportCache: Sendable {
         unlink(item.path)
       } else if name.hasPrefix(stagingPrefix),
         UUID(uuidString: String(name.dropFirst(stagingPrefix.count))) != nil,
-        fileType(at: item) == .typeDirectory
+        fileType(at: item) == .typeDirectory,
+        let contents = try? FileManager.default.contentsOfDirectory(atPath: item.path)
       {
         let output = item.appendingPathComponent("output.mp4", isDirectory: false)
-        if fileType(at: output) == .typeRegular { unlink(output.path) }
+        // Match the stored spelling on case-insensitive volumes too.
+        if contents.contains("output.mp4"), fileType(at: output) == .typeRegular { unlink(output.path) }
         // rmdir preserves any other contents in the staging directory.
         rmdir(item.path)
       }

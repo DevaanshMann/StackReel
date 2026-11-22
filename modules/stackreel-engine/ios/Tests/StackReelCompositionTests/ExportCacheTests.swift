@@ -73,12 +73,15 @@ final class ExportCacheTests: XCTestCase {
       try files.createDirectory(at: folder, withIntermediateDirectories: false)
       try video.write(to: folder.appendingPathComponent("notes.txt"))
     }
+    let foreign = staging.appendingPathComponent("OUTPUT.MP4")
+    try video.write(to: foreign)
 
     let session = ExportCache(directory: exports)
     await session.cleanup.value
     for folder in [namedLikeAnExport, staging] {
       XCTAssertEqual(try Data(contentsOf: folder.appendingPathComponent("notes.txt")), video)
     }
+    XCTAssertEqual(try Data(contentsOf: foreign), video)
   }
 
   @MainActor
