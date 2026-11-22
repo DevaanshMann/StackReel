@@ -1,7 +1,7 @@
 import AVFoundation
 import XCTest
 
-@testable import StackReelAudioProbe
+@testable import StackReelExpoSupport
 
 final class AudioProbeTests: XCTestCase {
   @MainActor

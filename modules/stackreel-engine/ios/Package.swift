@@ -13,14 +13,14 @@ let package = Package(
     .target(
       name: "StackReelComposition", dependencies: ["StackReelPlan"],
       resources: [.copy("Resources/Fonts")]),
-    // Test the audio probe without linking Expo on macOS.
+    // Test native bridge helpers without linking Expo on macOS.
     .target(
-      name: "StackReelAudioProbe", path: "Sources/StackReelExpo",
+      name: "StackReelExpoSupport", path: "Sources/StackReelExpo",
       exclude: ["EnginePreviewView.swift", "RenderSource.swift", "StackReelEngineModule.swift"],
-      sources: ["AudioProbe.swift"]),
+      sources: ["AudioProbe.swift", "ExportCache.swift"]),
     .testTarget(
       name: "StackReelCompositionTests",
-      dependencies: ["StackReelComposition", "StackReelPlan", "StackReelAudioProbe"]),
+      dependencies: ["StackReelComposition", "StackReelPlan", "StackReelExpoSupport"]),
     .testTarget(name: "StackReelPlanTests", dependencies: ["StackReelPlan"]),
   ]
 )
