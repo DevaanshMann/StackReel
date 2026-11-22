@@ -54,7 +54,8 @@ interrupts pending seeks.
 Use a fresh `exportId` for each job. Progress events carry that ID and a fraction from 0 to 1.
 `cancelExport` requests cancellation and the export promise rejects with `ERR_EXPORT_CANCELLED` if
 cancellation takes effect. A successful export returns a temporary `file:` URI in the app cache.
-The caller may delete the MP4 after using it.
+The caller may delete the MP4 after using it. The iOS engine clears temporary exports from previous app
+processes at startup. Copy the MP4 to a persistent destination before relying on it across launches.
 
 ## Swift render plan and composition
 

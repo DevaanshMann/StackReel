@@ -101,12 +101,7 @@ enum LocalMedia {
     _ source: String, progress: @escaping @Sendable (Double) -> Void
   ) async throws -> URL {
     let composition = try await composition(source)
-    let files = FileManager.default
-    let cache = try files.url(
-      for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-    let exports = cache.appendingPathComponent("StackReelExports", isDirectory: true)
-    try files.createDirectory(at: exports, withIntermediateDirectories: true)
-    let output = exports.appendingPathComponent("\(UUID().uuidString).mp4", isDirectory: false)
+    let output = try await ExportCache.shared.nextOutputURL()
     try await composition.exportMP4(to: output, progress: progress)
     return output
   }

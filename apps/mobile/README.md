@@ -55,6 +55,8 @@ the clip’s audio when present.
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
+To keep a file, choose **Share MP4** → **Save to Files**. StackReel clears its temporary exports on the next
+cold launch. Videos you saved to Photos or Files stay available.
 
 You can make several reels from the same template. Open a template and make an edit to save your first draft.
 To start another, go back to **Templates** and tap **New draft** on that template’s card. When a template has
@@ -180,5 +182,9 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
 17. In **Projects**, tap **Duplicate** twice on a reel with two videos and music. Open the first copy and change its
     caption. Reopen the original and second copy to check their captions. Delete the original, relaunch, and export
     the first copy. Check that its edited caption, clips, and soundtrack appear in the export.
+18. Export a reel and save it to both Photos and Files. In the Simulator's app data container, note the MP4 in
+    `Library/Caches/StackReelExports`. Background StackReel, return, and open **Share MP4** again. Force-quit
+    and relaunch to the gallery. Before exporting again, verify that the cached MP4 is gone. Play the saved
+    video in Photos and in Files, then reopen the draft from **Projects** and export and share a fresh MP4.
 
 Run the app’s checks from the root with `pnpm exec turbo run lint typecheck test --filter=@stackreel/mobile`.

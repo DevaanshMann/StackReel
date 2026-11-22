@@ -10,6 +10,8 @@ public final class StackReelEngineModule: Module {
     Name(Self.moduleName)
     Events(Self.progressEvent)
 
+    OnCreate { _ = ExportCache.shared }
+
     AsyncFunction("probeVideo") { (uri: String) async throws -> [String: Double] in
       try await LocalMedia.probeVideo(uri)
     }
