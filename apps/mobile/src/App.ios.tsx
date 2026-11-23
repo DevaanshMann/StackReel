@@ -11,6 +11,7 @@ import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from "rea
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import type { ScreenRef } from "./Screen";
+import { SingleClipTrim } from "./SingleClipTrim";
 import { TemplateMusicControls } from "./TemplateMusicControls";
 import { TemplateReframe } from "./TemplateReframe";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
@@ -18,7 +19,8 @@ import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
 import { TemplateVolume, VolumeSheet } from "./TemplateVolume";
 import { VideoImportActions } from "./VideoImportActions";
-import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
+import { canvas as singleClipCanvas, createTrimmedClipSource, getClipFrameRange } from "./clip-source";
+import type { ClipFrameRange, ClipMetadata } from "./clip-source";
 import { nextDraftName } from "./draft-names";
 import {
   clearTemplateMusic,
@@ -58,7 +60,7 @@ import { importTemplateVideos, removeCachedFile, SlotImportError } from "./templ
 import { pickVideo } from "./video-picker";
 import type { VideoPickerSource } from "./video-picker";
 
-type Clip = { name: string; uri: string; source: string };
+type Clip = { name: string; uri: string; media: ClipMetadata; selection: ClipFrameRange; source: string };
 type SingleDraft = { clip: Clip | null; outputUri: string | null };
 type TemplateDraft = TemplateDraftEdits & {
   source: string | null;
@@ -86,6 +88,7 @@ type SlotEdit = {
   slot: TemplateVideoSlot;
   clip: TemplateClip;
 };
+type SingleTrimEdit = { kind: "single-trim"; clip: Clip };
 type MusicVolumeEdit = { kind: "music-volume"; editor: TemplateEditor; music: TemplateMusic };
 type SlotSwap = { kind: "swap"; editor: TemplateEditor; draft: TemplateDraft };
 type TextEdit = { kind: "text"; editor: TemplateEditor; textOverrides: TemplateTextOverrides };
@@ -94,6 +97,7 @@ type Operation =
   | ImportOperation
   | { kind: "fullscreen" }
   | SlotEdit
+  | SingleTrimEdit
   | MusicVolumeEdit
   | SlotSwap
   | TextEdit
@@ -161,6 +165,7 @@ export default function App() {
   const [editor, setEditor] = useState<Editor>(firstScreen);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [singleDraft, setSingleDraft] = useState<SingleDraft>({ clip: null, outputUri: null });
+  const currentSingleDraft = useRef(singleDraft);
   const [templateDrafts, setTemplateDrafts] = useState<TemplateDrafts | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [historyLabels, setHistoryLabels] = useState(emptyHistoryLabels);
@@ -235,6 +240,7 @@ export default function App() {
     if (!mounted.current || currentEditor.current !== editor) return false;
     // Ignore queued handlers from before a synchronous commit or a change to the Projects list.
     if (editor.kind === "home") return currentTemplateDrafts.current === templateDrafts;
+    if (editor.kind === "single") return currentSingleDraft.current === singleDraft;
     return getEditorDraft(currentTemplateDrafts.current, editor) === templateDraft;
   }
 
@@ -574,6 +580,22 @@ export default function App() {
     }
   }
 
+  function storeSingleDraft(draft: SingleDraft) {
+    currentSingleDraft.current = draft;
+    setSingleDraft(draft);
+  }
+
+  function applySingleTrim(operation: SingleTrimEdit, selection: ClipFrameRange) {
+    if (!isCurrentOperation(operation)) return;
+    const { clip } = operation;
+    if (selection.startFrame !== clip.selection.startFrame || selection.endFrame !== clip.selection.endFrame) {
+      const source = createTrimmedClipSource(clip.uri, clip.media, selection);
+      storeSingleDraft({ clip: { ...clip, selection, source }, outputUri: null });
+      removeCachedFile(singleDraft.outputUri);
+    }
+    finish(operation);
+  }
+
   async function selectSingleVideo(source: VideoPickerSource) {
     const operation: ImportOperation = { kind: "import", source };
     if (!begin(operation)) return;
@@ -585,8 +607,12 @@ export default function App() {
       if (!isCurrentOperation(operation)) return;
       const metadata = await probeVideo(pickedUri);
       if (!isCurrentOperation(operation)) return;
-      const clipSource = createClipSource(pickedUri, metadata);
-      setSingleDraft({ clip: { name: asset.name, uri: pickedUri, source: clipSource }, outputUri: null });
+      const selection = getClipFrameRange(metadata);
+      const clipSource = createTrimmedClipSource(pickedUri, metadata, selection);
+      storeSingleDraft({
+        clip: { name: asset.name, uri: pickedUri, media: metadata, selection, source: clipSource },
+        outputUri: null,
+      });
       if (singleDraft.clip?.uri !== pickedUri) removeCachedFile(singleDraft.clip?.uri);
       removeCachedFile(outputUri);
       pickedUri = undefined;
@@ -678,7 +704,7 @@ export default function App() {
         if (editor.kind === "template") {
           storeTemplateDraft(editor, { ...templateDraft, outputUri: uri });
         } else {
-          setSingleDraft({ ...singleDraft, outputUri: uri });
+          storeSingleDraft({ ...singleDraft, outputUri: uri });
         }
         if (uri !== outputUri) removeCachedFile(outputUri);
       } else {
@@ -912,6 +938,16 @@ export default function App() {
           onSelect={selectSingleVideo}
         />
       )}
+      {editor.kind === "single" && clip && (
+        <View style={styles.navigation}>
+          <Action
+            label="Trim clip"
+            testID="single-trim-open"
+            onPress={() => begin({ kind: "single-trim", clip })}
+            disabled={busy}
+          />
+        </View>
+      )}
     </>
   );
   const editorActions = (
@@ -984,6 +1020,13 @@ export default function App() {
       page={editor.kind === "template" ? editor.draftId : "single-clip"}
       fullScreen={fullScreen}
     >
+      {activity?.kind === "single-trim" && (
+        <SingleClipTrim
+          clip={activity.clip}
+          onApply={(selection) => applySingleTrim(activity, selection)}
+          onCancel={() => finish(activity)}
+        />
+      )}
       {trimming && (
         <TemplateTrim
           slot={activity.slot}

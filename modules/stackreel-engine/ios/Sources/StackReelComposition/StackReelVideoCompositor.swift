@@ -77,7 +77,8 @@ extension VideoComposition {
         .max(by: { $0.timeRange.end < $1.timeRange.end })
     else { throw RenderError.unableToExtendAsset }
     let end = track.timeRange.end
-    guard end < timelineDuration else { return }
+    // A microsecond of frame-boundary rounding does not need a source-backed trailing edit.
+    guard timelineDuration - end > VideoCompositionBuilder.time(1) else { return }
     guard
       let last = track.segments.last, let sourceURL = last.sourceURL
     else { throw RenderError.unableToExtendAsset }

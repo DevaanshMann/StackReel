@@ -135,8 +135,17 @@ public enum VideoCompositionBuilder {
     let imageTextures =
       clips.isEmpty ? [:] : try ImageTexture.loadLayers(plan.layers, assetURL: assetURL)
     return VideoComposition(
-      composition: composition, timelineDuration: time(plan.durationUs), clipsByLayerID: clips,
+      composition: composition, timelineDuration: timelineEnd(for: plan), clipsByLayerID: clips,
       audioMix: mix, renderPlan: plan, imageTexturesByLayerID: imageTextures)
+  }
+
+  private static func timelineEnd(for plan: RenderPlan) -> CMTime {
+    let end = time(plan.durationUs)
+    guard let fps = CMTimeScale(exactly: plan.canvas.fps), fps > 0 else { return end }
+    let frame = end.convertScale(fps, method: .roundHalfAwayFromZero)
+    // A rounded-up frame boundary can ask the reader for one sample at the exclusive end.
+    guard frame.convertScale(timescale, method: .roundHalfAwayFromZero) == end else { return end }
+    return min(end, frame)
   }
 
   private static func insert(
@@ -194,6 +203,16 @@ public enum VideoCompositionBuilder {
     _ source: CMTimeRange, of track: AVAssetTrack, into lane: AVMutableCompositionTrack,
     at target: CMTimeRange
   ) throws {
+    // Frame boundaries are rounded independently to microseconds in the plan. Rescaling
+    // an otherwise normal-speed edit by that rounding error can skip a frame in AVFoundation.
+    if source.duration != target.duration,
+      CMTimeAbsoluteValue(source.duration - target.duration) <= time(1)
+    {
+      let duration = min(source.duration, target.duration)
+      try lane.insertTimeRange(
+        CMTimeRange(start: source.start, duration: duration), of: track, at: target.start)
+      return
+    }
     try lane.insertTimeRange(source, of: track, at: target.start)
     if source.duration != target.duration {
       lane.scaleTimeRange(

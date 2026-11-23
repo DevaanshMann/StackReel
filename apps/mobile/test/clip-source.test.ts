@@ -1,6 +1,6 @@
 import type { RenderPlan } from "@stackreel/core";
 import { describe, expect, it } from "vitest";
-import { createClipSource } from "../src/clip-source";
+import { createClipSource, createTrimmedClipSource, getClipFrameRange } from "../src/clip-source";
 
 const uri = "file:///video%20clip.mov";
 const landscapeVideo = { width: 1920, height: 1080, startUs: 0, durationUs: 2_014_000 };
@@ -78,5 +78,53 @@ describe("createClipSource", () => {
       "too short",
     );
     expect(() => createClipSource(uri, { ...landscapeVideo, height: 0 })).toThrow("invalid dimensions or timing");
+  });
+});
+
+describe("single-clip trim", () => {
+  it("keeps the full import and reset equivalent, including a track that starts before zero", () => {
+    const media = { ...landscapeVideo, startUs: -40_000, durationUs: 149_000 };
+    const bounds = getClipFrameRange(media);
+    expect(bounds).toEqual({ startFrame: 0, endFrame: 3 });
+    expect(createTrimmedClipSource(uri, media, bounds)).toBe(createClipSource(uri, media));
+  });
+
+  it("uses only complete frames from an offset track and accepts a one-frame selection", () => {
+    const media = { ...landscapeVideo, startUs: 20_000, durationUs: 55_000 };
+    const bounds = getClipFrameRange(media);
+    expect(bounds).toEqual({ startFrame: 1, endFrame: 2 });
+    const { plan } = parseSource(createTrimmedClipSource(uri, media, bounds));
+    expect(plan.durationUs).toBe(33_333);
+    expect(plan.audio[0]?.source).toMatchObject({
+      sourceStartUs: 33_333,
+      sourceEndUs: 66_667,
+      rate: 33_334 / 33_333,
+    });
+    expect(plan.layers[0]).toMatchObject({ startUs: 0, endUs: plan.durationUs, source: plan.audio[0]?.source });
+  });
+
+  it("cuts both ends and rebases picture and sound to the same zero-based timeline", () => {
+    const { plan, assets } = parseSource(createTrimmedClipSource(uri, landscapeVideo, { startFrame: 2, endFrame: 4 }));
+    expect(assets).toEqual({ clip: uri });
+    expect(plan.durationUs).toBe(66_667);
+    const timing = {
+      startUs: 0,
+      endUs: plan.durationUs,
+      source: { sourceStartUs: 66_667, sourceEndUs: 133_333, rate: 66_666 / 66_667 },
+    };
+    expect(plan.audio[0]).toMatchObject(timing);
+    expect(plan.layers[0]).toMatchObject(timing);
+  });
+
+  it.each([
+    [0, 2],
+    [1, 4],
+    [2, 2],
+    [3, 1],
+    [1.5, 3],
+    [1, NaN],
+  ])("rejects invalid source frame boundaries %s and %s", (startFrame, endFrame) => {
+    const media = { ...landscapeVideo, startUs: 20_000, durationUs: 89_000 };
+    expect(() => createTrimmedClipSource(uri, media, { startFrame, endFrame })).toThrow(RangeError);
   });
 });
