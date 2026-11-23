@@ -56,8 +56,9 @@ to restore the template defaults. The wording stays with the draft as you replac
 clips. Applied changes update preview and require a new export before sharing.
 
 Each filled slot shows its current start and end times within the source video. Tap **Trim** to see frames from the
-source in order. Drag the highlighted window onto the scene you want, then play the selection to check the cut and
-its audio. The window keeps the duration required by the template. You can trim as soon as a slot has a video.
+source in order. Drag the highlighted window onto the scene you want, or tap a scene outside the window to center
+the selection there. Use **−1f** or **+1f** to move the cut by one frame, then play the selection to check the cut
+and its audio. The window keeps the duration required by the template. You can trim as soon as a slot has a video.
 Tap **Apply trim** to save the window, or **Cancel** to keep the current selection. If you change the window, export
 the template again before sharing.
 

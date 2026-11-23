@@ -2,6 +2,13 @@ import type { getTemplateTrimWindow } from "./template-editor";
 
 type TrimBounds = Pick<ReturnType<typeof getTemplateTrimWindow>, "firstFrame" | "sourceEndFrame" | "durationFrames">;
 
+export type FilmstripIntent = "pending" | "drag" | "scroll";
+
+export function filmstripIntent(intent: FilmstripIntent, dx: number, dy: number): FilmstripIntent {
+  if (intent !== "pending" || Math.max(Math.abs(dx), Math.abs(dy)) < 6) return intent;
+  return Math.abs(dx) > Math.abs(dy) ? "drag" : "scroll";
+}
+
 export function filmstripSamples(firstFrame: number, sourceEndFrame: number) {
   const frames = sourceEndFrame - firstFrame;
   const count = Math.min(8, frames);

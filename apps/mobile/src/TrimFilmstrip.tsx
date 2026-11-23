@@ -3,10 +3,18 @@ import { getVideoThumbnails } from "@stackreel/engine";
 import { darkColors } from "@stackreel/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
+import type { GestureResponderEvent } from "react-native";
 import { textStyles } from "./Screen";
 import { canvas } from "./clip-source";
 import type { getTemplateTrimWindow } from "./template-editor";
-import { filmstripGrabOffset, filmstripSamples, filmstripStartFrame, filmstripWindow } from "./trim-filmstrip";
+import {
+  filmstripGrabOffset,
+  filmstripIntent,
+  filmstripSamples,
+  filmstripStartFrame,
+  filmstripWindow,
+} from "./trim-filmstrip";
+import type { FilmstripIntent } from "./trim-filmstrip";
 
 export function TrimFilmstrip({
   slotId,
@@ -30,7 +38,13 @@ export function TrimFilmstrip({
     () => filmstripSamples(firstFrame, sourceEndFrame).map((frame) => frameToUs(frame, canvas.fps)),
     [firstFrame, sourceEndFrame],
   );
-  const grabOffset = useRef<number | null>(null);
+  const gesture = useRef<{
+    pageX: number;
+    pageY: number;
+    locationX: number;
+    grabOffset: number;
+    intent: FilmstripIntent;
+  } | null>(null);
   const { left, right } = filmstripWindow(bounds, selectedFrame, width);
   // A short window on a long recording can be narrower than one display point.
   const outlineWidth = Math.max(1, right - left);
@@ -51,8 +65,18 @@ export function TrimFilmstrip({
     };
   }, [uri, timesUs]);
 
-  function frameAt(x: number) {
-    return grabOffset.current === null || width <= 0 ? null : filmstripStartFrame(bounds, x, width, grabOffset.current);
+  function updateGesture({ nativeEvent }: GestureResponderEvent, release: boolean) {
+    const touch = gesture.current;
+    if (!touch) return;
+    if (release) gesture.current = null;
+    const dx = nativeEvent.pageX - touch.pageX;
+    touch.intent = filmstripIntent(touch.intent, dx, nativeEvent.pageY - touch.pageY);
+    if (width <= 0 || touch.intent === "scroll" || (touch.intent === "pending" && !release)) return;
+    // Ignore finger jitter on a tap. A drag uses the original grab point even outside the strip.
+    const x = touch.intent === "drag" ? touch.locationX + dx : touch.locationX;
+    const frame = filmstripStartFrame(bounds, x, width, touch.grabOffset);
+    if (release) onRelease(frame);
+    else onDrag(frame);
   }
 
   return (
@@ -64,23 +88,21 @@ export function TrimFilmstrip({
         accessible={false}
         onLayout={({ nativeEvent }) => setWidth(nativeEvent.layout.width)}
         onStartShouldSetResponder={() => width > 0 && bounds.lastStartFrame > firstFrame}
-        onResponderGrant={({ nativeEvent: { locationX } }) => {
-          grabOffset.current = filmstripGrabOffset(bounds, selectedFrame, locationX, width);
-          onDrag(filmstripStartFrame(bounds, locationX, width, grabOffset.current));
+        onResponderGrant={({ nativeEvent: { locationX, pageX, pageY } }) => {
+          gesture.current = {
+            locationX,
+            pageX,
+            pageY,
+            grabOffset: filmstripGrabOffset(bounds, selectedFrame, locationX, width),
+            intent: "pending",
+          };
         }}
-        onResponderMove={({ nativeEvent: { locationX } }) => {
-          const frame = frameAt(locationX);
-          if (frame !== null) onDrag(frame);
-        }}
-        onResponderRelease={({ nativeEvent: { locationX } }) => {
-          const frame = frameAt(locationX);
-          grabOffset.current = null;
-          onRelease(frame);
-        }}
-        onResponderTerminationRequest={() => false}
+        onResponderMove={(event) => updateGesture(event, false)}
+        onResponderRelease={(event) => updateGesture(event, true)}
+        onResponderTerminationRequest={() => gesture.current?.intent !== "drag"}
         onResponderTerminate={() => {
-          grabOffset.current = null;
-          onRelease(null);
+          if (gesture.current?.intent === "drag") onRelease(null);
+          gesture.current = null;
         }}
       >
         {timesUs.map((time, index) => {

@@ -1,9 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { filmstripGrabOffset, filmstripSamples, filmstripStartFrame, filmstripWindow } from "../src/trim-filmstrip";
+import {
+  filmstripGrabOffset,
+  filmstripIntent,
+  filmstripSamples,
+  filmstripStartFrame,
+  filmstripWindow,
+} from "../src/trim-filmstrip";
 
 const bounds = { firstFrame: 12, sourceEndFrame: 112, durationFrames: 20 };
 
 describe("trim filmstrip", () => {
+  it("leaves taps pending through small finger movements and recognizes a horizontal drag in either direction", () => {
+    expect(filmstripIntent("pending", 0, 0)).toBe("pending");
+    expect(filmstripIntent("pending", -5, 5)).toBe("pending");
+    expect(filmstripIntent("pending", -6, 1)).toBe("drag");
+    expect(filmstripIntent("pending", 8, -4)).toBe("drag");
+    expect(filmstripIntent("drag", 1, 12)).toBe("drag");
+  });
+
+  it("yields vertical or diagonal movement to scrolling, including when the finger returns to its origin", () => {
+    expect(filmstripIntent("pending", 1, 6)).toBe("scroll");
+    expect(filmstripIntent("pending", -6, -6)).toBe("scroll");
+    expect(filmstripIntent("scroll", 20, 0)).toBe("scroll");
+    expect(filmstripIntent("scroll", 0, 0)).toBe("scroll");
+  });
+
   it("samples the middle of each equal tile across the playable source", () => {
     expect(filmstripSamples(12, 92)).toEqual([17, 27, 37, 47, 57, 67, 77, 87]);
     expect(filmstripSamples(12, 15)).toEqual([12, 13, 14]);
