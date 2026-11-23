@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>StackReel</title>
+  <rect width="1024" height="1024" fill="#111115"/>
+  <g id="foreground" transform="scale(16)">
+    <path fill="#FF5C99" d="M52 12H23C15.3 12 10 17.2 10 24.2S15 36 22.7 36H26.5L31.5 28H23.2C20.3 28 18.5 26.6 18.5 24.2S20.3 20 23.2 20H47Z"/>
+    <path fill="#F7F7F8" d="M12 52H41C48.7 52 54 46.8 54 39.8S49 28 41.3 28H37.5L32.5 36H40.8C43.7 36 45.5 37.4 45.5 39.8S43.7 44 40.8 44H17Z"/>
+  </g>
+</svg>
