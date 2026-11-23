@@ -475,7 +475,8 @@ _Runs in parallel with Phase 3._
    - [x] iOS template preview safe-zone toggle for TikTok, Reels, and Shorts
    - [ ] Android template preview safe-zone toggle
    - [ ] Edit text: tap text on the preview to edit it inline. Pick a style preset, color, and font.
-   - [ ] Music: pick from device files plus a bundled royalty-free starter pack (CC0). Trim the start offset and set volume.
+   - [x] iOS background music import from Files and soundtrack volume adjustment
+   - [ ] Music start offset, bundled royalty-free starter tracks (CC0), and Android music controls
    - [x] iOS template clip volume and mute
    - [ ] Android clip volume and mute. Undo/redo buttons wired to the `core` command stack.
 5. **Projects**

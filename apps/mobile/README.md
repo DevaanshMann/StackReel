@@ -39,6 +39,11 @@ to clear it. StackReel trims longer music to fit or loops shorter music and appl
 ducking where specified. Preview and export use the same mix. If you change the preview’s music selection, export a
 new MP4 before sharing.
 
+If the soundtrack covers up speech, tap **Music volume** under **Background music** and lower the level. At 100%,
+the music plays at the level set by the template. At 0%, the track stays in the draft and plays silently.
+You can set the level before filling every video slot. Once the reel is complete, play it in the volume editor
+to hear the music and clips together. Apply the change to save it with the draft and use it in the next export.
+
 If a draft’s imported music is missing, use **Choose music from Files** to replace it or **Remove missing music** to
 clear the warning and continue with the clips’ own audio. Removing missing music keeps the other edits and any MP4
 you already exported from the current preview.
@@ -213,6 +218,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     and guide at the larger size. Scrub across the cut, play, then return to the editor and check that playback
     continues. Repeat after exporting and confirm **Share MP4** is available. Try the same transport controls in the
     **Single-clip editor**.
+22. Import background music before filling the video slots. Set its volume to 50%, fill the slots, and export.
+    Open **Music volume**, mute the track, and preview a section with audible clip audio. Cancel and confirm the
+    previous MP4 is still shareable. Mute again, apply, and export a new MP4. Check that the clip is audible while
+    the music is silent. Reopen the draft and duplicate it from **Projects**. Check the saved level in both reels.
 
 ### Export display sleep on iPhone
 
