@@ -57,7 +57,7 @@ changes. If you apply a different framing, export the template again before shar
 Tap **Volume** on a filled slot to hear its selected segment and adjust its original audio. Leave it at 100% for
 the template’s mix, lower it to soften the clip, or tap **Mute** to silence it. Tap **Apply volume** to use the level
 in the reel and its next export. The level follows the clip when you swap slots and stays saved when you reopen
-or duplicate the draft.
+or duplicate the draft. [See the clip volume control on iOS](../../docs/ios-template-clip-volume.png).
 
 Choose **Single-clip editor** from the gallery to select or replace a video from Photos or Files, then preview and
 export it at 720 × 1280 and 30 fps. The video fits inside the vertical frame without cropping, and the export includes
