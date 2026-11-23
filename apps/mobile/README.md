@@ -236,6 +236,11 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     end, and duration. Cancel once, then move the window to a recognizable scene, play it, and tap **Apply trim**.
     Reopen the draft and export it. Check that the chosen scene starts the slot in the MP4.
 
+24. In a filled draft, apply a trim, edit a caption, then clear a video. Undo the clear and check that the same
+    video and trim return. Undo the caption, redo it, and compare the wording in preview. Undo the caption again
+    and apply a different one. Verify **Redo** is disabled and the new wording appears in the exported reel.
+    Leave the editor and reopen the draft. The last edit should be saved and both history controls disabled.
+
 ### Export display sleep on iPhone
 
 1. Install a release build on a physical iPhone. The Expo development client can independently keep the screen awake.
