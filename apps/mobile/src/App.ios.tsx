@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
+import type { ScreenRef } from "./Screen";
 import { TemplateMusicControls } from "./TemplateMusicControls";
 import { TemplateReframe } from "./TemplateReframe";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
@@ -80,6 +81,7 @@ type TextEdit = { kind: "text"; editor: TemplateEditor; textOverrides: TemplateT
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
 type Operation =
   | ImportOperation
+  | { kind: "fullscreen" }
   | SlotEdit
   | SlotSwap
   | TextEdit
@@ -125,6 +127,7 @@ function getSlotPreviewTemplateGainDb(template: MobileTemplate, slotId: string) 
 
 export default function App() {
   const mounted = useRef(false);
+  const editorScreenRef = useRef<ScreenRef>(null);
   const activeOperation = useRef<Operation | null>(null);
   const currentEditor = useRef<Editor>(firstScreen);
   const currentTemplateDrafts = useRef<TemplateDrafts | null>(null);
@@ -141,7 +144,8 @@ export default function App() {
   const source = template ? templateDraft.source : (singleDraft.clip?.source ?? null);
   const outputUri = template ? templateDraft.outputUri : singleDraft.outputUri;
   const canvas = template?.canvas ?? singleClipCanvas;
-  const busy = activity !== null;
+  const fullScreen = activity?.kind === "fullscreen";
+  const busy = activity !== null && !fullScreen;
 
   useEffect(() => {
     const drafts: Record<string, Record<string, TemplateDraft>> = {};
@@ -211,7 +215,7 @@ export default function App() {
     if (activeOperation.current || !isCurrentScreen()) return false;
     activeOperation.current = operation;
     setActivity(operation.kind === "export" ? { ...operation, progress: 0 } : operation);
-    setFeedback(null);
+    if (operation.kind !== "fullscreen") setFeedback(null);
     return true;
   }
 
@@ -724,41 +728,8 @@ export default function App() {
   const swapping = activity?.kind === "swap";
   const editingText = activity?.kind === "text";
   const clip = singleDraft.clip;
-  const editorScreen = (
-    <Screen page={editor.kind === "template" ? editor.draftId : "single-clip"}>
-      {trimming && (
-        <TemplateTrim
-          slot={activity.slot}
-          clip={activity.clip}
-          previewGainDb={getTemplateClipGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
-          onApply={(startFrame) =>
-            applySlotEdit(activity, (clip) => setTemplateClipTrim(activity.slot, clip, startFrame))
-          }
-          onCancel={() => finish(activity)}
-        />
-      )}
-      {reframing && (
-        <TemplateReframe
-          slot={activity.slot}
-          clip={activity.clip}
-          canvas={activity.editor.template.canvas}
-          previewGainDb={getTemplateClipGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
-          onApply={(reframe) =>
-            applySlotEdit(activity, (clip) => setTemplateClipReframe(clip, activity.editor.template.canvas, reframe))
-          }
-          onCancel={() => finish(activity)}
-        />
-      )}
-      {adjustingVolume && (
-        <TemplateVolume
-          slot={activity.slot}
-          clip={activity.clip}
-          canvas={activity.editor.template.canvas}
-          templateGainDb={previewTemplateGainDb}
-          onApply={(percent) => applySlotEdit(activity, (clip) => setTemplateClipVolume(clip, percent))}
-          onCancel={() => finish(activity)}
-        />
-      )}
+  const editorDetails = (
+    <>
       <View style={styles.navigation}>
         <Action label={backLabel} onPress={() => navigate({ ...editor.home })} disabled={busy} />
       </View>
@@ -817,15 +788,10 @@ export default function App() {
           onSelect={selectSingleVideo}
         />
       )}
-      {source && (
-        <ClipPreview
-          key={source}
-          canvas={canvas}
-          source={source}
-          suspended={busy && !exporting}
-          safeZoneGuide={template ? getTemplateSafeZoneGuide(template) : null}
-        />
-      )}
+    </>
+  );
+  const editorActions = (
+    <>
       {editor.kind === "single" && !source && (
         <PreviewFrame canvas={canvas}>
           <Text style={textStyles.muted}>Choose a video to preview.</Text>
@@ -885,6 +851,69 @@ export default function App() {
           />
         )}
       </View>
+    </>
+  );
+  const editorScreen = (
+    <Screen
+      ref={editorScreenRef}
+      page={editor.kind === "template" ? editor.draftId : "single-clip"}
+      fullScreen={fullScreen}
+    >
+      {trimming && (
+        <TemplateTrim
+          slot={activity.slot}
+          clip={activity.clip}
+          previewGainDb={getTemplateClipGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
+          onApply={(startFrame) =>
+            applySlotEdit(activity, (clip) => setTemplateClipTrim(activity.slot, clip, startFrame))
+          }
+          onCancel={() => finish(activity)}
+        />
+      )}
+      {reframing && (
+        <TemplateReframe
+          slot={activity.slot}
+          clip={activity.clip}
+          canvas={activity.editor.template.canvas}
+          previewGainDb={getTemplateClipGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
+          onApply={(reframe) =>
+            applySlotEdit(activity, (clip) => setTemplateClipReframe(clip, activity.editor.template.canvas, reframe))
+          }
+          onCancel={() => finish(activity)}
+        />
+      )}
+      {adjustingVolume && (
+        <TemplateVolume
+          slot={activity.slot}
+          clip={activity.clip}
+          canvas={activity.editor.template.canvas}
+          templateGainDb={previewTemplateGainDb}
+          onApply={(percent) => applySlotEdit(activity, (clip) => setTemplateClipVolume(clip, percent))}
+          onCancel={() => finish(activity)}
+        />
+      )}
+      {!fullScreen && editorDetails}
+      {source && (
+        <ClipPreview
+          key={source}
+          canvas={canvas}
+          source={source}
+          suspended={busy && !exporting}
+          fullScreen={{
+            active: fullScreen,
+            disabled: busy,
+            onChange: (expanded) => {
+              if (expanded) {
+                if (begin({ kind: "fullscreen" })) editorScreenRef.current?.saveScrollPosition();
+              } else if (fullScreen) {
+                finish(activity);
+              }
+            },
+          }}
+          safeZoneGuide={template ? getTemplateSafeZoneGuide(template) : null}
+        />
+      )}
+      {!fullScreen && editorActions}
     </Screen>
   );
 
