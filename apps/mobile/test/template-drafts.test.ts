@@ -7,6 +7,7 @@ import {
   clearTemplateVideoSlot,
   commitTemplateDraftUpdate,
   createDraftMediaFile,
+  createTemplateDraftSession,
   deleteTemplateDraft,
   duplicateTemplateDraft,
   listTemplateDraftIds,
@@ -1188,6 +1189,304 @@ describe("template draft storage", () => {
     storage.blockedDeletion = "";
     deleteTemplateDraft(beforeAfter);
     expect(loadTemplateDraft(beforeAfter)).toBeNull();
+  });
+});
+
+describe("in-session template draft history", () => {
+  const empty = { name: "First cut", clips: {}, textOverrides: {}, music: null };
+  const noExport = { source: null, outputUri: null };
+  afterEach(() => vi.restoreAllMocks());
+
+  it("undoes an ordered first import as one edit, then redoes it using the same files", async () => {
+    const session = createTemplateDraftSession(hook, firstDraftId);
+    const slots = getVideoSlots(hook);
+    const picked = slots.map((slot) => {
+      const file = new File(storage.document, slot.id + ".mov");
+      file.writeSync(slot.id);
+      return { uri: file.uri, name: file.name, draftFileName: file.name };
+    });
+    vi.mocked(pickOrderedVideos).mockResolvedValueOnce(picked);
+    vi.mocked(probeVideo).mockResolvedValue(metadata);
+    await importTemplateVideos({
+      template: hook,
+      draftId: firstDraftId,
+      slots,
+      source: "Photos",
+      isCurrent: () => true,
+      commit: (clips) => {
+        session.commit({ ...empty, clips, ...noExport }, "Import videos");
+      },
+    });
+    const imported = loadTemplateDraft(hook, firstDraftId)!;
+    const source = createTemplateSource(hook, imported.clips);
+    expect(Object.values(imported.clips).map((clip) => clip.name)).toEqual(picked.map((file) => file.name));
+    const copy = vi.spyOn(File.prototype, "copy");
+    expect(session.undoLabel).toBe("Import videos");
+    expect(session.undo({ source, outputUri: "file:///export.mp4" })).toEqual({
+      ...empty,
+      ...noExport,
+      missingSlots: [],
+      missingMusic: false,
+    });
+    expect(session.undo(noExport)).toBeNull();
+    expect(session.redoLabel).toBe("Import videos");
+    for (const clip of Object.values(imported.clips)) expect(new File(clip.uri).exists).toBe(true);
+    expect(session.redo(noExport)).toEqual({ ...imported, source, outputUri: null });
+    expect(session.redo(noExport)).toBeNull();
+    expect(copy).not.toHaveBeenCalled();
+    session.close();
+    const reopened = createTemplateDraftSession(hook, firstDraftId);
+    expect(reopened.undoLabel).toBeNull();
+    expect(reopened.redoLabel).toBeNull();
+    expect(loadTemplateDraft(hook, firstDraftId)).toEqual(imported);
+    reopened.close();
+  });
+
+  it("keeps an asynchronous import's staging files through discovery or reads of the active draft", () => {
+    const session = createTemplateDraftSession(beforeAfter);
+    const { edits, beforeFile, musicFile } = fixture();
+    expect(listTemplateDraftIds(beforeAfter)).toEqual([]);
+    expect(loadTemplateDraft(beforeAfter)).toBeNull();
+    expect(beforeFile.exists && musicFile.exists).toBe(true);
+    session.commit({ ...edits, ...noExport }, "Import");
+    const staged = createDraftMediaFile(beforeAfter, "replacement.mov");
+    staged.writeSync("staged");
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject(edits);
+    expect(staged.exists).toBe(true);
+    session.close();
+    expect(staged.exists).toBe(false);
+  });
+
+  it("round-trips clip swaps, trim, framing, volumes, text, and clearing video or music", () => {
+    const { edits } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const session = createTemplateDraftSession(beforeAfter);
+    const initial = loadTemplateDraft(beforeAfter)!;
+    let draft = initial;
+    const states = [initial];
+    const labels: string[] = [];
+    const apply = (changes: Partial<typeof initial>, label: string) => {
+      draft = { ...draft, ...changes };
+      session.commit({ ...draft, ...noExport }, label);
+      states.push(draft);
+      labels.push(label);
+    };
+    apply({ clips: swapTemplateClips(draft.clips, before, after) }, "Swap clips");
+    apply({ clips: { ...draft.clips, [before.id]: setTemplateClipTrim(before, draft.clips[before.id]!, 3) } }, "Trim");
+    apply(
+      {
+        clips: {
+          ...draft.clips,
+          [before.id]: setTemplateClipReframe(draft.clips[before.id]!, beforeAfter.canvas, { zoom: 2, x: 0.6, y: 0.3 }),
+        },
+      },
+      "Frame",
+    );
+    apply({ clips: { ...draft.clips, [after.id]: setTemplateClipVolume(draft.clips[after.id]!, 25) } }, "Clip volume");
+    apply({ music: setTemplateMusicVolume(draft.music!, 0) }, "Music volume");
+    apply(
+      { textOverrides: setTemplateText(getTemplateTextFields(beforeAfter)[0]!, draft.textOverrides, "New cut") },
+      "Text",
+    );
+    const newTrack = createDraftMediaFile(beforeAfter, "New.m4a");
+    newTrack.writeSync("new music");
+    apply(
+      { music: createTemplateMusic(newTrack.uri, newTrack.name, { startUs: 0, durationUs: 2_000_000 }) },
+      "Replace music",
+    );
+    apply({ clips: clearTemplateVideoSlot(draft, before.id).clips }, "Clear slot");
+    apply({ music: null }, "Clear music");
+    for (let i = labels.length - 1; i >= 0; i--) {
+      expect(session.undoLabel).toBe(labels[i]);
+      expect(session.undo(noExport)).toMatchObject(states[i]!);
+      expect(loadTemplateDraft(beforeAfter)).toEqual(states[i]);
+    }
+    for (const [i, label] of labels.entries()) {
+      expect(session.redoLabel).toBe(label);
+      expect(session.redo(noExport)).toMatchObject(states[i + 1]!);
+      expect(loadTemplateDraft(beforeAfter)).toEqual(states[i + 1]);
+    }
+    session.close();
+    expect(newTrack.exists).toBe(false);
+  });
+
+  it("retains exactly 20 edits and releases expired or discarded media independently of sibling drafts", () => {
+    const sibling = fixture(secondDraftId);
+    saveTemplateDraft(beforeAfter, sibling.edits, secondDraftId);
+    const siblingSession = createTemplateDraftSession(beforeAfter, secondDraftId);
+    siblingSession.commit({ ...sibling.edits, music: null, ...noExport }, "Clear music");
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    const files: File[] = [];
+    for (let i = 0; i < 22; i++) {
+      const file = createDraftMediaFile(beforeAfter, "clip.mov", firstDraftId);
+      file.writeSync(String(i));
+      files.push(file);
+      const clips = { [before.id]: createTemplateClip(before, file.uri, "clip " + i, metadata) };
+      expect(session.commit({ ...empty, clips, ...noExport }, "Video " + i)).toEqual(noExport);
+    }
+    expect(files.filter((file) => file.exists)).toEqual(files.slice(1));
+    for (let i = 21; i >= 2; i--) {
+      expect(session.undoLabel).toBe("Video " + i);
+      expect(session.undo(noExport)?.clips[before.id]?.uri).toBe(files[i - 1]!.uri);
+    }
+    expect(session.undo(noExport)).toBeNull();
+    const current = session.redo(noExport)!;
+    const shared = files[2]!;
+    expect(current.clips[before.id]?.uri).toBe(shared.uri);
+    session.commit({ ...current, textOverrides: { ...current.textOverrides } }, "Unchanged");
+    expect(session.redoLabel).toBe("Video 3");
+    const field = getTemplateTextFields(beforeAfter)[0]!;
+    session.commit({ ...current, textOverrides: setTemplateText(field, {}, "Partial cut") }, "Edit text");
+    expect(session.redoLabel).toBeNull();
+    expect(files.filter((file) => file.exists)).toEqual([files[1], shared]);
+    expect(session.undo(noExport)).toMatchObject(current);
+    expect(siblingSession.undoLabel).toBe("Clear music");
+    expect(sibling.musicFile.exists).toBe(true);
+    session.close();
+    expect(files.filter((file) => file.exists)).toEqual([shared]);
+    expect(siblingSession.undo(noExport)?.music).toEqual(sibling.edits.music);
+    siblingSession.close();
+  });
+
+  it("keeps current exports for metadata-only changes and never resurrects an export from history", () => {
+    const { edits } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const session = createTemplateDraftSession(beforeAfter);
+    const source = createTemplateSource(beforeAfter, edits.clips, edits.textOverrides, edits.music);
+    const exported = { source, outputUri: "file:///Caches/render.mp4" };
+    expect(session.commit({ ...edits, name: "Named cut", ...exported }, "Name")).toEqual(exported);
+    expect(session.undo(exported)).toMatchObject({ name: null, ...exported });
+    const renamed = session.redo(exported)!;
+    expect(renamed).toMatchObject({ name: "Named cut", ...exported });
+    const muted = session.commit({ ...renamed, music: setTemplateMusicVolume(renamed.music!, 0) }, "Mute");
+    expect(muted.source).not.toBe(source);
+    expect(muted.outputUri).toBeNull();
+    expect(session.undo(muted)).toMatchObject({ source, outputUri: null });
+    session.close();
+  });
+
+  it("restores raw missing and malformed media references and retains unknown fields and files", () => {
+    const { edits, beforeFile, musicFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const folder = beforeFile.parentDirectory;
+    const extra = createDraftMediaFile(beforeAfter, "aux.mov");
+    extra.writeSync("extension media");
+    const snapshot = new File(folder, "draft-1.json");
+    const original = JSON.parse(snapshot.textSync());
+    original.clips[before.id].width = "unknown dimensions";
+    original.clips[after.id].extension = { file: extra.name };
+    original.music.futureSetting = { version: 7 };
+    original.extension = { format: "future" };
+    snapshot.writeSync(JSON.stringify(original));
+    musicFile.delete();
+    const partial = loadTemplateDraft(beforeAfter)!;
+    expect(partial).toMatchObject({ missingSlots: [before.id], missingMusic: true });
+    const session = createTemplateDraftSession(beforeAfter);
+    const replacement = createDraftMediaFile(beforeAfter, "replacement.mov");
+    replacement.writeSync("replacement");
+    const render = session.commit(
+      {
+        ...clearTemplateMusic(partial),
+        clips: { ...partial.clips, [before.id]: createTemplateClip(before, replacement.uri, "Replacement", metadata) },
+        missingSlots: [],
+        ...noExport,
+      },
+      "Replace missing media",
+    );
+    expect(beforeFile.exists && extra.exists).toBe(true);
+    const restored = session.undo(render)!;
+    expect(restored).toMatchObject(partial);
+    expect(JSON.parse(new File(folder, "draft-3.json").textSync())).toEqual(original);
+    expect(session.redo(restored)).toMatchObject({ missingSlots: [], missingMusic: false });
+    musicFile.writeSync("recovered");
+    expect(session.undo(render)).toMatchObject({ missingSlots: [before.id], missingMusic: false, music: edits.music });
+    session.close();
+    expect(beforeFile.exists && extra.exists && musicFile.exists).toBe(true);
+    expect(replacement.exists).toBe(true);
+    // Cleanup can resume once the damaged settings become readable again.
+    const latest = new File(folder, "draft-5.json");
+    const repaired = JSON.parse(latest.textSync());
+    repaired.clips[before.id].width = edits.clips[before.id]!.width;
+    latest.writeSync(JSON.stringify(repaired));
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject({ missingSlots: [], missingMusic: false });
+    expect(replacement.exists).toBe(false);
+  });
+
+  it("leaves history, files, and the current manifest intact on failed first saves, edits, undo, and redo", () => {
+    const { edits } = fixture();
+    const session = createTemplateDraftSession(beforeAfter);
+    const beforeFirst = new Map(storage.files);
+    storage.interruptMove = true;
+    expect(() => session.commit({ ...edits, ...noExport }, "Import")).toThrow("Interrupted write");
+    expect(storage.files).toEqual(beforeFirst);
+    expect(session.undoLabel).toBeNull();
+    storage.interruptMove = false;
+    const render = session.commit({ ...edits, ...noExport }, "Import");
+    session.commit({ ...edits, music: null, ...render }, "Clear music");
+    const restored = session.undo(noExport)!;
+    const files = new Map(storage.files);
+    storage.interruptMove = true;
+    for (const attempt of [
+      () => session.commit({ ...restored, clips: {} }, "Clear videos"),
+      () => session.undo(restored),
+      () => session.redo(restored),
+    ]) {
+      expect(attempt).toThrow("Interrupted write");
+      expect(session.undoLabel).toBe("Import");
+      expect(session.redoLabel).toBe("Clear music");
+      expect(storage.files).toEqual(files);
+    }
+    storage.interruptMove = false;
+    vi.spyOn(templateEditor, "createTemplateSource").mockImplementationOnce(() => {
+      throw new Error("Preview failed");
+    });
+    expect(() => session.redo(restored)).toThrow("Preview failed");
+    expect(storage.files).toEqual(files);
+    expect(session.redo(restored)).toMatchObject({ music: null });
+    session.close();
+  });
+
+  it.each([null, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.mov"])(
+    "protects original footage and recovery revisions through a degraded load, unrelated edit and exit (%s)",
+    (badFile) => {
+      const { edits, beforeFile } = fixture();
+      saveTemplateDraft(beforeAfter, edits);
+      const folder = beforeFile.parentDirectory;
+      const recoverable = new File(folder, "draft-1.json");
+      const damaged = JSON.parse(recoverable.textSync());
+      damaged.clips[before.id].file = badFile;
+      const latest = new File(folder, "draft-2.json");
+      latest.writeSync(JSON.stringify(damaged));
+      const partial = loadTemplateDraft(beforeAfter)!;
+      expect(partial.missingSlots).toEqual([before.id]);
+      const session = createTemplateDraftSession(beforeAfter);
+      session.commit({ ...partial, name: "Renamed", ...noExport }, "Name");
+      expect(session.undo(noExport)).toMatchObject(partial);
+      expect(session.redo(noExport)).toMatchObject({ missingSlots: [before.id] });
+      session.close();
+      expect(loadTemplateDraft(beforeAfter)?.missingSlots).toEqual([before.id]);
+      expect(beforeFile.textSync()).toBe("fixture");
+      expect(recoverable.exists && latest.exists).toBe(true);
+    },
+  );
+
+  it("sweeps abandoned history on a healthy cold load and leaves unrelated files alone", async () => {
+    const { edits, beforeFile, afterFile, musicFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const session = createTemplateDraftSession(beforeAfter);
+    const current = loadTemplateDraft(beforeAfter)!;
+    session.commit({ ...clearTemplateMusic(current), ...noExport }, "Clear music");
+    expect(musicFile.exists).toBe(true);
+    const note = new File(afterFile.parentDirectory, "notes.txt");
+    note.writeSync("keep");
+    // A new JS runtime has no session pins, even if the editor never got to close.
+    vi.resetModules();
+    const cold = await import("../src/template-drafts");
+    expect(cold.loadTemplateDraft(beforeAfter)).toMatchObject({ missingSlots: [], missingMusic: false });
+    expect(musicFile.exists).toBe(false);
+    expect(beforeFile.exists && afterFile.exists && note.exists).toBe(true);
+    expect(cold.createTemplateDraftSession(beforeAfter).undoLabel).toBeNull();
+    session.close();
   });
 });
 
