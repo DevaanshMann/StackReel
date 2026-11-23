@@ -25,6 +25,7 @@ import {
   setTemplateClipReframe,
   setTemplateClipTrim,
   setTemplateClipVolume,
+  setTemplateMusicVolume,
   setTemplateText,
   swapTemplateClips,
 } from "../src/template-editor";
@@ -210,6 +211,7 @@ describe("duplicating a template draft", () => {
   ] as const)("copies %s independently (delete source first: %s)", async (sourceId, deleteSource) => {
     const { edits, beforeFile, afterFile, musicFile } = fixture(sourceId);
     edits.clips[before.id] = setTemplateClipVolume(edits.clips[before.id]!, 0);
+    edits.music = setTemplateMusicVolume(edits.music, 35);
     for (const file of [beforeFile, afterFile, musicFile]) file.writeSync(file.name);
     saveTemplateDraft(beforeAfter, edits, sourceId);
     renameTemplateDraft(beforeAfter, "Original", sourceId);
@@ -360,6 +362,45 @@ describe("duplicating a template draft", () => {
 });
 
 describe("template draft storage", () => {
+  it("retains a legacy export at the template music level and requires a new export after muting", () => {
+    const { edits } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const legacy = loadTemplateDraft(beforeAfter)!;
+    expect(legacy.music).toEqual(edits.music);
+    const source = createTemplateSource(beforeAfter, edits.clips, edits.textOverrides, edits.music);
+    const outputUri = "file:///Exports/rendered.mp4";
+    const current = { ...legacy, source, outputUri };
+    expect(
+      commitTemplateDraftUpdate(beforeAfter, { ...current, music: setTemplateMusicVolume(legacy.music!, 100) }),
+    ).toEqual({ source, outputUri });
+
+    const music = setTemplateMusicVolume(legacy.music!, 0);
+    const muted = commitTemplateDraftUpdate(beforeAfter, { ...current, music });
+    expect(muted.source).not.toBe(source);
+    expect(muted.outputUri).toBeNull();
+    const reopened = loadTemplateDraft(beforeAfter)!;
+    expect(reopened.music).toEqual(music);
+    expect(commitTemplateDraftUpdate(beforeAfter, { ...reopened, source: muted.source, outputUri })).toEqual({
+      source: muted.source,
+      outputUri,
+    });
+  });
+
+  it.each([null, "50", -1, 101])("preserves a soundtrack with an invalid saved volume (%s)", (volumePercent) => {
+    const { edits, musicFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const snapshot = new File(musicFile.parentDirectory, "draft-1.json");
+    const saved = JSON.parse(snapshot.textSync());
+    saved.music.volumePercent = volumePercent;
+    snapshot.writeSync(JSON.stringify(saved));
+    const loaded = loadTemplateDraft(beforeAfter)!;
+    expect(loaded).toEqual({ ...edits, name: null, music: null, missingSlots: [], missingMusic: true });
+    saveTemplateDraft(beforeAfter, loaded);
+    const next = new File(musicFile.parentDirectory, "draft-2.json");
+    expect(JSON.parse(next.textSync()).music).toEqual(saved.music);
+    expect(musicFile.exists).toBe(true);
+  });
+
   it("reopens a legacy mix, invalidates a rendered export on a volume change, and retains it on a no-op", () => {
     const { edits, beforeFile } = fixture();
     saveTemplateDraft(beforeAfter, edits);
@@ -784,6 +825,7 @@ describe("template draft storage", () => {
 
   it("preserves missing media and its settings when a caption autosaves", () => {
     const { edits, beforeFile, musicFile } = fixture();
+    edits.music = setTemplateMusicVolume(edits.music, 25);
     saveTemplateDraft(beforeAfter, { ...edits, name: "Weekend cut" });
     beforeFile.delete();
     musicFile.delete();

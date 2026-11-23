@@ -10,6 +10,7 @@ import {
   getVideoSlots,
   normalizeTemplateText,
   setTemplateClipVolume,
+  setTemplateMusicVolume,
 } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateMusic, TemplateTextOverrides } from "./template-editor";
 
@@ -298,11 +299,15 @@ function readAsset(value: unknown, directory: Directory, keep: Set<string>) {
   ) {
     throw new Error("Draft media is unavailable.");
   }
+  if (value.volumePercent !== undefined && typeof value.volumePercent !== "number") {
+    throw new Error("Invalid saved volume.");
+  }
   return {
     uri: file.uri,
     name: value.name,
     sourceStartUs: value.sourceStartUs as number,
     sourceEndUs: value.sourceEndUs as number,
+    volumePercent: value.volumePercent ?? 100,
   };
 }
 
@@ -344,8 +349,9 @@ function restoreDraftEdits(
       ) {
         throw new Error("Invalid saved video settings.");
       }
+      const { volumePercent, ...asset } = readAsset(value, directory, keep);
       const clip: TemplateClip = {
-        ...readAsset(value, directory, keep),
+        ...asset,
         width: value.width,
         height: value.height,
         trimInUs: value.trimInUs,
@@ -365,10 +371,7 @@ function restoreDraftEdits(
         getTemplateCrop(clip, template.canvas);
       }
       getTemplateTrimWindow(slot, clip);
-      if (value.volumePercent !== undefined && typeof value.volumePercent !== "number") {
-        throw new Error("Invalid saved volume.");
-      }
-      clips[slot.id] = setTemplateClipVolume(clip, value.volumePercent ?? 100);
+      clips[slot.id] = setTemplateClipVolume(clip, volumePercent);
     } catch {
       missingSlots.push(slot.id);
     }
@@ -378,8 +381,9 @@ function restoreDraftEdits(
   let missingMusic = false;
   if (saved.music) {
     try {
-      const { uri, name, sourceStartUs, sourceEndUs } = readAsset(saved.music, directory, keep);
-      music = createTemplateMusic(uri, name, { startUs: sourceStartUs, durationUs: sourceEndUs - sourceStartUs });
+      const { uri, name, sourceStartUs, sourceEndUs, volumePercent } = readAsset(saved.music, directory, keep);
+      const track = createTemplateMusic(uri, name, { startUs: sourceStartUs, durationUs: sourceEndUs - sourceStartUs });
+      music = setTemplateMusicVolume(track, volumePercent);
     } catch {
       missingMusic = true;
     }
