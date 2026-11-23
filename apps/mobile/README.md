@@ -6,6 +6,12 @@ video. Use **Replace from Photos** or **Replace from Files** to choose a differe
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
 MP4. Each template supplies its own canvas, timing, and captions.
 
+Use **Undo** and **Redo** in an open template draft to compare cuts or recover a previous edit. You can step back
+through the last 20 edits, including trims, framing, captions, volume changes, swaps, and adding, replacing, or
+removing videos and music. Choosing several videos together counts as one edit. After undoing, making a different
+edit starts a new sequence from that point. The draft saves the result of each undo or redo. Leaving the editor
+ends the history for that session. Reopening the draft resumes at the saved result.
+
 Tap **Full screen** on a finished template or an imported single clip to inspect the reel at a larger size.
 Play, pause, or scrub to check a cut. Tap **Exit full screen** to return to the same position in the editor.
 On templates, you can also check the safe-zone guide while watching full screen.

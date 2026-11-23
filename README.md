@@ -479,7 +479,8 @@ _Runs in parallel with Phase 3._
    - [x] iOS background music import from Files and soundtrack volume adjustment
    - [ ] Music start offset, bundled royalty-free starter tracks (CC0), and Android music controls
    - [x] iOS template clip volume and mute
-   - [ ] Android clip volume and mute. Undo/redo buttons wired to the `core` command stack.
+   - [x] Undo and redo applied edits in an open iOS template draft
+   - [ ] Android clip volume, mute, and undo/redo controls
 5. **Projects**
    - [ ] Auto-save every edit (debounced) to SQLite and the app sandbox
    - [ ] Project list with thumbnails. Duplicate, rename, delete.
