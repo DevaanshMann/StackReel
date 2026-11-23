@@ -28,6 +28,7 @@ export function TemplateVolume({
   const [dragPercent, setDragPercent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const sliding = useRef(false);
+  const currentVolumePercent = useRef(volumePercent);
   const lastAudiblePercent = useRef(volumePercent || 100);
   const visiblePercent = dragPercent ?? volumePercent;
   const muteLabel = visiblePercent === 0 ? "Unmute" : "Mute";
@@ -44,6 +45,7 @@ export function TemplateVolume({
   }, [canvas, clip, templateGainDb, volumePercent]);
 
   function updateVolume(percent: number) {
+    currentVolumePercent.current = percent;
     if (percent > 0) lastAudiblePercent.current = percent;
     setVolumePercent(percent);
   }
@@ -51,7 +53,7 @@ export function TemplateVolume({
   function apply() {
     if (sliding.current) return;
     try {
-      onApply(volumePercent);
+      onApply(currentVolumePercent.current);
     } catch (cause) {
       setError(errorMessage("Couldn’t apply the volume.", cause));
     }
@@ -64,40 +66,57 @@ export function TemplateVolume({
           <Text numberOfLines={1} style={textStyles.muted}>
             {clip.name}
           </Text>
-          <View style={styles.level}>
+          <View style={styles.level} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <Text style={textStyles.body}>Original audio</Text>
             <Text style={styles.percent} testID={`volume-percent-${slot.id}`}>
               {visiblePercent}%
             </Text>
           </View>
           <View style={styles.sliderRow}>
-            <Slider
-              testID={`volume-slider-${slot.id}`}
+            <View
+              testID={`volume-adjustable-${slot.id}`}
+              style={styles.sliderControl}
+              accessible
+              accessibilityRole="adjustable"
               accessibilityLabel={`Original audio volume for ${slot.label}`}
               accessibilityValue={{ min: 0, max: 100, now: visiblePercent, text: `${visiblePercent}%` }}
-              minimumValue={0}
-              maximumValue={100}
-              value={volumePercent}
-              step={1}
-              minimumTrackTintColor={darkColors.accent}
-              maximumTrackTintColor={darkColors.border}
-              thumbTintColor={darkColors.text}
-              style={styles.slider}
-              tapToSeek
-              onSlidingStart={(percent) => {
-                sliding.current = true;
-                setDragPercent(percent);
+              accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+              onAccessibilityAction={({ nativeEvent: { actionName } }) => {
+                if (sliding.current) return;
+                const percent = currentVolumePercent.current;
+                if (actionName === "increment") updateVolume(Math.min(100, percent + 5));
+                if (actionName === "decrement") updateVolume(Math.max(0, percent - 5));
               }}
-              onValueChange={(percent) => {
-                if (sliding.current) setDragPercent(percent);
-                else updateVolume(percent);
-              }}
-              onSlidingComplete={(percent) => {
-                sliding.current = false;
-                updateVolume(percent);
-                setDragPercent(null);
-              }}
-            />
+            >
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <Slider
+                  testID={`volume-slider-${slot.id}`}
+                  accessible={false}
+                  minimumValue={0}
+                  maximumValue={100}
+                  value={volumePercent}
+                  step={1}
+                  minimumTrackTintColor={darkColors.accent}
+                  maximumTrackTintColor={darkColors.border}
+                  thumbTintColor={darkColors.text}
+                  style={styles.slider}
+                  tapToSeek
+                  onSlidingStart={(percent) => {
+                    sliding.current = true;
+                    setDragPercent(percent);
+                  }}
+                  onValueChange={(percent) => {
+                    if (sliding.current) setDragPercent(percent);
+                    else updateVolume(percent);
+                  }}
+                  onSlidingComplete={(percent) => {
+                    sliding.current = false;
+                    updateVolume(percent);
+                    setDragPercent(null);
+                  }}
+                />
+              </View>
+            </View>
             <Action
               label={muteLabel}
               accessibilityLabel={`${muteLabel} original audio for ${slot.label}`}
@@ -143,6 +162,7 @@ const styles = StyleSheet.create({
   level: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: space[2] },
   percent: { ...textStyles.body, fontVariant: ["tabular-nums"] },
   sliderRow: { flexDirection: "row", alignItems: "center", gap: space[3] },
-  slider: { flex: 1, height: 44 },
+  sliderControl: { flex: 1 },
+  slider: { height: 44 },
   actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: space[2] },
 });
