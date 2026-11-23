@@ -55,8 +55,9 @@ Tap **Apply text** to save the wording, **Cancel** to discard your changes, or *
 to restore the template defaults. The wording stays with the draft as you replace, trim, or reframe its
 clips. Applied changes update preview and require a new export before sharing.
 
-Each filled slot shows its current start and end times within the source video. Tap **Trim** to move the fixed-length
-window in whole-frame steps and play the selected segment with its audio. You can trim as soon as a slot has a video.
+Each filled slot shows its current start and end times within the source video. Tap **Trim** to see frames from the
+source in order. Drag the highlighted window onto the scene you want, then play the selection to check the cut and
+its audio. The window keeps the duration required by the template. You can trim as soon as a slot has a video.
 Tap **Apply trim** to save the window, or **Cancel** to keep the current selection. If you change the window, export
 the template again before sharing.
 
