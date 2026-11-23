@@ -28,7 +28,12 @@ const pendingName = "pending.json";
 const mediaName = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}(?:\.[a-z0-9]{1,10})?$/i;
 const draftUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 const copyingDirectories = new Set<string>();
-type SessionFiles = { media: Set<string>; preserveRecoveryFiles: boolean };
+type SessionFiles = {
+  historyMedia: Set<string>;
+  allocated: Set<string>;
+  staged: Set<string>;
+  preserveRecoveryFiles: boolean;
+};
 const activeSessionFiles = new Map<string, SessionFiles>();
 const maxHistoryEdits = 20;
 
@@ -79,6 +84,9 @@ function draftSnapshots(directory: Directory) {
 export function removeDraftFile(file: File) {
   try {
     if (file.exists) file.delete();
+    const session = activeSessionFiles.get(file.parentDirectory.uri);
+    session?.allocated.delete(file.name);
+    session?.staged.delete(file.name);
   } catch {
     // An interrupted cleanup can be retried the next time the draft is opened or saved.
   }
@@ -87,10 +95,12 @@ export function removeDraftFile(file: File) {
 function pruneDraftFiles(directory: Directory, keep: ReadonlySet<string>) {
   // Discovery can run while a duplicate is still copying media into its unpublished folder.
   const session = activeSessionFiles.get(directory.uri);
-  if (copyingDirectories.has(directory.uri) || session?.preserveRecoveryFiles) return;
+  if (copyingDirectories.has(directory.uri)) return;
   try {
     for (const entry of directory.list()) {
-      if (!(entry instanceof File) || keep.has(entry.name) || session?.media.has(entry.name)) continue;
+      if (!(entry instanceof File) || keep.has(entry.name)) continue;
+      if (session?.historyMedia.has(entry.name) || session?.staged.has(entry.name)) continue;
+      if (session?.preserveRecoveryFiles && !session.allocated.has(entry.name)) continue;
       if (entry.name === pendingName || snapshotName.test(entry.name) || mediaName.test(entry.name)) {
         removeDraftFile(entry);
       }
@@ -106,7 +116,14 @@ export function createDraftMediaFile(template: MobileTemplate, importedName: str
   const directory = draftDirectory(template, draftId);
   directory.create({ intermediates: true, idempotent: true });
   const extension = /\.[a-z0-9]{1,10}$/i.exec(importedName)?.[0] ?? "";
-  return new File(directory, `${randomUUID()}${extension.toLowerCase()}`);
+  let file: File;
+  do {
+    file = new File(directory, `${randomUUID()}${extension.toLowerCase()}`);
+  } while (file.exists);
+  const session = activeSessionFiles.get(directory.uri);
+  session?.allocated.add(file.name);
+  session?.staged.add(file.name);
+  return file;
 }
 
 export function deleteTemplateDraft(template: MobileTemplate, draftId = template.id) {
@@ -256,6 +273,9 @@ function publishManifest(directory: Directory, revision: number, saved: Record<s
   collectMediaFiles(saved, keep);
   directory.create({ intermediates: true, idempotent: true });
   keep.add(commitDraftManifest(directory, revision, saved));
+  // Other imports can still be copying. Only the published references are finished staging.
+  const session = activeSessionFiles.get(directory.uri);
+  if (session) for (const name of keep) session.staged.delete(name);
   return keep;
 }
 
@@ -299,7 +319,12 @@ export type TemplateDraftSession = ReturnType<typeof createTemplateDraftSession>
 
 export function createTemplateDraftSession(template: MobileTemplate, draftId = template.id) {
   const directory = draftDirectory(template, draftId);
-  const sessionFiles: SessionFiles = { media: new Set(), preserveRecoveryFiles: false };
+  const sessionFiles: SessionFiles = {
+    historyMedia: new Set(),
+    allocated: new Set(),
+    staged: new Set(),
+    preserveRecoveryFiles: false,
+  };
   activeSessionFiles.set(directory.uri, sessionFiles);
   let past: HistoryEntry[] = [];
   let future: HistoryEntry[] = [];
@@ -334,7 +359,7 @@ export function createTemplateDraftSession(template: MobileTemplate, draftId = t
     lastRevision = revision + 1;
     past = nextPast;
     future = nextFuture;
-    sessionFiles.media = files;
+    sessionFiles.historyMedia = files;
     pruneDraftFiles(directory, keep);
   }
 
@@ -396,12 +421,15 @@ export function createTemplateDraftSession(template: MobileTemplate, draftId = t
       past = [];
       future = [];
       if (activeSessionFiles.get(directory.uri) !== sessionFiles) return;
-      activeSessionFiles.delete(directory.uri);
-      sessionFiles.media.clear();
+      sessionFiles.historyMedia.clear();
+      sessionFiles.staged.clear();
       try {
-        loadTemplateDraft(template, draftId);
+        readTemplateDraft(template, directory, true);
       } catch {
         // An unreadable current manifest must keep all its files. Retry on the next cold load.
+      } finally {
+        activeSessionFiles.delete(directory.uri);
+        sessionFiles.allocated.clear();
       }
     },
   };
@@ -485,21 +513,30 @@ function isDegraded(draft: TemplateDraftEdits) {
 
 export function loadTemplateDraft(template: MobileTemplate, draftId = template.id) {
   const directory = draftDirectory(template, draftId);
+  // Reads during an editor session can race an async import before its files reach the manifest.
+  return readTemplateDraft(template, directory, !activeSessionFiles.has(directory.uri));
+}
+
+function readTemplateDraft(template: MobileTemplate, directory: Directory, cleanup: boolean) {
   if (!directory.exists) return null;
   const snapshot = draftSnapshots(directory).at(-1);
   const keep = new Set<string>();
-  // Reads during an editor session can race an async import before its files reach the manifest.
-  const coldLoad = !activeSessionFiles.has(directory.uri);
   if (!snapshot) {
-    if (coldLoad) pruneDraftFiles(directory, keep);
+    if (cleanup) pruneDraftFiles(directory, keep);
     return null;
   }
   keep.add(snapshot.file.name);
   const manifest = readDraftManifest(template, snapshot.file);
   const draft = restoreDraftEdits(template, directory, manifest);
-  if (coldLoad && !isDegraded(draft)) {
-    collectMediaFiles(manifest.saved, keep);
-    pruneDraftFiles(directory, keep);
+  if (cleanup) {
+    const session = activeSessionFiles.get(directory.uri);
+    const degraded = isDegraded(draft);
+    // On exit we still know which imports are ours. A cold load has no ownership record.
+    if (session) session.preserveRecoveryFiles = degraded;
+    if (!degraded || session) {
+      collectMediaFiles(manifest.saved, keep);
+      pruneDraftFiles(directory, keep);
+    }
   }
   return draft;
 }

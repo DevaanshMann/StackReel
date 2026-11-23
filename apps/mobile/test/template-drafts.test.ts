@@ -1402,14 +1402,14 @@ describe("in-session template draft history", () => {
     expect(session.undo(render)).toMatchObject({ missingSlots: [before.id], missingMusic: false, music: edits.music });
     session.close();
     expect(beforeFile.exists && extra.exists && musicFile.exists).toBe(true);
-    expect(replacement.exists).toBe(true);
-    // Cleanup can resume once the damaged settings become readable again.
+    expect(replacement.exists).toBe(false);
+    // A healthy cold load can also reclaim the older recovery revisions.
     const latest = new File(folder, "draft-5.json");
     const repaired = JSON.parse(latest.textSync());
     repaired.clips[before.id].width = edits.clips[before.id]!.width;
     latest.writeSync(JSON.stringify(repaired));
     expect(loadTemplateDraft(beforeAfter)).toMatchObject({ missingSlots: [], missingMusic: false });
-    expect(replacement.exists).toBe(false);
+    expect(snapshot.exists).toBe(false);
   });
 
   it("leaves history, files, and the current manifest intact on failed first saves, edits, undo, and redo", () => {
@@ -1444,6 +1444,54 @@ describe("in-session template draft history", () => {
     expect(storage.files).toEqual(files);
     expect(session.redo(restored)).toMatchObject({ music: null });
     session.close();
+  });
+
+  it("reclaims only session imports on expiry, branching and exit while a soundtrack reference is damaged", () => {
+    const { edits, beforeFile, musicFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const folder = musicFile.parentDirectory;
+    const recovery = new File(folder, "draft-1.json");
+    const damaged = JSON.parse(recovery.textSync());
+    damaged.music.file = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.m4a";
+    const brokenRevision = new File(folder, "draft-2.json");
+    brokenRevision.writeSync(JSON.stringify(damaged));
+    const partial = loadTemplateDraft(beforeAfter)!;
+    expect(partial.missingMusic).toBe(true);
+
+    const session = createTemplateDraftSession(beforeAfter);
+    const pending = createDraftMediaFile(beforeAfter, "pending.mov");
+    pending.writeSync("import in progress");
+    const replacements: File[] = [];
+    for (let i = 0; i < 22; i++) {
+      const file = createDraftMediaFile(beforeAfter, "video.mov");
+      file.writeSync(String(i));
+      replacements.push(file);
+      const clips = { ...partial.clips, [before.id]: createTemplateClip(before, file.uri, file.name, metadata) };
+      session.commit({ ...partial, clips, ...noExport }, "Replace video");
+    }
+    expect(replacements.filter((file) => file.exists)).toEqual(replacements.slice(1));
+    const current = session.undo(noExport)!;
+    expect(current.clips[before.id]?.uri).toBe(replacements[20]!.uri);
+    const branch = { ...current, name: "Alternate cut" };
+    storage.interruptMove = true;
+    expect(() => session.commit(branch, "Rename")).toThrow("Interrupted write");
+    expect(replacements[21]!.exists).toBe(true);
+    storage.interruptMove = false;
+    session.commit(branch, "Rename");
+    expect(session.redoLabel).toBeNull();
+    expect(replacements.filter((file) => file.exists)).toEqual(replacements.slice(1, 21));
+    expect(pending.textSync()).toBe("import in progress");
+
+    session.close();
+    expect(replacements.filter((file) => file.exists)).toEqual([replacements[20]]);
+    expect(pending.exists).toBe(false);
+    expect(loadTemplateDraft(beforeAfter)).toMatchObject({
+      name: branch.name,
+      clips: current.clips,
+      missingMusic: true,
+    });
+    expect(beforeFile.exists && musicFile.exists).toBe(true);
+    expect(recovery.exists && brokenRevision.exists).toBe(true);
   });
 
   it.each([null, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.mov"])(
