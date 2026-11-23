@@ -61,7 +61,11 @@ export function TemplateGallery({
           );
         })}
       </View>
-      <GalleryCard label="Single-clip editor" details="Preview and export one video" onPress={onSelectSingleClip} />
+      <GalleryCard
+        label="Single-clip editor"
+        details="Trim, preview, and export one video"
+        onPress={onSelectSingleClip}
+      />
     </>
   );
 }
