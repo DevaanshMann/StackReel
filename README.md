@@ -5,13 +5,13 @@
 **Stack your clips. Ship your reel.**
 
 A free, open-source, on-device editor for vertical video (Reels, TikTok, YouTube Shorts).
-Pick a template, drop in your clips, and export. Your media never leaves your device.
+Pick a template, drop in your clips, and export. StackReel edits and renders your reel on your device.
 
 **Available on iOS as a development build.** Open **Before / After** or **Hook & Reveal**, add videos from Photos or Files,
 trim and reframe clips, and edit the template text. You can resume a saved draft, preview the reel, and export an H.264 MP4
 to share or save to Photos. Android, web, and desktop editors are planned.
 
-[Set up and run the iOS editor](#getting-started-developers) · [Try the mobile smoke test](apps/mobile/README.md#smoke-test) · MIT licensed
+[Set up and run the iOS editor](#getting-started-developers) · [Try the mobile smoke test](apps/mobile/README.md#smoke-test) · [Privacy policy](docs/privacy.md) · MIT licensed
 
 </div>
 
@@ -298,7 +298,7 @@ A phase is done only when every exit criterion is met.
    - [ ] Reserve the **StackReel** name in App Store Connect (create the app record) and the Google Play Console
    - [ ] Run a trademark search (USPTO / WIPO) for "StackReel" in class 9 (software)
    - [ ] Register a domain (e.g. `stackreel.app` or `getstackreel.com`)
-   - [ ] Draft a privacy policy: "no data collected" plus the opt-in crash reporting clause
+   - [x] [Draft a privacy policy](docs/privacy.md) covering on-device editing and opt-in crash reporting
 6. **Design basics**
    - [ ] Figma file with user flows: _Home → Template gallery → Fill slots → Preview/Tweak → Export → Share_
    - [x] Design tokens (color, type scale, spacing, radii, motion durations) in `packages/ui`
