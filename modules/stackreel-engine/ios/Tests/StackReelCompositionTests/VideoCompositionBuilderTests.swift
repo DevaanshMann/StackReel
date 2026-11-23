@@ -89,6 +89,28 @@ final class VideoCompositionBuilderTests: XCTestCase {
   }
 
   @MainActor
+  func testNormalSpeedTrimKeepsEveryFrameAcrossMicrosecondRounding() async throws {
+    let url = try await makeMovie()
+    func microseconds(at frame: Int) -> Int64 {
+      CMTime(value: Int64(frame), timescale: 30)
+        .convertScale(1_000_000, method: .roundHalfAwayFromZero).value
+    }
+    // The first two source spans round one microsecond shorter and longer than at timeline zero.
+    for selection in [2..<88, 1..<89, 1..<2, 89..<90] {
+      let sourceStart = microseconds(at: selection.lowerBound)
+      let sourceEnd = microseconds(at: selection.upperBound)
+      let duration = microseconds(at: selection.count)
+      let layer = clip(
+        0, start: 0, end: duration, sourceStart: sourceStart, sourceEnd: sourceEnd,
+        rate: Double(sourceEnd - sourceStart) / Double(duration))
+      let plan = try decodePlan(duration: duration, layers: [layer])
+      let composition = try await VideoCompositionBuilder.build(plan) { _ in url }
+      let frames = try readFrames(composition.makeRenderComposition())
+      XCTAssertEqual(frames.keys.sorted(), Array(0..<selection.count), "Source frames \(selection)")
+    }
+  }
+
+  @MainActor
   func testLoopsFillTheLayerAndHoldTailsRemainAddressable() async throws {
     let url = try await makeMovie()
     let plan = try decodePlan(
@@ -914,7 +936,7 @@ final class VideoCompositionBuilderTests: XCTestCase {
 
   private func readFrames(
     _ render: (asset: AVComposition, videoComposition: AVVideoComposition),
-    at frameNumbers: Set<Int>
+    at frameNumbers: Set<Int>? = nil
   ) throws -> [Int: CVPixelBuffer] {
     let reader = try AVAssetReader(asset: render.asset)
     let output = AVAssetReaderVideoCompositionOutput(
@@ -929,10 +951,10 @@ final class VideoCompositionBuilderTests: XCTestCase {
     while let sample = output.copyNextSampleBuffer() {
       let frameNumber = Int(
         sample.presentationTimeStamp.convertScale(30, method: .roundHalfAwayFromZero).value)
-      if frameNumbers.contains(frameNumber) { frames[frameNumber] = sample.imageBuffer }
+      if frameNumbers?.contains(frameNumber) ?? true { frames[frameNumber] = sample.imageBuffer }
     }
     guard reader.status == .completed else { throw reader.error ?? TestError.cannotReadComposition }
-    XCTAssertEqual(Set(frames.keys), frameNumbers)
+    if let frameNumbers { XCTAssertEqual(Set(frames.keys), frameNumbers) }
     return frames
   }
 
