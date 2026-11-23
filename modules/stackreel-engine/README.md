@@ -39,6 +39,11 @@ try {
 `probeVideo` returns width and height in pixels after applying the first video track's preferred
 transform. `startUs` and `durationUs` describe that track's time range in microseconds.
 
+`getVideoThumbnails(uri, timesUs)` accepts a local video file URL and up to eight absolute source timestamps in
+integer microseconds. Use the video track’s playable bounds when choosing samples. The returned array follows the
+requested order, with a JPEG data URI for each available frame and `null` for an unavailable sample. Each image
+respects the video’s orientation and fits within 192 × 192 pixels.
+
 `probeAudio(uri)` accepts an absolute local `file:` URL and returns `AudioMetadata` with `startUs`
 and `durationUs` for the first audio track. Use `startUs` and `startUs + durationUs` as the source trim
 bounds. They are safe integer microseconds rounded inward, and `startUs` can be greater than zero.

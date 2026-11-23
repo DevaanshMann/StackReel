@@ -17,7 +17,7 @@ let package = Package(
     .target(
       name: "StackReelExpoSupport", path: "Sources/StackReelExpo",
       exclude: ["EnginePreviewView.swift", "RenderSource.swift", "StackReelEngineModule.swift"],
-      sources: ["AudioProbe.swift", "ExportCache.swift"]),
+      sources: ["AudioProbe.swift", "ExportCache.swift", "VideoThumbnails.swift"]),
     .testTarget(
       name: "StackReelCompositionTests",
       dependencies: ["StackReelComposition", "StackReelPlan", "StackReelExpoSupport"]),

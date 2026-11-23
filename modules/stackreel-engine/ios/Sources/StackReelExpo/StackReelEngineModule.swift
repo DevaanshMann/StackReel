@@ -16,6 +16,10 @@ public final class StackReelEngineModule: Module {
       try await LocalMedia.probeVideo(uri)
     }
 
+    AsyncFunction("getVideoThumbnails") { (uri: String, timesUs: [Double]) async throws -> [String?] in
+      try await VideoThumbnails.generate(for: LocalMedia.fileURL(uri), timesUs: timesUs)
+    }
+
     AsyncFunction("probeAudio") { (uri: String) async throws -> [String: Double] in
       try await LocalMedia.probeAudio(uri)
     }

@@ -224,6 +224,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     Open **Music volume**, mute the track, and preview a section with audible clip audio. Cancel and confirm the
     previous MP4 is still shareable. Mute again, apply, and export a new MP4. Check that the clip is audible while
     the music is silent. Reopen the draft and duplicate it from **Projects**. Check the saved level in both reels.
+23. Fill a slot with a video that has several distinct scenes and is longer than the slot. Open **Trim** and compare
+    the order of the filmstrip images with the source. Drag the highlighted window to each end and check its start,
+    end, and duration. Cancel once, then move the window to a recognizable scene, play it, and tap **Apply trim**.
+    Reopen the draft and export it. Check that the chosen scene starts the slot in the MP4.
 
 ### Export display sleep on iPhone
 
