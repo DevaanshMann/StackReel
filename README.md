@@ -62,7 +62,7 @@ Power users can open the same project in Pro mode and edit every layer on a full
 ## Product principles
 
 1. **Template-first.** The default flow is _pick → fill → tweak → export_. A timeline is optional.
-2. **Vertical-native.** 9:16 at 1080×1920 is the default canvas. Safe zones for TikTok, Reels, and Shorts UI are always visible.
+2. **Vertical-native.** 9:16 at 1080×1920 is the default canvas. Creators can show safe zones for TikTok, Reels, and Shorts while composing a reel.
 3. **On-device and private.** No uploads, no account required, no analytics without opt-in.
 4. **Hardware-accelerated.** Every platform uses its native GPU and hardware codecs. We never write our own codecs.
 5. **One format, many engines.** A single JSON template format renders identically on iOS, Android, Web, and Desktop.
@@ -471,7 +471,8 @@ _Runs in parallel with Phase 3._
    - [ ] Crop and reframe: pinch and drag inside the 9:16 frame, with face-centered auto-reframe as a stretch goal
 4. **Preview & tweak**
    - [ ] Full-screen native preview with play/pause and a scrubber
-   - [ ] Safe-zone overlay toggle (TikTok / Reels / Shorts)
+   - [x] iOS template preview safe-zone toggle for TikTok, Reels, and Shorts
+   - [ ] Android template preview safe-zone toggle
    - [ ] Edit text: tap text on the preview to edit it inline. Pick a style preset, color, and font.
    - [ ] Music: pick from device files plus a bundled royalty-free starter pack (CC0). Trim the start offset and set volume.
    - [ ] Clip volume and mute. Undo/redo buttons wired to the `core` command stack.
