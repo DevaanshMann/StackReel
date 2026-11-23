@@ -28,6 +28,14 @@ const pendingName = "pending.json";
 const mediaName = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}(?:\.[a-z0-9]{1,10})?$/i;
 const draftUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 const copyingDirectories = new Set<string>();
+type SessionFiles = {
+  historyMedia: Set<string>;
+  allocated: Set<string>;
+  staged: Set<string>;
+  preserveRecoveryFiles: boolean;
+};
+const activeSessionFiles = new Map<string, SessionFiles>();
+const maxHistoryEdits = 20;
 
 function templateDirectory(template: MobileTemplate, root: "StackReelDrafts" | "StackReelDraftInstances") {
   return new Directory(Paths.document, root, Id.parse(template.id));
@@ -46,8 +54,8 @@ function hasDiscoverableDraft(directory: Directory) {
     // Keep an inaccessible directory visible so its individual load can report the failure.
     return true;
   }
-  // Startup can find staging files left behind before a first commit or after a deletion.
-  pruneDraftFiles(directory, new Set());
+  // An open editor can still be staging its first import.
+  if (!activeSessionFiles.has(directory.uri)) pruneDraftFiles(directory, new Set());
   return false;
 }
 
@@ -76,6 +84,9 @@ function draftSnapshots(directory: Directory) {
 export function removeDraftFile(file: File) {
   try {
     if (file.exists) file.delete();
+    const session = activeSessionFiles.get(file.parentDirectory.uri);
+    session?.allocated.delete(file.name);
+    session?.staged.delete(file.name);
   } catch {
     // An interrupted cleanup can be retried the next time the draft is opened or saved.
   }
@@ -83,10 +94,13 @@ export function removeDraftFile(file: File) {
 
 function pruneDraftFiles(directory: Directory, keep: ReadonlySet<string>) {
   // Discovery can run while a duplicate is still copying media into its unpublished folder.
+  const session = activeSessionFiles.get(directory.uri);
   if (copyingDirectories.has(directory.uri)) return;
   try {
     for (const entry of directory.list()) {
       if (!(entry instanceof File) || keep.has(entry.name)) continue;
+      if (session?.historyMedia.has(entry.name) || session?.staged.has(entry.name)) continue;
+      if (session?.preserveRecoveryFiles && !session.allocated.has(entry.name)) continue;
       if (entry.name === pendingName || snapshotName.test(entry.name) || mediaName.test(entry.name)) {
         removeDraftFile(entry);
       }
@@ -102,7 +116,14 @@ export function createDraftMediaFile(template: MobileTemplate, importedName: str
   const directory = draftDirectory(template, draftId);
   directory.create({ intermediates: true, idempotent: true });
   const extension = /\.[a-z0-9]{1,10}$/i.exec(importedName)?.[0] ?? "";
-  return new File(directory, `${randomUUID()}${extension.toLowerCase()}`);
+  let file: File;
+  do {
+    file = new File(directory, `${randomUUID()}${extension.toLowerCase()}`);
+  } while (file.exists);
+  const session = activeSessionFiles.get(directory.uri);
+  session?.allocated.add(file.name);
+  session?.staged.add(file.name);
+  return file;
 }
 
 export function deleteTemplateDraft(template: MobileTemplate, draftId = template.id) {
@@ -111,6 +132,7 @@ export function deleteTemplateDraft(template: MobileTemplate, draftId = template
 
   // Delete the current snapshot last so an interrupted deletion cannot restore an older revision.
   for (const { file } of draftSnapshots(directory)) file.delete();
+  activeSessionFiles.delete(directory.uri);
   pruneDraftFiles(directory, new Set());
 }
 
@@ -169,7 +191,7 @@ export async function duplicateTemplateDraft(template: MobileTemplate, sourceId:
       const file = new File(original, basename);
       if (file.exists) await file.copy(new File(destination, basename));
     }
-    const draft = restoreDraftEdits(template, destination, { ...manifest, saved }, new Set());
+    const draft = restoreDraftEdits(template, destination, { ...manifest, saved });
     const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
     commitDraftManifest(destination, 0, saved);
     committed = true;
@@ -180,65 +202,237 @@ export async function duplicateTemplateDraft(template: MobileTemplate, sourceId:
   }
 }
 
-export function saveTemplateDraft(
-  template: MobileTemplate,
+type Manifest = ReturnType<typeof readDraftManifest>;
+type RenderState = { source: string | null; outputUri: string | null };
+
+function currentManifest(template: MobileTemplate, directory: Directory) {
+  const snapshot = directory.exists ? draftSnapshots(directory).at(-1) : undefined;
+  // Never overwrite an unsupported or unreadable snapshot.
+  return snapshot
+    ? { revision: snapshot.revision, manifest: readDraftManifest(template, snapshot.file) }
+    : { revision: 0, manifest: null };
+}
+
+function buildDraftManifest(
+  directory: Directory,
   { name, clips, textOverrides, music, missingSlots = [], missingMusic = false }: TemplateDraftEdits,
-  draftId = template.id,
+  previous: Manifest | null,
 ) {
-  const directory = draftDirectory(template, draftId);
-  directory.create({ intermediates: true, idempotent: true });
-  const snapshot = draftSnapshots(directory).at(-1);
-  // Read the current snapshot before writing or pruning so an unreadable draft stays recoverable.
-  const previous = snapshot ? readDraftManifest(template, snapshot.file) : null;
-  const keep = new Set<string>();
-  function storeAsset<T extends TemplateClip | TemplateMusic>({ uri, ...settings }: T) {
+  function storeAsset(asset: TemplateClip | TemplateMusic, original: unknown) {
+    const { uri, ...settings } = asset;
     const file = new File(uri).name;
     if (!mediaName.test(file) || new File(directory, file).uri !== uri) {
       throw new Error("The draft can only save media imported into its own folder.");
     }
-    keep.add(file);
-    return { ...settings, file };
-  }
-  function preserveAsset(reference: unknown) {
-    if (hasDraftMediaFile(reference)) {
-      keep.add(reference.file);
-    }
-    return reference;
+    // Keep extension fields on the same asset, including when its slot changes.
+    const originalAsset =
+      hasDraftMediaFile(original) && original.file === file
+        ? original
+        : Object.values(previous?.clips ?? {}).find((entry) => hasDraftMediaFile(entry) && entry.file === file);
+    const prior = record(originalAsset) ? originalAsset : {};
+    const reframe =
+      "reframe" in asset && asset.reframe
+        ? { ...(record(prior.reframe) ? prior.reframe : {}), ...asset.reframe }
+        : undefined;
+    return { ...prior, volumePercent: undefined, ...settings, reframe, file };
   }
 
-  const storedClips: [string, unknown][] = Object.entries(clips).map(([slot, clip]) => [slot, storeAsset(clip)]);
-  let storedMusic: unknown = music ? storeAsset(music) : null;
-  // An unrelated edit must retain the references and settings needed to recover missing media.
+  const storedClips: [string, unknown][] = Object.entries(clips).map(([slot, clip]) => [
+    slot,
+    storeAsset(clip, previous?.clips[slot]),
+  ]);
+  let storedMusic: unknown = music ? storeAsset(music, previous?.saved.music) : null;
   if (previous) {
     for (const slot of missingSlots) {
       if (!Object.hasOwn(clips, slot) && Object.hasOwn(previous.clips, slot)) {
-        storedClips.push([slot, preserveAsset(previous.clips[slot])]);
+        storedClips.push([slot, previous.clips[slot]]);
       }
     }
-    if (missingMusic && !music) storedMusic = preserveAsset(previous.saved.music ?? null);
+    if (missingMusic && !music) storedMusic = previous.saved.music ?? null;
   }
 
-  const manifest = {
+  return {
+    ...previous?.saved,
     version: 1,
     name: name ?? undefined,
     clips: Object.fromEntries(storedClips),
     textOverrides,
     music: storedMusic,
   };
+}
 
-  keep.add(commitDraftManifest(directory, snapshot?.revision ?? 0, manifest));
+// Collect safe basenames from the raw manifest, even for unavailable or unrecognized media settings.
+function collectMediaFiles(value: unknown, files: Set<string>) {
+  if (!record(value) && !Array.isArray(value)) return;
+  if (hasDraftMediaFile(value)) files.add(value.file);
+  for (const item of Object.values(value)) collectMediaFiles(item, files);
+}
+
+function publishManifest(directory: Directory, revision: number, saved: Record<string, unknown>) {
+  const keep = new Set<string>();
+  collectMediaFiles(saved, keep);
+  directory.create({ intermediates: true, idempotent: true });
+  keep.add(commitDraftManifest(directory, revision, saved));
+  // Other imports can still be copying. Only the published references are finished staging.
+  const session = activeSessionFiles.get(directory.uri);
+  if (session) for (const name of keep) session.staged.delete(name);
+  return keep;
+}
+
+export function saveTemplateDraft(template: MobileTemplate, edits: TemplateDraftEdits, draftId = template.id) {
+  const directory = draftDirectory(template, draftId);
+  const { revision, manifest } = currentManifest(template, directory);
+  const keep = publishManifest(directory, revision, buildDraftManifest(directory, edits, manifest));
   pruneDraftFiles(directory, keep);
+}
+
+function renderDraftUpdate(template: MobileTemplate, draft: TemplateDraftEdits, current: RenderState) {
+  const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
+  return { source, outputUri: source === current.source ? current.outputUri : null };
 }
 
 export function commitTemplateDraftUpdate(
   template: MobileTemplate,
-  draft: TemplateDraftEdits & { source: string | null; outputUri: string | null },
+  draft: TemplateDraftEdits & RenderState,
   draftId = template.id,
 ) {
-  const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
-  const outputUri = source === draft.source ? draft.outputUri : null;
+  const render = renderDraftUpdate(template, draft, draft);
   saveTemplateDraft(template, draft, draftId);
-  return { source, outputUri };
+  return render;
+}
+
+// Object key order can change when clips are swapped or restored from a missing slot.
+function comparableManifest(saved: Record<string, unknown>) {
+  return JSON.stringify(saved, (_key, value: unknown) =>
+    record(value)
+      ? Object.fromEntries(
+          Object.keys(value)
+            .sort()
+            .map((key) => [key, value[key]]),
+        )
+      : value,
+  );
+}
+
+type HistoryEntry = { label: string; manifest: Manifest };
+export type TemplateDraftSession = ReturnType<typeof createTemplateDraftSession>;
+
+export function createTemplateDraftSession(template: MobileTemplate, draftId = template.id) {
+  const directory = draftDirectory(template, draftId);
+  const sessionFiles: SessionFiles = {
+    historyMedia: new Set(),
+    allocated: new Set(),
+    staged: new Set(),
+    preserveRecoveryFiles: false,
+  };
+  activeSessionFiles.set(directory.uri, sessionFiles);
+  let past: HistoryEntry[] = [];
+  let future: HistoryEntry[] = [];
+  let lastRevision: number | undefined;
+
+  function current() {
+    if (activeSessionFiles.get(directory.uri) !== sessionFiles) throw new Error("The draft session has ended.");
+    const state = currentManifest(template, directory);
+    if (lastRevision !== undefined && state.revision !== lastRevision) {
+      throw new Error("The saved draft changed. Reopen it before editing.");
+    }
+    return state;
+  }
+
+  function publish(
+    revision: number,
+    saved: Record<string, unknown>,
+    nextPast: HistoryEntry[],
+    nextFuture: HistoryEntry[],
+    degraded: boolean,
+  ) {
+    const files = new Set<string>();
+    for (const entry of [...nextPast, ...nextFuture]) collectMediaFiles(entry.manifest.saved, files);
+    const keep = publishManifest(directory, revision, saved);
+    // Only a successful atomic rename changes history or releases any of its media.
+    // A damaged reference can point at the wrong basename. Any pre-existing file or
+    // revision could be needed for recovery, even if no readable reference names it.
+    if (sessionFiles.preserveRecoveryFiles && lastRevision !== undefined) {
+      removeDraftFile(new File(directory, `draft-${lastRevision}.json`));
+    }
+    sessionFiles.preserveRecoveryFiles ||= degraded;
+    lastRevision = revision + 1;
+    past = nextPast;
+    future = nextFuture;
+    sessionFiles.historyMedia = files;
+    pruneDraftFiles(directory, keep);
+  }
+
+  function step(direction: "undo" | "redo", render: RenderState) {
+    const entry = (direction === "undo" ? past : future).at(-1);
+    if (!entry) return null;
+    const { revision, manifest } = current();
+    if (!manifest) throw new Error("The saved draft is unavailable.");
+    const edits = restoreDraftEdits(template, directory, entry.manifest);
+    const restored = { ...edits, ...renderDraftUpdate(template, edits, render) };
+    const inverse = { label: entry.label, manifest };
+    const degraded = isDegraded(edits) || isDegraded(restoreDraftEdits(template, directory, manifest));
+    if (direction === "undo")
+      publish(revision, entry.manifest.saved, past.slice(0, -1), [...future, inverse], degraded);
+    else publish(revision, entry.manifest.saved, [...past, inverse], future.slice(0, -1), degraded);
+    return restored;
+  }
+
+  return {
+    get undoLabel() {
+      return past.at(-1)?.label ?? null;
+    },
+    get redoLabel() {
+      return future.at(-1)?.label ?? null;
+    },
+    commit(draft: TemplateDraftEdits & RenderState, label: string) {
+      const { revision, manifest } = current();
+      const render = renderDraftUpdate(template, draft, draft);
+      const saved = buildDraftManifest(directory, draft, manifest);
+      // A first edit can undo to an ordinary, named empty draft without deleting the project.
+      const baseline =
+        manifest ??
+        parseDraftManifest(template, {
+          version: 1,
+          name: draft.name ?? undefined,
+          clips: {},
+          textOverrides: {},
+          music: null,
+        });
+      const priorEdits = restoreDraftEdits(template, directory, baseline);
+      // A legacy encoding of the same edits (e.g. an omitted music field) is a no-op.
+      const comparable = buildDraftManifest(directory, priorEdits, baseline);
+      if (comparableManifest(comparable) !== comparableManifest(saved)) {
+        publish(
+          revision,
+          saved,
+          [...past, { label, manifest: baseline }].slice(-maxHistoryEdits),
+          [],
+          isDegraded(priorEdits) || isDegraded(draft),
+        );
+      } else if (!manifest) {
+        publish(revision, saved, past, future, false);
+      }
+      return render;
+    },
+    undo: (render: RenderState) => step("undo", render),
+    redo: (render: RenderState) => step("redo", render),
+    close() {
+      past = [];
+      future = [];
+      if (activeSessionFiles.get(directory.uri) !== sessionFiles) return;
+      sessionFiles.historyMedia.clear();
+      sessionFiles.staged.clear();
+      try {
+        readTemplateDraft(template, directory, true);
+      } catch {
+        // An unreadable current manifest must keep all its files. Retry on the next cold load.
+      } finally {
+        activeSessionFiles.delete(directory.uri);
+        sessionFiles.allocated.clear();
+      }
+    },
+  };
 }
 
 export function clearTemplateVideoSlot(draft: TemplateDraftEdits, slotId: string) {
@@ -263,7 +457,10 @@ function hasDraftMediaFile(value: unknown): value is Record<string, unknown> & {
 }
 
 function readDraftManifest(template: MobileTemplate, snapshot: File) {
-  const saved: unknown = JSON.parse(snapshot.textSync());
+  return parseDraftManifest(template, JSON.parse(snapshot.textSync()));
+}
+
+function parseDraftManifest(template: MobileTemplate, saved: unknown) {
   if (!record(saved) || saved.version !== 1 || !record(saved.clips) || !record(saved.textOverrides)) {
     throw new Error("The saved draft has an unsupported format.");
   }
@@ -285,12 +482,11 @@ function readDraftManifest(template: MobileTemplate, snapshot: File) {
   return { saved, clips: saved.clips, textOverrides };
 }
 
-function readAsset(value: unknown, directory: Directory, keep: Set<string>) {
+function readAsset(value: unknown, directory: Directory) {
   if (!hasDraftMediaFile(value)) {
     throw new Error("Invalid draft media reference.");
   }
   const file = new File(directory, value.file);
-  keep.add(file.name);
   if (
     !file.exists ||
     typeof value.name !== "string" ||
@@ -311,18 +507,37 @@ function readAsset(value: unknown, directory: Directory, keep: Set<string>) {
   };
 }
 
+function isDegraded(draft: TemplateDraftEdits) {
+  return Boolean(draft.missingSlots?.length || draft.missingMusic);
+}
+
 export function loadTemplateDraft(template: MobileTemplate, draftId = template.id) {
   const directory = draftDirectory(template, draftId);
+  // Reads during an editor session can race an async import before its files reach the manifest.
+  return readTemplateDraft(template, directory, !activeSessionFiles.has(directory.uri));
+}
+
+function readTemplateDraft(template: MobileTemplate, directory: Directory, cleanup: boolean) {
   if (!directory.exists) return null;
   const snapshot = draftSnapshots(directory).at(-1);
   const keep = new Set<string>();
   if (!snapshot) {
-    pruneDraftFiles(directory, keep);
+    if (cleanup) pruneDraftFiles(directory, keep);
     return null;
   }
   keep.add(snapshot.file.name);
-  const draft = restoreDraftEdits(template, directory, readDraftManifest(template, snapshot.file), keep);
-  if (draft.missingSlots.length === 0 && !draft.missingMusic) pruneDraftFiles(directory, keep);
+  const manifest = readDraftManifest(template, snapshot.file);
+  const draft = restoreDraftEdits(template, directory, manifest);
+  if (cleanup) {
+    const session = activeSessionFiles.get(directory.uri);
+    const degraded = isDegraded(draft);
+    // On exit we still know which imports are ours. A cold load has no ownership record.
+    if (session) session.preserveRecoveryFiles = degraded;
+    if (!degraded || session) {
+      collectMediaFiles(manifest.saved, keep);
+      pruneDraftFiles(directory, keep);
+    }
+  }
   return draft;
 }
 
@@ -330,7 +545,6 @@ function restoreDraftEdits(
   template: MobileTemplate,
   directory: Directory,
   { saved, clips: savedClips, textOverrides }: ReturnType<typeof readDraftManifest>,
-  keep: Set<string>,
 ) {
   const name = typeof saved.name === "string" ? saved.name.trim() || null : null;
 
@@ -349,7 +563,7 @@ function restoreDraftEdits(
       ) {
         throw new Error("Invalid saved video settings.");
       }
-      const { volumePercent, ...asset } = readAsset(value, directory, keep);
+      const { volumePercent, ...asset } = readAsset(value, directory);
       const clip: TemplateClip = {
         ...asset,
         width: value.width,
@@ -381,7 +595,7 @@ function restoreDraftEdits(
   let missingMusic = false;
   if (saved.music) {
     try {
-      const { uri, name, sourceStartUs, sourceEndUs, volumePercent } = readAsset(saved.music, directory, keep);
+      const { uri, name, sourceStartUs, sourceEndUs, volumePercent } = readAsset(saved.music, directory);
       const track = createTemplateMusic(uri, name, { startUs: sourceStartUs, durationUs: sourceEndUs - sourceStartUs });
       music = setTemplateMusicVolume(track, volumePercent);
     } catch {

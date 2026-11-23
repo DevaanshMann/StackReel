@@ -6,6 +6,13 @@ video. Use **Replace from Photos** or **Replace from Files** to choose a differe
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
 MP4. Each template supplies its own canvas, timing, and captions.
 
+Use **Undo** and **Redo** in an open template draft to compare cuts or recover a previous edit. You can step back
+through the last 20 edits, including trims, framing, captions, volume changes, swaps, and adding, replacing, or
+removing videos and music. Choosing several videos together counts as one edit. After undoing, making a different
+edit starts a new sequence from that point. The draft saves the result of each undo or redo. Leaving the editor
+ends the history for that session. Reopening the draft resumes at the saved result.
+[See Undo and Redo in a template draft on iPhone](../../docs/ios-template-undo-redo.png).
+
 Tap **Full screen** on a finished template or an imported single clip to inspect the reel at a larger size.
 Play, pause, or scrub to check a cut. Tap **Exit full screen** to return to the same position in the editor.
 On templates, you can also check the safe-zone guide while watching full screen.
@@ -229,6 +236,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     the order of the filmstrip images with the source. Drag the highlighted window to each end and check its start,
     end, and duration. Cancel once, then move the window to a recognizable scene, play it, and tap **Apply trim**.
     Reopen the draft and export it. Check that the chosen scene starts the slot in the MP4.
+24. In a filled draft, apply a trim, edit a caption, then clear a video. Undo the clear and check that the same
+    video and trim return. Undo the caption, redo it, and compare the wording in preview. Undo the caption again
+    and apply a different one. Verify **Redo** is disabled and the new wording appears in the exported reel.
+    Leave the editor and reopen the draft. The last edit should be saved and both history controls disabled.
 
 ### Export display sleep on iPhone
 
