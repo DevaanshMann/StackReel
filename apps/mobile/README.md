@@ -54,6 +54,11 @@ pinch to zoom up to 3×. The **Zoom**, **Horizontal position**, and **Vertical p
 **Reset** restores the centered framing. Tap **Apply** to save the framing for that slot, or **Cancel** to discard your
 changes. If you apply a different framing, export the template again before sharing.
 
+Tap **Volume** on a filled slot to hear its selected segment and adjust its original audio. Leave it at 100% for
+the template’s mix, lower it to soften the clip, or tap **Mute** to silence it. Tap **Apply volume** to use the level
+in the reel and its next export. The level follows the clip when you swap slots and stays saved when you reopen
+or duplicate the draft.
+
 Choose **Single-clip editor** from the gallery to select or replace a video from Photos or Files, then preview and
 export it at 720 × 1280 and 30 fps. The video fits inside the vertical frame without cropping, and the export includes
 the clip’s audio when present.
@@ -195,6 +200,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     check that the frame stays in place. Turn it on during playback and scrub across the cut. Export with the guide
     visible and play the saved MP4 in Photos to check that the shaded edges and outline are absent. Toggle the guide
     again and confirm **Share MP4** still works. Repeat in **Hook & Reveal**.
+20. Fill **Before / After** with two clips that have recognizable audio and export once. Open **Volume** on **Before**,
+    lower it, and cancel. Check that the previous MP4 is still shareable. Mute **Before**, apply, and play the reel
+    across the cut. Check that the first clip is silent and the second is audible. Export again and listen to both
+    sections of the MP4. Relaunch and reopen the draft to check the saved level.
 
 ### Export display sleep on iPhone
 
