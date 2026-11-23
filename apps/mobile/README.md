@@ -60,7 +60,7 @@ source in order. Drag the highlighted window onto the scene you want, or tap a s
 the selection there. Use **−1f** or **+1f** to move the cut by one frame, then play the selection to check the cut
 and its audio. The window keeps the duration required by the template. You can trim as soon as a slot has a video.
 Tap **Apply trim** to save the window, or **Cancel** to keep the current selection. If you change the window, export
-the template again before sharing.
+the template again before sharing. [See the trim filmstrip on iPhone](../../docs/ios-template-trim-filmstrip.png).
 
 Tap **Reframe** on any filled slot to see its selected segment in the template’s vertical canvas. Drag the video or
 pinch to zoom up to 3×. The **Zoom**, **Horizontal position**, and **Vertical position** sliders make the same adjustments.
