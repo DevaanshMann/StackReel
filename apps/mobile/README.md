@@ -6,6 +6,10 @@ video. Use **Replace from Photos** or **Replace from Files** to choose a differe
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
 MP4. Each template supplies its own canvas, timing, and captions.
 
+Tap **Full screen** on a finished template or an imported single clip to inspect the reel at a larger size.
+Play, pause, or scrub to check a cut. Return to the editor to continue from the same position.
+On templates, you can also check the safe-zone guide while watching full screen.
+
 Turn on **Safe zones** in a filled template’s preview to see where TikTok, Reels, or Shorts controls may cover the
 picture. Keep important text and faces inside the outline. You can play and scrub with the guide on, and the exported
 MP4 contains only the reel.
@@ -204,6 +208,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     lower it, and cancel. Check that the previous MP4 is still shareable. Mute **Before**, apply, and play the reel
     across the cut. Check that the first clip is silent and the second is audible. Export again and listen to both
     sections of the MP4. Relaunch and reopen the draft to check the saved level.
+21. In a filled template, pause on a caption, enable **Safe zones**, and enter **Full screen**. Check the same frame
+    and guide at the larger size. Scrub across the cut, play, then return to the editor and check that playback
+    continues. Repeat after exporting and confirm **Share MP4** is available. Try the same transport controls in the
+    **Single-clip editor**.
 
 ### Export display sleep on iPhone
 
