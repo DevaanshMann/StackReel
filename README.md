@@ -468,6 +468,7 @@ _Runs in parallel with Phase 3._
    - [ ] Media picker (`expo-image-picker` / native picker) with multi-select. Auto-assign clips to slots in order.
    - [ ] Slot strip: tap a slot to replace its clip, long-press to reorder
    - [x] iOS trim sheet with a source filmstrip and a draggable window locked to the slot’s duration
+   - [x] Trim either end of a single video on iOS before preview and export
    - [ ] Android trim sheet with a source filmstrip and a fixed-duration window
    - [ ] Crop and reframe: pinch and drag inside the 9:16 frame, with face-centered auto-reframe as a stretch goal
 4. **Preview & tweak**

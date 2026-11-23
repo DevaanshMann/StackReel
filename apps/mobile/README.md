@@ -79,9 +79,12 @@ the template’s mix, lower it to soften the clip, or tap **Mute** to silence it
 in the reel and its next export. The level follows the clip when you swap slots and stays saved when you reopen
 or duplicate the draft. [See the clip volume control on iOS](../../docs/ios-template-clip-volume.png).
 
-Choose **Single-clip editor** from the gallery to select or replace a video from Photos or Files, then preview and
-export it at 720 × 1280 and 30 fps. The video fits inside the vertical frame without cropping, and the export includes
-the clip’s audio when present.
+Choose **Single-clip editor** from the gallery and pick a video from Photos or Files. Tap **Trim clip** to set where
+it starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f** to adjust by one frame. Play the
+selection to check its picture and sound. **Apply trim** uses that selection for preview and export. To bring back
+footage, reopen **Trim clip** and extend the range, or tap **Reset trim** to select the full video.
+The MP4 fits the picture inside a 720 × 1280 frame at 30 fps and includes the clip’s audio when present.
+[See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
@@ -240,6 +243,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     video and trim return. Undo the caption, redo it, and compare the wording in preview. Undo the caption again
     and apply a different one. Verify **Redo** is disabled and the new wording appears in the exported reel.
     Leave the editor and reopen the draft. The last edit should be saved and both history controls disabled.
+25. In **Single-clip editor**, pick a video with distinct scenes and sound and export it. Open **Trim clip**, move
+    both ends, then cancel. Confirm the original MP4 is still shareable. Apply a shorter selection and export again.
+    Check the first and last scenes, the sound, and the duration of the exported file. Reopen **Trim clip**, tap
+    **Reset trim**, and apply to restore the full recording. Replacing the video should start with its full range.
 
 ### Export display sleep on iPhone
 
