@@ -43,6 +43,7 @@ If the soundtrack covers up speech, tap **Music volume** under **Background musi
 the music plays at the level set by the template. At 0%, the track stays in the draft and plays silently.
 You can set the level before filling every video slot. Once the reel is complete, play it in the volume editor
 to hear the music and clips together. Apply the change to save it with the draft and use it in the next export.
+[See the music volume control on iPhone](../../docs/ios-template-music-volume.png).
 
 If a draft’s imported music is missing, use **Choose music from Files** to replace it or **Remove missing music** to
 clear the warning and continue with the clips’ own audio. Removing missing music keeps the other edits and any MP4
