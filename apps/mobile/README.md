@@ -7,8 +7,9 @@ to the videos you select. Once every required slot is filled, you can play, scru
 MP4. Each template supplies its own canvas, timing, and captions.
 
 Tap **Full screen** on a finished template or an imported single clip to inspect the reel at a larger size.
-Play, pause, or scrub to check a cut. Return to the editor to continue from the same position.
+Play, pause, or scrub to check a cut. Tap **Exit full screen** to return to the same position in the editor.
 On templates, you can also check the safe-zone guide while watching full screen.
+[See a template in full screen on iPhone](../../docs/ios-fullscreen-reel-preview.png).
 
 Turn on **Safe zones** in a filled template’s preview to see where TikTok, Reels, or Shorts controls may cover the
 picture. Keep important text and faces inside the outline. You can play and scrub with the guide on, and the exported
