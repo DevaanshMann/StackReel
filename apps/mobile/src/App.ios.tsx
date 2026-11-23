@@ -41,6 +41,7 @@ import {
   swapTemplateClips,
 } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateTextOverrides, TemplateVideoSlot } from "./template-editor";
+import { getTemplateSafeZoneGuide } from "./template-safe-zones";
 import { importTemplateVideos, removeCachedFile, SlotImportError } from "./template-video-import";
 import { pickVideo } from "./video-picker";
 import type { VideoPickerSource } from "./video-picker";
@@ -779,7 +780,15 @@ export default function App() {
           onSelect={selectSingleVideo}
         />
       )}
-      {source && <ClipPreview key={source} canvas={canvas} source={source} suspended={busy && !exporting} />}
+      {source && (
+        <ClipPreview
+          key={source}
+          canvas={canvas}
+          source={source}
+          suspended={busy && !exporting}
+          safeZoneGuide={template ? getTemplateSafeZoneGuide(template) : null}
+        />
+      )}
       {editor.kind === "single" && !source && (
         <PreviewFrame canvas={canvas}>
           <Text style={textStyles.muted}>Choose a video to preview.</Text>

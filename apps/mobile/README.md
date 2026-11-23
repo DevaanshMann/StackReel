@@ -6,6 +6,11 @@ video. Use **Replace from Photos** or **Replace from Files** to choose a differe
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
 MP4. Each template supplies its own canvas, timing, and captions.
 
+Turn on **Safe zones** in a filled template’s preview to see where TikTok, Reels, or Shorts controls may cover the
+picture. Keep important text and faces inside the outline. You can play and scrub with the guide on, and the exported
+MP4 contains only the reel.
+[See the guide in the Before / After preview](../../docs/ios-template-safe-zones.png).
+
 Tap **Clear video** on a filled slot or a slot with a missing saved video, then confirm using the slot name shown.
 This empties the slot in the saved draft and keeps your original video and other edits. Fill the slot again to
 restore preview and export, then export a new MP4 before sharing.
@@ -186,6 +191,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     `Library/Caches/StackReelExports`. Background StackReel, return, and open **Share MP4** again. Force-quit
     and relaunch to the gallery. Before exporting again, verify that the cached MP4 is gone. Play the saved
     video in Photos and in Files, then reopen the draft from **Projects** and export and share a fresh MP4.
+19. Fill **Before / After** and scrub to a frame with a caption. Turn **Safe zones** on and off while paused and
+    check that the frame stays in place. Turn it on during playback and scrub across the cut. Export with the guide
+    visible and play the saved MP4 in Photos to check that the shaded edges and outline are absent. Toggle the guide
+    again and confirm **Share MP4** still works. Repeat in **Hook & Reveal**.
 
 ### Export display sleep on iPhone
 
