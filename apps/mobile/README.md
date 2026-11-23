@@ -55,10 +55,12 @@ Tap **Apply text** to save the wording, **Cancel** to discard your changes, or *
 to restore the template defaults. The wording stays with the draft as you replace, trim, or reframe its
 clips. Applied changes update preview and require a new export before sharing.
 
-Each filled slot shows its current start and end times within the source video. Tap **Trim** to move the fixed-length
-window in whole-frame steps and play the selected segment with its audio. You can trim as soon as a slot has a video.
+Each filled slot shows its current start and end times within the source video. Tap **Trim** to see frames from the
+source in order. Drag the highlighted window onto the scene you want, or tap a scene outside the window to center
+the selection there. Use **−1f** or **+1f** to move the cut by one frame, then play the selection to check the cut
+and its audio. The window keeps the duration required by the template. You can trim as soon as a slot has a video.
 Tap **Apply trim** to save the window, or **Cancel** to keep the current selection. If you change the window, export
-the template again before sharing.
+the template again before sharing. [See the trim filmstrip on iPhone](../../docs/ios-template-trim-filmstrip.png).
 
 Tap **Reframe** on any filled slot to see its selected segment in the template’s vertical canvas. Drag the video or
 pinch to zoom up to 3×. The **Zoom**, **Horizontal position**, and **Vertical position** sliders make the same adjustments.
@@ -223,6 +225,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     Open **Music volume**, mute the track, and preview a section with audible clip audio. Cancel and confirm the
     previous MP4 is still shareable. Mute again, apply, and export a new MP4. Check that the clip is audible while
     the music is silent. Reopen the draft and duplicate it from **Projects**. Check the saved level in both reels.
+23. Fill a slot with a video that has several distinct scenes and is longer than the slot. Open **Trim** and compare
+    the order of the filmstrip images with the source. Drag the highlighted window to each end and check its start,
+    end, and duration. Cancel once, then move the window to a recognizable scene, play it, and tap **Apply trim**.
+    Reopen the draft and export it. Check that the chosen scene starts the slot in the MP4.
 
 ### Export display sleep on iPhone
 

@@ -39,6 +39,7 @@ type EngineEvents = {
 
 interface StackReelEngineModule extends InstanceType<typeof NativeModule<EngineEvents>> {
   probeVideo(uri: string): Promise<VideoMetadata>;
+  getVideoThumbnails(uri: string, timesUs: number[]): Promise<(string | null)[]>;
   probeAudio(uri: string): Promise<AudioMetadata>;
   exportMP4(source: string, exportId: string): Promise<{ uri: string }>;
   cancelExport(exportId: string): Promise<void>;
@@ -48,6 +49,11 @@ const engine = requireNativeModule<StackReelEngineModule>("StackReelEngine");
 
 export function probeVideo(uri: string): Promise<VideoMetadata> {
   return engine.probeVideo(uri);
+}
+
+/** Samples up to eight local video frames. Unavailable frames have a null entry. */
+export function getVideoThumbnails(uri: string, timesUs: number[]): Promise<(string | null)[]> {
+  return engine.getVideoThumbnails(uri, timesUs);
 }
 
 export function probeAudio(uri: string): Promise<AudioMetadata> {
