@@ -1,12 +1,14 @@
 import Slider from "@react-native-community/slider";
 import { StackReelPreviewView } from "@stackreel/engine";
 import type { StackReelPreviewViewRef } from "@stackreel/engine";
-import { darkColors, neutral, radius, space } from "@stackreel/ui";
+import { MIN_HIT_TARGET, darkColors, neutral, radius, space } from "@stackreel/ui";
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 import type { ViewProps, ViewStyle } from "react-native";
+import { SafeZoneOverlay } from "./SafeZoneOverlay";
 import { Action, textStyles } from "./Screen";
+import type { SafeZoneGuide } from "./template-safe-zones";
 
 type PreviewCanvas = { width: number; height: number };
 const previewMaxWidth = 224;
@@ -30,11 +32,13 @@ export function ClipPreview({
   source,
   suspended,
   viewport,
+  safeZoneGuide,
 }: {
   canvas: PreviewCanvas;
   source: string;
   suspended: boolean;
   viewport?: { maxWidth: number; props: ViewProps; videoStyle: ViewStyle };
+  safeZoneGuide?: SafeZoneGuide | null;
 }) {
   const preview = useRef<StackReelPreviewViewRef>(null);
   const dragging = useRef(false);
@@ -44,6 +48,7 @@ export function ClipPreview({
   const [scrubPosition, setScrubPosition] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSafeZones, setShowSafeZones] = useState(false);
 
   async function seek(fraction: number) {
     dragging.current = false;
@@ -98,6 +103,7 @@ export function ClipPreview({
               setError(errorMessage("Couldn’t load the preview.", nativeEvent.message));
             }}
           />
+          {showSafeZones && safeZoneGuide && <SafeZoneOverlay canvas={canvas} guide={safeZoneGuide} />}
           {duration === 0 && !error && <Text style={textStyles.muted}>Preparing preview…</Text>}
         </View>
       </PreviewFrame>
@@ -135,6 +141,27 @@ export function ClipPreview({
           </View>
         </View>
       </View>
+      {safeZoneGuide && (
+        <View style={styles.safeZoneControl}>
+          <Text accessibilityElementsHidden style={[textStyles.body, styles.safeZoneLabel]}>
+            Safe zones
+          </Text>
+          <Switch
+            testID="template-safe-zones-toggle"
+            accessibilityLabel="Safe zones"
+            accessibilityRole="switch"
+            accessibilityHint={
+              safeZoneGuide.safe
+                ? "Shows where platform controls may cover the video."
+                : "Shows that platform controls may cover the entire video."
+            }
+            hitSlop={7}
+            trackColor={{ true: darkColors.accent }}
+            value={showSafeZones}
+            onValueChange={setShowSafeZones}
+          />
+        </View>
+      )}
       {error && (
         <Text accessibilityRole="alert" style={textStyles.error}>
           {error}
@@ -174,4 +201,12 @@ const styles = StyleSheet.create({
   slider: { height: 44 },
   timestamps: { flexDirection: "row", justifyContent: "space-between" },
   time: { ...textStyles.muted, fontVariant: ["tabular-nums"] },
+  safeZoneControl: {
+    minHeight: MIN_HIT_TARGET,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space[3],
+  },
+  safeZoneLabel: { flexShrink: 1 },
 });
