@@ -3,6 +3,7 @@ import { darkColors, fontSize, radius, space } from "@stackreel/ui";
 import { randomUUID } from "expo-crypto";
 import { getDocumentAsync } from "expo-document-picker";
 import { File } from "expo-file-system";
+import { useKeepAwake } from "expo-keep-awake";
 import { Asset, requestPermissionsAsync } from "expo-media-library";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
@@ -890,6 +891,8 @@ function HomeTabBar({
 }
 
 function ExportProgress({ percentage }: { percentage: number }) {
+  useKeepAwake();
+
   return (
     <View
       accessible

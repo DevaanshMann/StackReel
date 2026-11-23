@@ -481,7 +481,8 @@ _Runs in parallel with Phase 3._
    - [ ] Handle missing media (the user deleted a clip from Photos): show a relink prompt
 6. **Export & share**
    - [ ] Export sheet: resolution (720p / 1080p), fps (30/60), quality (standard / high)
-   - [ ] Progress screen with cancel. Keep the screen awake during export.
+   - [x] iOS MP4 export progress with cancel and screen sleep prevention during export
+   - [ ] Android export progress with cancel and screen sleep prevention during export
    - [ ] Post-export: save to gallery, share sheet, and quick-share buttons that open TikTok, Instagram, or YouTube via their share intents
 7. **Polish**
    - [ ] Haptics on key actions. Skeleton loaders.

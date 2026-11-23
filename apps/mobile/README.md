@@ -187,4 +187,14 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     and relaunch to the gallery. Before exporting again, verify that the cached MP4 is gone. Play the saved
     video in Photos and in Files, then reopen the draft from **Projects** and export and share a fresh MP4.
 
+### Export display sleep on iPhone
+
+1. Install a release build on a physical iPhone. The Expo development client can independently keep the screen awake.
+   Set **Settings → Display & Brightness → Auto-Lock** to 30 seconds and verify that the idle editor locks on its own.
+2. In **Single-clip editor**, export a video that takes longer than 30 seconds to encode. Leave the phone untouched
+   and verify the screen stays on past the Auto-Lock interval while export progress is visible. Let the export finish,
+   then verify Auto-Lock resumes. Repeat with **Cancel export** and verify Auto-Lock resumes after cancellation is reported.
+3. Repeat in a template draft. If the export finishes within the Auto-Lock interval, verify that the screen locks again
+   after it finishes and after cancellation. Restore your original Auto-Lock setting when done.
+
 Run the app’s checks from the root with `pnpm exec turbo run lint typecheck test --filter=@stackreel/mobile`.
