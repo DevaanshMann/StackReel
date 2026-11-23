@@ -3,16 +3,14 @@ import type { AudioEntry, PlanCanvas, RenderPlan, SourceTiming, VideoLayer } fro
 
 export const canvas = { width: 720, height: 1280, fps: 30, background: "#000000" } satisfies PlanCanvas;
 
-export function createClipSource(
-  uri: string,
-  { width, height, startUs, durationUs }: { width: number; height: number; startUs: number; durationUs: number },
-  targetCanvas: PlanCanvas = canvas,
-  fit: VideoLayer["fit"] = "contain",
-  gainDb = 0,
-): string {
-  if (!Number.isFinite(gainDb) || gainDb < -60 || gainDb > 12) {
-    throw new RangeError("Clip gain must be between -60 and 12 dB.");
-  }
+export type ClipMetadata = { width: number; height: number; startUs: number; durationUs: number };
+/** Absolute source frames at the output rate. The end frame is exclusive. */
+export type ClipFrameRange = { startFrame: number; endFrame: number };
+
+export function getClipFrameRange(
+  { width, height, startUs, durationUs }: ClipMetadata,
+  fps = canvas.fps,
+): ClipFrameRange {
   const endUs = startUs + durationUs;
   if (
     !Number.isFinite(width) ||
@@ -28,14 +26,53 @@ export function createClipSource(
     throw new Error("This video has invalid dimensions or timing.");
   }
 
-  const { fps } = targetCanvas;
   const firstFrame = usToFrame(Math.max(0, startUs), fps, "ceil");
   const endFrame = usToFrame(endUs, fps, "floor");
   if (endFrame <= firstFrame) throw new Error(`This video is too short for a ${fps} fps export.`);
+  return { startFrame: firstFrame, endFrame };
+}
 
-  const sourceStartUs = frameToUs(firstFrame, fps);
+export function createClipSource(
+  uri: string,
+  media: ClipMetadata,
+  targetCanvas: PlanCanvas = canvas,
+  fit: VideoLayer["fit"] = "contain",
+  gainDb = 0,
+): string {
+  const range = getClipFrameRange(media, targetCanvas.fps);
+  return buildClipSource(uri, media, range, targetCanvas, fit, gainDb);
+}
+
+export function createTrimmedClipSource(uri: string, media: ClipMetadata, selection: ClipFrameRange): string {
+  const bounds = getClipFrameRange(media);
+  const { startFrame, endFrame } = selection;
+  if (
+    !Number.isSafeInteger(startFrame) ||
+    !Number.isSafeInteger(endFrame) ||
+    startFrame < bounds.startFrame ||
+    endFrame > bounds.endFrame ||
+    endFrame <= startFrame
+  ) {
+    throw new RangeError("Select at least one whole frame within the video.");
+  }
+  return buildClipSource(uri, media, selection, canvas, "contain", 0);
+}
+
+function buildClipSource(
+  uri: string,
+  { width, height }: ClipMetadata,
+  { startFrame, endFrame }: ClipFrameRange,
+  targetCanvas: PlanCanvas,
+  fit: VideoLayer["fit"],
+  gainDb: number,
+): string {
+  if (!Number.isFinite(gainDb) || gainDb < -60 || gainDb > 12) {
+    throw new RangeError("Clip gain must be between -60 and 12 dB.");
+  }
+  const { fps } = targetCanvas;
+  const sourceStartUs = frameToUs(startFrame, fps);
   const sourceEndUs = frameToUs(endFrame, fps);
-  const timelineEndUs = frameToUs(endFrame - firstFrame, fps);
+  const timelineEndUs = frameToUs(endFrame - startFrame, fps);
   const assetId = "clip";
   const source: SourceTiming = {
     assetUri: assetId,
