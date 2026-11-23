@@ -15,6 +15,7 @@ import { TemplateReframe } from "./TemplateReframe";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
+import { TemplateVolume } from "./TemplateVolume";
 import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
 import { nextDraftName } from "./draft-names";
@@ -34,10 +35,12 @@ import type { TemplateDraftEdits } from "./template-drafts";
 import {
   createTemplateMusic,
   createTemplateSource,
+  getTemplateClipGainDb,
   getTemplateTextFields,
   mobileTemplates,
   setTemplateClipReframe,
   setTemplateClipTrim,
+  setTemplateClipVolume,
   swapTemplateClips,
 } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateTextOverrides, TemplateVideoSlot } from "./template-editor";
@@ -66,7 +69,12 @@ type TemplateEditor = {
 };
 type Editor = Home | { kind: "single"; home: Home } | TemplateEditor;
 type ImportOperation = { kind: "import"; source: VideoPickerSource; slotId?: string };
-type SlotEdit = { kind: "trim" | "reframe"; editor: TemplateEditor; slot: TemplateVideoSlot; clip: TemplateClip };
+type SlotEdit = {
+  kind: "trim" | "reframe" | "volume";
+  editor: TemplateEditor;
+  slot: TemplateVideoSlot;
+  clip: TemplateClip;
+};
 type SlotSwap = { kind: "swap"; editor: TemplateEditor; draft: TemplateDraft };
 type TextEdit = { kind: "text"; editor: TemplateEditor; textOverrides: TemplateTextOverrides };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
@@ -103,6 +111,16 @@ function getEditorDraft(drafts: TemplateDrafts | null, editor: Editor) {
   return editor.kind === "template"
     ? (drafts?.[editor.template.id]?.[editor.draftId] ?? emptyTemplateDraft)
     : emptyTemplateDraft;
+}
+
+function getSlotPreviewTemplateGainDb(template: MobileTemplate, slotId: string) {
+  // An isolated preview uses the first authored occurrence of a slot.
+  for (const track of template.tracks) {
+    if (track.type !== "video") continue;
+    const item = track.items.find((item) => item.slot === slotId);
+    if (item) return item.gainDb;
+  }
+  return undefined;
 }
 
 export default function App() {
@@ -386,6 +404,7 @@ export default function App() {
 
   function openSlotEdit(kind: SlotEdit["kind"], slot: TemplateVideoSlot) {
     const clip = templateDraft.clips[slot.id];
+    if (kind === "volume" && templateDraft.missingSlots.includes(slot.id)) return;
     if (editor.kind === "template" && clip) begin({ kind, editor, slot, clip });
   }
 
@@ -697,6 +716,11 @@ export default function App() {
   const exporting = activity?.kind === "export";
   const trimming = activity?.kind === "trim";
   const reframing = activity?.kind === "reframe";
+  const adjustingVolume = activity?.kind === "volume";
+  const previewTemplateGainDb =
+    trimming || reframing || adjustingVolume
+      ? getSlotPreviewTemplateGainDb(activity.editor.template, activity.slot.id)
+      : undefined;
   const swapping = activity?.kind === "swap";
   const editingText = activity?.kind === "text";
   const clip = singleDraft.clip;
@@ -706,6 +730,7 @@ export default function App() {
         <TemplateTrim
           slot={activity.slot}
           clip={activity.clip}
+          previewGainDb={getTemplateClipGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
           onApply={(startFrame) =>
             applySlotEdit(activity, (clip) => setTemplateClipTrim(activity.slot, clip, startFrame))
           }
@@ -717,9 +742,20 @@ export default function App() {
           slot={activity.slot}
           clip={activity.clip}
           canvas={activity.editor.template.canvas}
+          previewGainDb={getTemplateClipGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
           onApply={(reframe) =>
             applySlotEdit(activity, (clip) => setTemplateClipReframe(clip, activity.editor.template.canvas, reframe))
           }
+          onCancel={() => finish(activity)}
+        />
+      )}
+      {adjustingVolume && (
+        <TemplateVolume
+          slot={activity.slot}
+          clip={activity.clip}
+          canvas={activity.editor.template.canvas}
+          templateGainDb={previewTemplateGainDb}
+          onApply={(percent) => applySlotEdit(activity, (clip) => setTemplateClipVolume(clip, percent))}
           onCancel={() => finish(activity)}
         />
       )}
@@ -763,6 +799,7 @@ export default function App() {
           onSelect={(slot, source) => selectTemplateVideos([slot], source)}
           onTrim={(slot) => openSlotEdit("trim", slot)}
           onReframe={(slot) => openSlotEdit("reframe", slot)}
+          onVolume={(slot) => openSlotEdit("volume", slot)}
           onClear={confirmClearVideo}
           onChooseSwap={() => startSlotSwap()}
           onSwap={(first, second) =>

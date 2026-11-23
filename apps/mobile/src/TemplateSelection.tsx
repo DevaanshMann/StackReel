@@ -207,6 +207,7 @@ export function TemplateVideoSlots({
   onSelectOrdered,
   onTrim,
   onReframe,
+  onVolume,
   onClear,
   onChooseSwap,
   onSwap,
@@ -224,6 +225,7 @@ export function TemplateVideoSlots({
   onSelectOrdered: (slots: TemplateVideoSlot[]) => void;
   onTrim: (slot: TemplateVideoSlot) => void;
   onReframe: (slot: TemplateVideoSlot) => void;
+  onVolume: (slot: TemplateVideoSlot) => void;
   onClear: (slot: TemplateVideoSlot) => void;
   onChooseSwap: () => void;
   onSwap: (first: TemplateVideoSlot, second: TemplateVideoSlot) => void;
@@ -295,6 +297,7 @@ export function TemplateVideoSlots({
                   <Text style={textStyles.muted}>
                     Source {trimTimeLabel(clip.trimInUs)} to {trimTimeLabel(clip.trimOutUs)}
                   </Text>
+                  {!missing && <Text style={textStyles.muted}>Original audio {clip.volumePercent ?? 100}%</Text>}
                 </>
               )}
               {missing && (
@@ -328,6 +331,15 @@ export function TemplateVideoSlots({
                       onPress={() => onReframe(slot)}
                       disabled={busy}
                     />
+                    {!missing && (
+                      <Action
+                        label="Volume"
+                        accessibilityLabel={`Volume for ${slot.label}`}
+                        testID={`volume-${slot.id}`}
+                        onPress={() => onVolume(slot)}
+                        disabled={busy}
+                      />
+                    )}
                   </>
                 )}
                 <Action

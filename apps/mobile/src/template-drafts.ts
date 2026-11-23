@@ -9,6 +9,7 @@ import {
   getTemplateTrimWindow,
   getVideoSlots,
   normalizeTemplateText,
+  setTemplateClipVolume,
 } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateMusic, TemplateTextOverrides } from "./template-editor";
 
@@ -364,7 +365,10 @@ function restoreDraftEdits(
         getTemplateCrop(clip, template.canvas);
       }
       getTemplateTrimWindow(slot, clip);
-      clips[slot.id] = clip;
+      if (value.volumePercent !== undefined && typeof value.volumePercent !== "number") {
+        throw new Error("Invalid saved volume.");
+      }
+      clips[slot.id] = setTemplateClipVolume(clip, value.volumePercent ?? 100);
     } catch {
       missingSlots.push(slot.id);
     }

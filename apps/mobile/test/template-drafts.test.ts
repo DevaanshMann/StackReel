@@ -24,6 +24,7 @@ import {
   mobileTemplates,
   setTemplateClipReframe,
   setTemplateClipTrim,
+  setTemplateClipVolume,
   setTemplateText,
   swapTemplateClips,
 } from "../src/template-editor";
@@ -208,6 +209,7 @@ describe("duplicating a template draft", () => {
     [firstDraftId, false],
   ] as const)("copies %s independently (delete source first: %s)", async (sourceId, deleteSource) => {
     const { edits, beforeFile, afterFile, musicFile } = fixture(sourceId);
+    edits.clips[before.id] = setTemplateClipVolume(edits.clips[before.id]!, 0);
     for (const file of [beforeFile, afterFile, musicFile]) file.writeSync(file.name);
     saveTemplateDraft(beforeAfter, edits, sourceId);
     renameTemplateDraft(beforeAfter, "Original", sourceId);
@@ -358,6 +360,47 @@ describe("duplicating a template draft", () => {
 });
 
 describe("template draft storage", () => {
+  it("reopens a legacy mix, invalidates a rendered export on a volume change, and retains it on a no-op", () => {
+    const { edits, beforeFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const snapshot = new File(beforeFile.parentDirectory, "draft-1.json");
+    expect(JSON.parse(snapshot.textSync()).clips[before.id]).not.toHaveProperty("volumePercent");
+    const loaded = loadTemplateDraft(beforeAfter)!;
+    const source = createTemplateSource(beforeAfter, edits.clips, edits.textOverrides, edits.music);
+    const outputUri = "file:///Exports/rendered.mp4";
+    expect(commitTemplateDraftUpdate(beforeAfter, { ...loaded, source, outputUri })).toEqual({ source, outputUri });
+
+    const quiet = setTemplateClipVolume(loaded.clips[before.id]!, 40);
+    const clips = { ...loaded.clips, [before.id]: quiet };
+    const changed = commitTemplateDraftUpdate(beforeAfter, { ...loaded, clips, source, outputUri });
+    expect(changed.source).not.toBe(source);
+    expect(changed.outputUri).toBeNull();
+    const reopened = loadTemplateDraft(beforeAfter)!;
+    expect(reopened.clips).toEqual(clips);
+    expect(commitTemplateDraftUpdate(beforeAfter, { ...reopened, source: changed.source, outputUri })).toEqual({
+      source: changed.source,
+      outputUri,
+    });
+  });
+
+  it.each([null, "50", -1, 101])("retains other edits when one saved volume is invalid (%s)", (volumePercent) => {
+    const { edits, beforeFile } = fixture();
+    saveTemplateDraft(beforeAfter, edits);
+    const snapshot = new File(beforeFile.parentDirectory, "draft-1.json");
+    const saved = JSON.parse(snapshot.textSync());
+    saved.clips[before.id].volumePercent = volumePercent;
+    snapshot.writeSync(JSON.stringify(saved));
+
+    expect(loadTemplateDraft(beforeAfter)).toEqual({
+      ...edits,
+      name: null,
+      clips: { [after.id]: edits.clips[after.id] },
+      missingSlots: [before.id],
+      missingMusic: false,
+    });
+    expect(beforeFile.exists).toBe(true);
+  });
+
   it("discovers and reopens two independent cuts of the same template", () => {
     const first = fixture(firstDraftId);
     const second = fixture(secondDraftId);
