@@ -27,6 +27,7 @@ export type TemplateMusic = {
   name: string;
   readonly sourceStartUs: number;
   readonly sourceEndUs: number;
+  volumePercent?: number;
 };
 
 export const defaultTemplateReframe: Readonly<TemplateReframe> = Object.freeze({ zoom: 1, x: 0.5, y: 0.5 });
@@ -40,21 +41,23 @@ const mutedGainDb = -60;
 
 function validateVolumePercent(percent: number) {
   if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
-    throw new RangeError("Clip volume must be between 0 and 100 percent.");
+    throw new RangeError("Volume must be between 0 and 100 percent.");
   }
 }
 
-export function setTemplateClipVolume(clip: TemplateClip, percent: number): TemplateClip {
+function setVolumePercent<T extends { volumePercent?: number }>(media: T, percent: number): T {
   validateVolumePercent(percent);
-  if ((clip.volumePercent ?? 100) === percent) return clip;
-  if (percent === 100) {
-    const { volumePercent: _volumePercent, ...reset } = clip;
-    return reset;
-  }
-  return { ...clip, volumePercent: percent };
+  if ((media.volumePercent ?? 100) === percent) return media;
+  const updated = { ...media };
+  if (percent === 100) delete updated.volumePercent;
+  else updated.volumePercent = percent;
+  return updated;
 }
 
-export function getTemplateClipGainDb(volumePercent = 100, templateGainDb = 0): number {
+export const setTemplateClipVolume = setVolumePercent<TemplateClip>;
+export const setTemplateMusicVolume = setVolumePercent<TemplateMusic>;
+
+export function getTemplateGainDb(volumePercent = 100, templateGainDb = 0): number {
   validateVolumePercent(volumePercent);
   if (volumePercent === 100) return templateGainDb;
   if (volumePercent === 0) return mutedGainDb;
@@ -349,7 +352,8 @@ export function createTemplateClip(
   return { ...source, trimInUs: frameToUs(firstFrame, fps), trimOutUs: frameToUs(firstFrame + durationFrames, fps) };
 }
 
-function validateTemplateMusic({ uri, sourceStartUs, sourceEndUs }: TemplateMusic): void {
+function validateTemplateMusic({ uri, sourceStartUs, sourceEndUs, volumePercent = 100 }: TemplateMusic): void {
+  validateVolumePercent(volumePercent);
   if (!uri || checkTrim(sourceStartUs, sourceEndUs)) throw new Error(invalidMusic);
   if (usToFrame(sourceStartUs, fps, "ceil") >= usToFrame(sourceEndUs, fps, "floor")) {
     throw new Error(invalidMusic);
@@ -410,7 +414,7 @@ export function createTemplateSource(
         items: track.items.map((item) => {
           const percent = clipFor(item.slot)?.volumePercent;
           if (percent === undefined || percent === 100) return item;
-          return { ...item, gainDb: getTemplateClipGainDb(percent, item.gainDb) };
+          return { ...item, gainDb: getTemplateGainDb(percent, item.gainDb) };
         }),
       };
     }),
@@ -454,6 +458,9 @@ export function createTemplateSource(
   if (issue) throw new Error(issue.message);
   plan.warnings = [];
   plan.layers = plan.layers.map((layer) => (layer.kind === "video" ? alignSourceRate(layer) : layer));
-  plan.audio = plan.audio.map((entry) => (entry.kind === "music" ? entry : alignSourceRate(entry)));
+  plan.audio = plan.audio.map((entry) => {
+    if (entry.kind !== "music") return alignSourceRate(entry);
+    return { ...entry, gainDb: getTemplateGainDb(music?.volumePercent, entry.gainDb) };
+  });
   return JSON.stringify({ plan, assets });
 }

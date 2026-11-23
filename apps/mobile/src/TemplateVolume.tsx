@@ -6,7 +6,7 @@ import { Modal, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { createClipSource } from "./clip-source";
-import { getTemplateClipGainDb } from "./template-editor";
+import { getTemplateGainDb } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
 
 export function TemplateVolume({
@@ -24,7 +24,60 @@ export function TemplateVolume({
   onApply: (percent: number) => void;
   onCancel: () => void;
 }) {
-  const [volumePercent, setVolumePercent] = useState(clip.volumePercent ?? 100);
+  function createPreview(volumePercent: number) {
+    const { uri, width, height, trimInUs, trimOutUs } = clip;
+    return createClipSource(
+      uri,
+      { width, height, startUs: trimInUs, durationUs: trimOutUs - trimInUs },
+      { ...canvas, background: canvas.background ?? PLAN_DEFAULTS.background },
+      "contain",
+      getTemplateGainDb(volumePercent, templateGainDb),
+    );
+  }
+
+  return (
+    <VolumeSheet
+      id={slot.id}
+      title={`Volume for ${slot.label}`}
+      filename={clip.name}
+      levelLabel="Original audio"
+      accessibilitySubject={`original audio for ${slot.label}`}
+      sliderLabel={`Original audio volume for ${slot.label}`}
+      initialVolume={clip.volumePercent ?? 100}
+      canvas={canvas}
+      createPreview={createPreview}
+      onApply={onApply}
+      onCancel={onCancel}
+    />
+  );
+}
+
+export function VolumeSheet({
+  id,
+  title,
+  filename,
+  levelLabel,
+  accessibilitySubject,
+  sliderLabel,
+  initialVolume,
+  canvas,
+  createPreview,
+  onApply,
+  onCancel,
+}: {
+  id: string;
+  title: string;
+  filename: string;
+  levelLabel: string;
+  accessibilitySubject: string;
+  sliderLabel: string;
+  initialVolume: number;
+  canvas: MobileTemplate["canvas"];
+  createPreview: (percent: number) => string | null;
+  onApply: (percent: number) => void;
+  onCancel: () => void;
+}) {
+  const [volumePercent, setVolumePercent] = useState(initialVolume);
   const [dragPercent, setDragPercent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const sliding = useRef(false);
@@ -33,16 +86,7 @@ export function TemplateVolume({
   const visiblePercent = dragPercent ?? volumePercent;
   const muteLabel = visiblePercent === 0 ? "Unmute" : "Mute";
 
-  const previewSource = useMemo(() => {
-    const { uri, width, height, trimInUs, trimOutUs } = clip;
-    return createClipSource(
-      uri,
-      { width, height, startUs: trimInUs, durationUs: trimOutUs - trimInUs },
-      { ...canvas, background: canvas.background ?? PLAN_DEFAULTS.background },
-      "contain",
-      getTemplateClipGainDb(volumePercent, templateGainDb),
-    );
-  }, [canvas, clip, templateGainDb, volumePercent]);
+  const previewSource = useMemo(() => createPreview(volumePercent), [createPreview, volumePercent]);
 
   function updateVolume(percent: number) {
     currentVolumePercent.current = percent;
@@ -61,24 +105,24 @@ export function TemplateVolume({
 
   return (
     <Modal animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
-      <Screen title={`Volume for ${slot.label}`}>
+      <Screen title={title}>
         <View style={styles.adjustment}>
           <Text numberOfLines={1} style={textStyles.muted}>
-            {clip.name}
+            {filename}
           </Text>
           <View style={styles.level} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            <Text style={textStyles.body}>Original audio</Text>
-            <Text style={styles.percent} testID={`volume-percent-${slot.id}`}>
+            <Text style={textStyles.body}>{levelLabel}</Text>
+            <Text style={styles.percent} testID={`volume-percent-${id}`}>
               {visiblePercent}%
             </Text>
           </View>
           <View style={styles.sliderRow}>
             <View
-              testID={`volume-adjustable-${slot.id}`}
+              testID={`volume-adjustable-${id}`}
               style={styles.sliderControl}
               accessible
               accessibilityRole="adjustable"
-              accessibilityLabel={`Original audio volume for ${slot.label}`}
+              accessibilityLabel={sliderLabel}
               accessibilityValue={{ min: 0, max: 100, now: visiblePercent, text: `${visiblePercent}%` }}
               accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
               onAccessibilityAction={({ nativeEvent: { actionName } }) => {
@@ -90,7 +134,7 @@ export function TemplateVolume({
             >
               <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                 <Slider
-                  testID={`volume-slider-${slot.id}`}
+                  testID={`volume-slider-${id}`}
                   accessible={false}
                   minimumValue={0}
                   maximumValue={100}
@@ -119,34 +163,38 @@ export function TemplateVolume({
             </View>
             <Action
               label={muteLabel}
-              accessibilityLabel={`${muteLabel} original audio for ${slot.label}`}
-              testID={`volume-mute-${slot.id}`}
+              accessibilityLabel={`${muteLabel} ${accessibilitySubject}`}
+              testID={`volume-mute-${id}`}
               onPress={() => updateVolume(volumePercent === 0 ? lastAudiblePercent.current : 0)}
               disabled={dragPercent !== null}
             />
           </View>
         </View>
-        <ClipPreview
-          key={previewSource}
-          canvas={canvas}
-          source={previewSource}
-          suspended={dragPercent !== null}
-          viewport={{
-            maxWidth: 176,
-            props: { testID: `volume-preview-${slot.id}` },
-            videoStyle: StyleSheet.absoluteFill,
-          }}
-        />
+        {previewSource ? (
+          <ClipPreview
+            key={previewSource}
+            canvas={canvas}
+            source={previewSource}
+            suspended={dragPercent !== null}
+            viewport={{
+              maxWidth: 176,
+              props: { testID: `volume-preview-${id}` },
+              videoStyle: StyleSheet.absoluteFill,
+            }}
+          />
+        ) : (
+          <Text style={textStyles.muted}>Add all required videos to preview the mix.</Text>
+        )}
         {error && (
           <Text accessibilityRole="alert" style={textStyles.error}>
             {error}
           </Text>
         )}
         <View style={styles.actions}>
-          <Action label="Cancel" testID={`volume-cancel-${slot.id}`} onPress={onCancel} />
+          <Action label="Cancel" testID={`volume-cancel-${id}`} onPress={onCancel} />
           <Action
             label="Apply volume"
-            testID={`volume-apply-${slot.id}`}
+            testID={`volume-apply-${id}`}
             onPress={apply}
             disabled={dragPercent !== null}
             primary

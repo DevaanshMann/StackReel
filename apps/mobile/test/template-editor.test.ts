@@ -8,8 +8,8 @@ import {
   createTemplateMusic,
   createTemplateSource,
   defaultTemplateReframe,
-  getTemplateClipGainDb,
   getTemplateCrop,
+  getTemplateGainDb,
   getTemplateTextFields,
   getTemplateTrimWindow,
   getVideoSlots,
@@ -18,6 +18,7 @@ import {
   setTemplateClipReframe,
   setTemplateClipTrim,
   setTemplateClipVolume,
+  setTemplateMusicVolume,
   setTemplateText,
   swapTemplateClips,
 } from "../src/template-editor";
@@ -168,7 +169,7 @@ describe("template clip volume", () => {
 
   it.each([-1, 101, NaN, Infinity])("rejects invalid volume %s", (percent) => {
     expect(() => setTemplateClipVolume(fillSlots(beforeAfter).before!, percent)).toThrow(RangeError);
-    expect(() => getTemplateClipGainDb(percent)).toThrow(RangeError);
+    expect(() => getTemplateGainDb(percent)).toThrow(RangeError);
   });
 
   it("scales each use of a slot from its own authored gain, retaining the native mute floor", () => {
@@ -206,9 +207,9 @@ describe("template clip volume", () => {
     ]);
 
     const quiet = setTemplateClipVolume(clip, 50);
-    const gain = getTemplateClipGainDb(50, 4);
+    const gain = getTemplateGainDb(50, 4);
     expect(gain).toBeCloseTo(-2.0206, 4);
-    expect(getTemplateClipGainDb(1, -50)).toBe(-60);
+    expect(getTemplateGainDb(1, -50)).toBe(-60);
     // The third item uses the same slot with an authored mute.
     const expected = parseSource(source);
     const video = expected.plan.layers.find((layer) => layer.id === "main/1");
@@ -515,6 +516,33 @@ describe("createTemplateSource", () => {
 describe("template music", () => {
   const uri = "file:///Music/Backing%20Track.m4a";
   const name = "Backing Track.m4a";
+
+  it("changes only the music gain while keeping clip levels, looping, fades and ducking", () => {
+    const music = createTemplateMusic(uri, name, { startUs: 50_000, durationUs: 2_000_000 });
+    const clips = fillSlots(hookAndReveal);
+    clips.clip1 = setTemplateClipVolume(clips.clip1!, 50);
+    const render = (track: typeof music) => createTemplateSource(hookAndReveal, clips, {}, track);
+    const originalSource = render(music);
+    expect(setTemplateMusicVolume(music, 100)).toBe(music);
+    expect(render({ ...music, volumePercent: 100 })).toBe(originalSource);
+
+    const quiet = setTemplateMusicVolume(music, 50);
+    expect(setTemplateMusicVolume(quiet, 50)).toBe(quiet);
+    const expected = parseSource(originalSource);
+    const entry = expected.plan.audio.find((entry) => entry.kind === "music")!;
+    expect(entry).toMatchObject({ gainDb: -6, source: { fitMode: "loop" }, fadeOutUs: 500_000, ducking: {} });
+    entry.gainDb += 20 * Math.log10(0.5);
+    expect(parseSource(render(quiet))).toEqual(expected);
+    entry.gainDb = -60;
+    expect(parseSource(render(setTemplateMusicVolume(quiet, 0)))).toEqual(expected);
+    expect(render(setTemplateMusicVolume(quiet, 100))).toBe(originalSource);
+  });
+
+  it.each([-1, 101, NaN, Infinity])("rejects invalid music volume %s before the video slots are filled", (percent) => {
+    const music = createTemplateMusic(uri, name, { startUs: 0, durationUs: 2_000_000 });
+    expect(() => setTemplateMusicVolume(music, percent)).toThrow(RangeError);
+    expect(() => createTemplateSource(beforeAfter, {}, {}, { ...music, volumePercent: percent })).toThrow(RangeError);
+  });
 
   it.each(mobileTemplates)("keeps the music slot optional in $name", (template) => {
     expect(template.audio?.music?.slot).toBe("music");

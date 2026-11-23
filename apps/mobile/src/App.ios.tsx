@@ -16,7 +16,7 @@ import { TemplateReframe } from "./TemplateReframe";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
-import { TemplateVolume } from "./TemplateVolume";
+import { TemplateVolume, VolumeSheet } from "./TemplateVolume";
 import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas, createClipSource } from "./clip-source";
 import { nextDraftName } from "./draft-names";
@@ -36,15 +36,22 @@ import type { TemplateDraftEdits } from "./template-drafts";
 import {
   createTemplateMusic,
   createTemplateSource,
-  getTemplateClipGainDb,
+  getTemplateGainDb,
   getTemplateTextFields,
   mobileTemplates,
   setTemplateClipReframe,
   setTemplateClipTrim,
   setTemplateClipVolume,
+  setTemplateMusicVolume,
   swapTemplateClips,
 } from "./template-editor";
-import type { MobileTemplate, TemplateClip, TemplateTextOverrides, TemplateVideoSlot } from "./template-editor";
+import type {
+  MobileTemplate,
+  TemplateClip,
+  TemplateMusic,
+  TemplateTextOverrides,
+  TemplateVideoSlot,
+} from "./template-editor";
 import { getTemplateSafeZoneGuide } from "./template-safe-zones";
 import { importTemplateVideos, removeCachedFile, SlotImportError } from "./template-video-import";
 import { pickVideo } from "./video-picker";
@@ -76,6 +83,7 @@ type SlotEdit = {
   slot: TemplateVideoSlot;
   clip: TemplateClip;
 };
+type MusicVolumeEdit = { kind: "music-volume"; editor: TemplateEditor; music: TemplateMusic };
 type SlotSwap = { kind: "swap"; editor: TemplateEditor; draft: TemplateDraft };
 type TextEdit = { kind: "text"; editor: TemplateEditor; textOverrides: TemplateTextOverrides };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
@@ -83,6 +91,7 @@ type Operation =
   | ImportOperation
   | { kind: "fullscreen" }
   | SlotEdit
+  | MusicVolumeEdit
   | SlotSwap
   | TextEdit
   | { kind: "duplicate"; templateId: string; draftId: string }
@@ -555,6 +564,23 @@ export default function App() {
     }
   }
 
+  function openMusicVolume() {
+    const { music, missingMusic } = templateDraft;
+    if (editor.kind === "template" && music && !missingMusic) begin({ kind: "music-volume", editor, music });
+  }
+
+  function applyMusicVolume(operation: MusicVolumeEdit, percent: number) {
+    if (!isCurrentOperation(operation)) return;
+    const { editor, music } = operation;
+    const draft = getEditorDraft(currentTemplateDrafts.current, editor);
+    if (draft.music !== music || draft.missingMusic) {
+      throw new Error("The soundtrack changed. Close the editor and open it again.");
+    }
+    const updated = setTemplateMusicVolume(music, percent);
+    if (updated !== music) updateTemplateDraft(editor, { ...draft, music: updated });
+    finish(operation);
+  }
+
   function removeMusic() {
     if (editor.kind !== "template") return;
     const operation = { kind: "remove-music" } as const;
@@ -807,6 +833,7 @@ export default function App() {
           busy={busy}
           importing={activity?.kind === "import-music"}
           error={feedback?.scope === "music" ? feedback.message : undefined}
+          onVolume={openMusicVolume}
           onSelect={selectMusic}
           onRemove={removeMusic}
         />
@@ -863,7 +890,7 @@ export default function App() {
         <TemplateTrim
           slot={activity.slot}
           clip={activity.clip}
-          previewGainDb={getTemplateClipGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
+          previewGainDb={getTemplateGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
           onApply={(startFrame) =>
             applySlotEdit(activity, (clip) => setTemplateClipTrim(activity.slot, clip, startFrame))
           }
@@ -875,7 +902,7 @@ export default function App() {
           slot={activity.slot}
           clip={activity.clip}
           canvas={activity.editor.template.canvas}
-          previewGainDb={getTemplateClipGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
+          previewGainDb={getTemplateGainDb(activity.clip.volumePercent, previewTemplateGainDb)}
           onApply={(reframe) =>
             applySlotEdit(activity, (clip) => setTemplateClipReframe(clip, activity.editor.template.canvas, reframe))
           }
@@ -889,6 +916,28 @@ export default function App() {
           canvas={activity.editor.template.canvas}
           templateGainDb={previewTemplateGainDb}
           onApply={(percent) => applySlotEdit(activity, (clip) => setTemplateClipVolume(clip, percent))}
+          onCancel={() => finish(activity)}
+        />
+      )}
+      {activity?.kind === "music-volume" && (
+        <VolumeSheet
+          id="music"
+          title="Music volume"
+          filename={activity.music.name}
+          levelLabel="Background music"
+          accessibilitySubject="background music"
+          sliderLabel="Background music volume"
+          initialVolume={activity.music.volumePercent ?? 100}
+          canvas={activity.editor.template.canvas}
+          createPreview={(percent) =>
+            createTemplateSource(
+              activity.editor.template,
+              templateDraft.clips,
+              templateDraft.textOverrides,
+              setTemplateMusicVolume(activity.music, percent),
+            )
+          }
+          onApply={(percent) => applyMusicVolume(activity, percent)}
           onCancel={() => finish(activity)}
         />
       )}
