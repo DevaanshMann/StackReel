@@ -9,6 +9,7 @@ MP4. Each template supplies its own canvas, timing, and captions.
 Turn on **Safe zones** in a filled template’s preview to see where TikTok, Reels, or Shorts controls may cover the
 picture. Keep important text and faces inside the outline. You can play and scrub with the guide on, and the exported
 MP4 contains only the reel.
+[See the guide in the Before / After preview](../../docs/ios-template-safe-zones.png).
 
 Tap **Clear video** on a filled slot or a slot with a missing saved video, then confirm using the slot name shown.
 This empties the slot in the saved draft and keeps your original video and other edits. Fill the slot again to
