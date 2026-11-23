@@ -89,6 +89,9 @@ importers:
       expo-image-picker:
         specifier: ~58.0.10
         version: 58.0.10(expo@58.0.26)
+      expo-keep-awake:
+        specifier: ~58.0.4
+        version: 58.0.4(expo@58.0.26)(react@19.3.0)
       expo-media-library:
         specifier: ~58.0.14
         version: 58.0.14(expo@58.0.26)(react-native@0.88.1(@babel/core@7.29.13)(@types/react@19.3.0)(react@19.3.0))
