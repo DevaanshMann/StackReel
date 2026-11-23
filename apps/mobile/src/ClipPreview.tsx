@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import type { ViewProps, ViewStyle } from "react-native";
+import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
 import { SafeZoneOverlay } from "./SafeZoneOverlay";
 import { Action, textStyles } from "./Screen";
 import { fitPreviewCanvas } from "./template-safe-zones";
@@ -98,6 +99,10 @@ export function ClipPreview({
   }
 
   const expanded = fullScreen?.active ?? false;
+  const windowFrame = useSafeAreaFrame();
+  const insets = useSafeAreaInsets();
+  // A ScrollView can offer its content the height of the entire inline editor.
+  const fullHeight = Math.max(0, windowFrame.height - insets.top - insets.bottom);
   const seekDisabled = suspended || duration <= 0;
   const visiblePosition = scrubPosition ?? position;
   const playbackControls = (
@@ -187,7 +192,7 @@ export function ClipPreview({
       collapsable={false}
       accessibilityViewIsModal={expanded}
       onAccessibilityEscape={expanded ? () => fullScreen?.onChange(false) : undefined}
-      style={expanded ? styles.fullPreview : styles.controls}
+      style={expanded ? [styles.fullPreview, { height: fullHeight }] : styles.controls}
     >
       {fullScreen && (
         <Action
@@ -270,7 +275,7 @@ const styles = StyleSheet.create({
   },
   stage: { flex: 1, justifyContent: "center" },
   fullFrame: { borderWidth: 0, borderRadius: 0 },
-  fullPreview: { flex: 1, gap: space[2] },
+  fullPreview: { flexGrow: 0, flexShrink: 0, gap: space[2] },
   fullTransport: { flexGrow: 0, maxHeight: "45%", paddingHorizontal: space[3] },
   viewport: { alignItems: "center", justifyContent: "center" },
   controls: { gap: space[3] },

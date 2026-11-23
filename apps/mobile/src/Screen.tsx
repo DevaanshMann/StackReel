@@ -1,5 +1,5 @@
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
-import { useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
+import { useImperativeHandle, useLayoutEffect, useRef } from "react";
 import type { ComponentRef, ReactNode, Ref } from "react";
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
 import type { ScrollViewProps } from "react-native";
@@ -27,7 +27,6 @@ export function Screen({
   fullScreen?: boolean;
 }) {
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
-  const [viewportHeight, setViewportHeight] = useState(0);
   const savedOffset = useRef<number | null>(null);
 
   useImperativeHandle(
@@ -56,7 +55,6 @@ export function Screen({
       ? undefined
       : {
           removeClippedSubviews: false,
-          onLayout: ({ nativeEvent }) => setViewportHeight(nativeEvent.layout.height),
           onContentSizeChange: () => {
             // iOS may clamp an early restore while the inline editor is still laying out.
             if (!fullScreen && savedOffset.current !== null) {
@@ -85,13 +83,13 @@ export function Screen({
           ref={scroll}
           key={page}
           {...previewScrollProps}
-          contentContainerStyle={fullScreen ? { height: viewportHeight } : styles.scroll}
+          contentContainerStyle={fullScreen ? undefined : styles.scroll}
           scrollEnabled={scrollEnabled && !fullScreen}
           automaticallyAdjustKeyboardInsets={adjustForKeyboard}
           keyboardDismissMode={adjustForKeyboard ? "interactive" : "none"}
           keyboardShouldPersistTaps={adjustForKeyboard ? "always" : "never"}
         >
-          <View style={fullScreen ? styles.fill : styles.content}>
+          <View style={fullScreen ? undefined : styles.content}>
             {!fullScreen && (
               <Text accessibilityRole="header" style={styles.title}>
                 {title}
@@ -145,7 +143,6 @@ export const textStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: darkColors.bg },
-  fill: { flex: 1 },
   scroll: { alignItems: "center", padding: space[5] },
   content: { width: "100%", maxWidth: 440, gap: space[4] },
   title: { color: darkColors.text, fontSize: fontSize["3xl"], fontWeight: "700" },
