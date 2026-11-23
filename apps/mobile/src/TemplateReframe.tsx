@@ -49,12 +49,14 @@ export function TemplateReframe({
   slot,
   clip,
   canvas,
+  previewGainDb,
   onApply,
   onCancel,
 }: {
   slot: TemplateVideoSlot;
   clip: TemplateClip;
   canvas: MobileTemplate["canvas"];
+  previewGainDb: number;
   onApply: (reframe: Reframe) => void;
   onCancel: () => void;
 }) {
@@ -76,9 +78,10 @@ export function TemplateReframe({
       { width: clip.width, height: clip.height, startUs: clip.trimInUs, durationUs: clip.trimOutUs - clip.trimInUs },
       { width, height, fps: canvas.fps, background: canvas.background ?? PLAN_DEFAULTS.background },
       "fill",
+      previewGainDb,
     );
     return { source, width, height };
-  }, [canvas, clip]);
+  }, [canvas, clip, previewGainDb]);
 
   const crop = getTemplateCrop(clip, canvas, reframe);
   const [scaleX, , left, , scaleY, top] = fitMatrix(clip, canvas, "cover", cropRect(clip, crop));

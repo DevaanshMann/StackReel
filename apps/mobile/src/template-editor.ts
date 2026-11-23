@@ -20,6 +20,7 @@ export type TemplateClip = {
   width: number;
   height: number;
   reframe?: TemplateReframe;
+  volumePercent?: number;
 };
 export type TemplateMusic = {
   uri: string;
@@ -34,6 +35,31 @@ export const maxTemplateReframeZoom = 3;
 const fps = 30;
 const invalidVideo = "This video has invalid dimensions or timing.";
 const invalidMusic = "This audio has invalid timing or no playable frames.";
+// Both the resolver's ducking calculation and the native audio mix treat this gain as silent.
+const mutedGainDb = -60;
+
+function validateVolumePercent(percent: number) {
+  if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+    throw new RangeError("Clip volume must be between 0 and 100 percent.");
+  }
+}
+
+export function setTemplateClipVolume(clip: TemplateClip, percent: number): TemplateClip {
+  validateVolumePercent(percent);
+  if ((clip.volumePercent ?? 100) === percent) return clip;
+  if (percent === 100) {
+    const { volumePercent: _volumePercent, ...reset } = clip;
+    return reset;
+  }
+  return { ...clip, volumePercent: percent };
+}
+
+export function getTemplateClipGainDb(volumePercent = 100, templateGainDb = 0): number {
+  validateVolumePercent(volumePercent);
+  if (volumePercent === 100) return templateGainDb;
+  if (volumePercent === 0) return mutedGainDb;
+  return Math.max(mutedGainDb, templateGainDb + 20 * Math.log10(volumePercent / 100));
+}
 
 function isValidSize({ width, height }: Size): boolean {
   return [width, height].every(
@@ -377,6 +403,17 @@ export function createTemplateSource(
   // Keep the editor's freeze policy for other slots while allowing the resolver to loop music.
   const project = createProject({
     ...template,
+    tracks: template.tracks.map((track) => {
+      if (track.type !== "video") return track;
+      return {
+        ...track,
+        items: track.items.map((item) => {
+          const percent = clipFor(item.slot)?.volumePercent;
+          if (percent === undefined || percent === 100) return item;
+          return { ...item, gainDb: getTemplateClipGainDb(percent, item.gainDb) };
+        }),
+      };
+    }),
     slots: template.slots.map((slot) => {
       if (slot.kind !== "audio" && slot.kind !== "video") return slot;
       return { ...slot, shortClipPolicy: slot.id === musicSlotId ? "loop" : "freeze" };

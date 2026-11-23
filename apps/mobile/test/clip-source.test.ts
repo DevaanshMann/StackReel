@@ -46,6 +46,17 @@ describe("createClipSource", () => {
     });
   });
 
+  it("applies preview gain to the video and audio while preserving the default source", () => {
+    const source = createClipSource(uri, landscapeVideo);
+    expect(createClipSource(uri, landscapeVideo, undefined, undefined, 0)).toBe(source);
+    for (const gainDb of [-60, -6.02, 4]) {
+      const { plan } = parseSource(createClipSource(uri, landscapeVideo, undefined, undefined, gainDb));
+      expect(plan.layers[0]).toMatchObject({ gainDb });
+      expect(plan.audio[0]).toMatchObject({ gainDb });
+    }
+    expect(() => createClipSource(uri, landscapeVideo, undefined, undefined, NaN)).toThrow(RangeError);
+  });
+
   it("can fill a preview canvas with the entire oriented source for the selected trim", () => {
     const orientedVideo = { width: 721, height: 1281, startUs: 66_667, durationUs: 1_000_000 };
     const previewCanvas = { width: 722, height: 1282, fps: 30, background: "#000000" };

@@ -8,7 +8,11 @@ export function createClipSource(
   { width, height, startUs, durationUs }: { width: number; height: number; startUs: number; durationUs: number },
   targetCanvas: PlanCanvas = canvas,
   fit: VideoLayer["fit"] = "contain",
+  gainDb = 0,
 ): string {
+  if (!Number.isFinite(gainDb) || gainDb < -60 || gainDb > 12) {
+    throw new RangeError("Clip gain must be between -60 and 12 dB.");
+  }
   const endUs = startUs + durationUs;
   if (
     !Number.isFinite(width) ||
@@ -51,7 +55,7 @@ export function createClipSource(
     startUs: 0,
     endUs: timelineEndUs,
     source,
-    gainDb: 0,
+    gainDb,
     fadeInUs: 0,
     fadeOutUs: 0,
   } as const satisfies AudioEntry;

@@ -8,6 +8,7 @@ import {
   createTemplateMusic,
   createTemplateSource,
   defaultTemplateReframe,
+  getTemplateClipGainDb,
   getTemplateCrop,
   getTemplateTextFields,
   getTemplateTrimWindow,
@@ -16,6 +17,7 @@ import {
   mobileTemplates,
   setTemplateClipReframe,
   setTemplateClipTrim,
+  setTemplateClipVolume,
   setTemplateText,
   swapTemplateClips,
 } from "../src/template-editor";
@@ -81,7 +83,7 @@ describe("template clip swapping", () => {
       x: 0.7,
       y: 0.25,
     });
-    const after = setTemplateClipTrim(afterSlot!, portrait, 31);
+    const after = setTemplateClipVolume(setTemplateClipTrim(afterSlot!, portrait, 31), 25);
     const swapped = swapTemplateClips({ before, after }, beforeSlot!, afterSlot!);
 
     expect(swapped).toEqual({
@@ -144,6 +146,93 @@ describe("template clip swapping", () => {
     expect(() => swapTemplateClips(clips, afterSlot!, beforeSlot!)).toThrow('"After" needs at least 4.50 seconds');
     expect(clips).toEqual({ before, after });
     expect(createTemplateSource(beforeAfter, clips)).toBe(original);
+  });
+});
+
+describe("template clip volume", () => {
+  it("retains identity on no-ops, resets to the original clip settings, and leaves replacements at full volume", () => {
+    const slot = getVideoSlots(beforeAfter)[0]!;
+    const original = fillSlots(beforeAfter)[slot.id]!;
+    expect(setTemplateClipVolume(original, 100)).toBe(original);
+    const quiet = setTemplateClipVolume(original, 37.5);
+    expect(quiet).toEqual({ ...original, volumePercent: 37.5 });
+    expect(setTemplateClipVolume(quiet, 37.5)).toBe(quiet);
+    expect(setTemplateClipVolume(quiet, 100)).toStrictEqual(original);
+    const replacement = createTemplateClip(slot, quiet.uri, quiet.name, {
+      ...videoSize,
+      startUs: 0,
+      durationUs: slot.minDurationUs,
+    });
+    expect(replacement.volumePercent).toBeUndefined();
+  });
+
+  it.each([-1, 101, NaN, Infinity])("rejects invalid volume %s", (percent) => {
+    expect(() => setTemplateClipVolume(fillSlots(beforeAfter).before!, percent)).toThrow(RangeError);
+    expect(() => getTemplateClipGainDb(percent)).toThrow(RangeError);
+  });
+
+  it("scales each use of a slot from its own authored gain, retaining the native mute floor", () => {
+    const template: MobileTemplate = {
+      ...hookAndReveal,
+      tracks: hookAndReveal.tracks.map((track) =>
+        track.type !== "video"
+          ? track
+          : {
+              ...track,
+              items: track.items.map((item, index) =>
+                index === 0
+                  ? item
+                  : {
+                      ...item,
+                      slot: "clip2",
+                      gainDb: index === 1 ? 4 : -60,
+                      fadeInUs: 200_000,
+                      voice: true,
+                    },
+              ),
+            },
+      ),
+    };
+    const clips = fillSlots(template);
+    const music = createTemplateMusic("file:///music.m4a", "Music", { startUs: 0, durationUs: template.durationUs });
+    const render = (clip: TemplateClip) => createTemplateSource(template, { ...clips, clip2: clip }, {}, music);
+    const clip = clips.clip2!;
+    const source = render(clip);
+    expect(render({ ...clip, volumePercent: 100 })).toBe(source);
+    const original = parseSource(source);
+    expect(original.plan.audio.find((entry) => entry.id === "main/1")).toMatchObject({ gainDb: 4 });
+    expect(original.plan.audio.find((entry) => entry.kind === "music")?.ducking?.regions).toEqual([
+      { startUs: 3_000_000, endUs: 5_200_000 },
+    ]);
+
+    const quiet = setTemplateClipVolume(clip, 50);
+    const gain = getTemplateClipGainDb(50, 4);
+    expect(gain).toBeCloseTo(-2.0206, 4);
+    expect(getTemplateClipGainDb(1, -50)).toBe(-60);
+    // The third item uses the same slot with an authored mute.
+    const expected = parseSource(source);
+    const video = expected.plan.layers.find((layer) => layer.id === "main/1");
+    if (video?.kind !== "video") throw new Error("Missing second video");
+    video.gainDb = gain;
+    expected.plan.audio.find((entry) => entry.id === video.id)!.gainDb = gain;
+    expect(parseSource(render(quiet))).toEqual(expected);
+
+    const muted = parseSource(render(setTemplateClipVolume(quiet, 0)));
+    expect(muted.plan.audio.find((entry) => entry.id === video.id)).toMatchObject({ gainDb: -60, fadeInUs: 200_000 });
+    expect(muted.plan.layers.find((layer) => layer.id === video.id)).toMatchObject({ gainDb: -60 });
+    expect(muted.plan.audio.find((entry) => entry.kind === "music")?.ducking?.regions).toEqual([]);
+    expect(render(setTemplateClipVolume(quiet, 100))).toBe(source);
+  });
+
+  it("keeps music ducked under the audible neighbors of a muted clip, including the transition tail", () => {
+    const clips = fillSlots(hookAndReveal);
+    const music = createTemplateMusic("file:///music.m4a", "Music", { startUs: 0, durationUs: 9_000_000 });
+    const muted = { ...clips, clip2: setTemplateClipVolume(clips.clip2!, 0) };
+    const { plan } = parseSource(createTemplateSource(hookAndReveal, muted, {}, music));
+    expect(plan.audio.find((entry) => entry.kind === "music")?.ducking?.regions).toEqual([
+      { startUs: 0, endUs: 3_266_667 },
+      { startUs: 5_000_000, endUs: 9_000_000 },
+    ]);
   });
 });
 

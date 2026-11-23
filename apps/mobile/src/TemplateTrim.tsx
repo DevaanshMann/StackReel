@@ -16,11 +16,13 @@ export function trimTimeLabel(microseconds: number) {
 export function TemplateTrim({
   slot,
   clip,
+  previewGainDb,
   onApply,
   onCancel,
 }: {
   slot: TemplateVideoSlot;
   clip: TemplateClip;
+  previewGainDb: number;
   onApply: (startFrame: number) => void;
   onCancel: () => void;
 }) {
@@ -38,8 +40,14 @@ export function TemplateTrim({
 
   const previewSource = useMemo(() => {
     const { uri, width, height, trimInUs, trimOutUs } = setTemplateClipTrim(slot, clip, startFrame);
-    return createClipSource(uri, { width, height, startUs: trimInUs, durationUs: trimOutUs - trimInUs });
-  }, [slot, clip, startFrame]);
+    return createClipSource(
+      uri,
+      { width, height, startUs: trimInUs, durationUs: trimOutUs - trimInUs },
+      canvas,
+      "contain",
+      previewGainDb,
+    );
+  }, [slot, clip, startFrame, previewGainDb]);
 
   function frameForOffset(offset: number) {
     return window.firstFrame + Math.min(lastOffset, Math.max(0, Math.round(offset)));
