@@ -11,6 +11,7 @@ through the last 20 edits, including trims, framing, captions, volume changes, s
 removing videos and music. Choosing several videos together counts as one edit. After undoing, making a different
 edit starts a new sequence from that point. The draft saves the result of each undo or redo. Leaving the editor
 ends the history for that session. Reopening the draft resumes at the saved result.
+[See Undo and Redo in a template draft on iPhone](../../docs/ios-template-undo-redo.png).
 
 Tap **Full screen** on a finished template or an imported single clip to inspect the reel at a larger size.
 Play, pause, or scrub to check a cut. Tap **Exit full screen** to return to the same position in the editor.
@@ -235,7 +236,6 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     the order of the filmstrip images with the source. Drag the highlighted window to each end and check its start,
     end, and duration. Cancel once, then move the window to a recognizable scene, play it, and tap **Apply trim**.
     Reopen the draft and export it. Check that the chosen scene starts the slot in the MP4.
-
 24. In a filled draft, apply a trim, edit a caption, then clear a video. Undo the clear and check that the same
     video and trim return. Undo the caption, redo it, and compare the wording in preview. Undo the caption again
     and apply a different one. Verify **Redo** is disabled and the new wording appears in the exported reel.
