@@ -470,7 +470,8 @@ _Runs in parallel with Phase 3._
    - [ ] Trim sheet: scrub a filmstrip and drag a window locked to the slot's duration
    - [ ] Crop and reframe: pinch and drag inside the 9:16 frame, with face-centered auto-reframe as a stretch goal
 4. **Preview & tweak**
-   - [ ] Full-screen native preview with play/pause and a scrubber
+   - [x] Full-screen iOS reel preview with play/pause and a scrubber
+   - [ ] Full-screen Android reel preview with play/pause and a scrubber
    - [x] iOS template preview safe-zone toggle for TikTok, Reels, and Shorts
    - [ ] Android template preview safe-zone toggle
    - [ ] Edit text: tap text on the preview to edit it inline. Pick a style preset, color, and font.

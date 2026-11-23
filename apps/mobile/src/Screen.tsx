@@ -1,39 +1,100 @@
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
-import type { ReactNode } from "react";
+import { useImperativeHandle, useLayoutEffect, useRef } from "react";
+import type { ComponentRef, ReactNode, Ref } from "react";
 import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import type { ScrollViewProps } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
+export type ScreenRef = { saveScrollPosition: () => void };
+
 export function Screen({
+  ref,
   children,
   footer,
   page,
   title = "StackReel",
   scrollEnabled = true,
   adjustForKeyboard = false,
+  fullScreen,
 }: {
+  ref?: Ref<ScreenRef>;
   children: ReactNode;
   footer?: ReactNode;
   page?: string;
   title?: string;
   scrollEnabled?: boolean;
   adjustForKeyboard?: boolean;
+  fullScreen?: boolean;
 }) {
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const savedOffset = useRef<number | null>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      saveScrollPosition() {
+        savedOffset.current = scroll.current?.scrollTop ?? 0;
+      },
+    }),
+    [],
+  );
+
+  useLayoutEffect(() => {
+    if (fullScreen) {
+      scroll.current?.scrollTo({ y: 0, animated: false });
+    } else if (savedOffset.current !== null) {
+      const frame = requestAnimationFrame(() => {
+        if (savedOffset.current !== null) scroll.current?.scrollTo({ y: savedOffset.current, animated: false });
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [fullScreen]);
+
+  const previewScrollProps: ScrollViewProps | undefined =
+    fullScreen === undefined
+      ? undefined
+      : {
+          removeClippedSubviews: false,
+          onContentSizeChange: () => {
+            // iOS may clamp an early restore while the inline editor is still laying out.
+            if (!fullScreen && savedOffset.current !== null) {
+              scroll.current?.scrollTo({ y: savedOffset.current, animated: false });
+            }
+          },
+          onScroll: ({ nativeEvent }) => {
+            if (
+              !fullScreen &&
+              savedOffset.current !== null &&
+              Math.abs(nativeEvent.contentOffset.y - savedOffset.current) < 1
+            ) {
+              savedOffset.current = null;
+            }
+          },
+          onScrollBeginDrag: () => {
+            savedOffset.current = null;
+          },
+        };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle="light-content" hidden={fullScreen} />
         <ScrollView
+          ref={scroll}
           key={page}
-          contentContainerStyle={styles.scroll}
-          scrollEnabled={scrollEnabled}
+          {...previewScrollProps}
+          contentContainerStyle={fullScreen ? undefined : styles.scroll}
+          scrollEnabled={scrollEnabled && !fullScreen}
           automaticallyAdjustKeyboardInsets={adjustForKeyboard}
           keyboardDismissMode={adjustForKeyboard ? "interactive" : "none"}
           keyboardShouldPersistTaps={adjustForKeyboard ? "always" : "never"}
         >
-          <View style={styles.content}>
-            <Text accessibilityRole="header" style={styles.title}>
-              {title}
-            </Text>
+          <View style={fullScreen ? undefined : styles.content}>
+            {!fullScreen && (
+              <Text accessibilityRole="header" style={styles.title}>
+                {title}
+              </Text>
+            )}
             {children}
           </View>
         </ScrollView>
