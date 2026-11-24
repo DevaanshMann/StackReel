@@ -1,6 +1,7 @@
 import { Directory, File, Paths } from "expo-file-system";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "expo-crypto";
+import { defaultClipReframe } from "../src/clip-reframe";
 import { createTrimmedClipSource } from "../src/clip-source";
 import type { SingleClipFit } from "../src/clip-source";
 import { discardPickerCopy } from "../src/draft-files";
@@ -9,6 +10,7 @@ import {
   importSingleClipDraft,
   loadSingleClipDraft,
   setSingleClipFit,
+  setSingleClipReframe,
   trimSingleClipDraft,
 } from "../src/single-clip-draft";
 import type { SingleClip } from "../src/single-clip-draft";
@@ -122,11 +124,76 @@ describe("single-clip draft storage", () => {
     expect(setSingleClipFit(retrimmed, "contain")).toMatchObject({ fit: "contain", selection: shortened });
   });
 
+  it("remembers custom Fill across Fit, trimming, restart, and a failed edit, then resets to centered Fill", async () => {
+    const initial = (await importVideo())!;
+    const covered = setSingleClipFit(initial, "cover");
+    const crop = { zoom: 3, x: 0, y: 1 };
+    const reframed = setSingleClipReframe(covered, crop);
+    expect(JSON.parse(manifest(reframed).textSync()).reframe).toEqual(crop);
+    expect(reframed.source).toBe(createTrimmedClipSource(initial.uri, media, initial.selection, "cover", crop));
+
+    const fitted = setSingleClipFit(reframed, "contain");
+    expect(fitted.source).toBe(initial.source);
+    expect(() => setSingleClipFit(initial, "cover")).toThrow(/changed/);
+    expect(() => trimSingleClipDraft(initial, trimmed)).toThrow(/changed/);
+    const oneFrame = { startFrame: 32, endFrame: 33 };
+    const retrimmed = trimSingleClipDraft(fitted, oneFrame);
+    vi.resetModules();
+    const { loadSingleClipDraft: coldLoad } = await import("../src/single-clip-draft");
+    const reopened = coldLoad()!;
+    expect(reopened).toEqual(retrimmed);
+    const restored = setSingleClipFit(reopened, "cover");
+    expect(restored.source).toBe(createTrimmedClipSource(initial.uri, media, oneFrame, "cover", crop));
+
+    const before = new Map(storage.files);
+    storage.interruptMove = true;
+    expect(() => setSingleClipReframe(restored, defaultClipReframe)).toThrow("Interrupted write");
+    expect(storage.files).toEqual(before);
+    expect(loadSingleClipDraft()).toEqual(restored);
+    storage.interruptMove = false;
+    const reset = setSingleClipReframe(restored, defaultClipReframe);
+    expect(reset).not.toHaveProperty("reframe");
+    expect(JSON.parse(manifest(reset).textSync())).not.toHaveProperty("reframe");
+    expect(reset.source).toBe(createTrimmedClipSource(initial.uri, media, oneFrame, "cover"));
+    expect(loadSingleClipDraft()).toEqual(reset);
+  });
+
+  it("preserves object identity and snapshot for equivalent crops on an axis with no travel", async () => {
+    const clip = setSingleClipFit((await importVideo())!, "cover");
+    const before = new Map(storage.files);
+    expect(setSingleClipReframe(clip, { zoom: 1, x: 0.5, y: 0 })).toBe(clip);
+    expect(storage.files).toEqual(before);
+    const panned = setSingleClipReframe(clip, { zoom: 1, x: 1, y: 0 });
+    expect(panned.reframe).toEqual({ zoom: 1, x: 1, y: 0.5 });
+    const after = new Map(storage.files);
+    expect(setSingleClipReframe(panned, { zoom: 1, x: 1, y: 1 })).toBe(panned);
+    expect(() => setSingleClipReframe(panned, { zoom: NaN, x: 0, y: 0 })).toThrow();
+    expect(storage.files).toEqual(after);
+  });
+
+  it.each([null, {}, [], { zoom: 4, x: 0, y: 0 }, { zoom: 1, x: -1, y: 0 }, { zoom: 1, x: "0", y: 0 }])(
+    "preserves the recovery files for a Fit draft with a corrupt remembered crop %j",
+    async (reframe) => {
+      const clip = (await importVideo())!;
+      const snapshot = manifest(clip);
+      snapshot.writeSync(JSON.stringify({ ...JSON.parse(snapshot.textSync()), reframe }));
+      const before = new Map(storage.files);
+      expect(() => loadSingleClipDraft()).toThrow();
+      await expect(importVideo()).rejects.toThrow();
+      expect(storage.files).toEqual(before);
+    },
+  );
+
   it("starts a replacement video in Fit with its full trim range", async () => {
     const clip = (await importVideo())!;
-    const previous = setSingleClipFit(trimSingleClipDraft(clip, trimmed), "cover");
+    const previous = setSingleClipReframe(setSingleClipFit(trimSingleClipDraft(clip, trimmed), "cover"), {
+      zoom: 2,
+      x: 1,
+      y: 0,
+    });
     const next = (await importVideo())!;
     expect(next).toMatchObject({ fit: "contain", selection: clip.selection });
+    expect(next).not.toHaveProperty("reframe");
     expect(loadSingleClipDraft()).toEqual(next);
     expect(new File(previous.uri).exists).toBe(false);
   });

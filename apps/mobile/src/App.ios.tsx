@@ -1,3 +1,4 @@
+import { frameToUs } from "@stackreel/core";
 import { addExportProgressListener, cancelExport, exportMP4, probeAudio, probeVideo } from "@stackreel/engine";
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
 import { randomUUID } from "expo-crypto";
@@ -9,11 +10,11 @@ import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
+import { ReframeSheet } from "./ReframeSheet";
 import { Action, Screen, textStyles } from "./Screen";
 import type { ScreenRef } from "./Screen";
 import { SingleClipTrim } from "./SingleClipTrim";
 import { TemplateMusicControls } from "./TemplateMusicControls";
-import { TemplateReframe } from "./TemplateReframe";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
@@ -28,6 +29,7 @@ import {
   importSingleClipDraft,
   loadSingleClipDraft,
   setSingleClipFit,
+  setSingleClipReframe,
   trimSingleClipDraft,
 } from "./single-clip-draft";
 import type { SingleClip } from "./single-clip-draft";
@@ -106,6 +108,7 @@ type Operation =
   | { kind: "fullscreen" }
   | SlotEdit
   | SingleTrimEdit
+  | { kind: "single-reframe"; clip: SingleClip }
   | MusicVolumeEdit
   | SlotSwap
   | TextEdit
@@ -1052,6 +1055,14 @@ export default function App() {
                     onPress={() => changeSingleFraming(fit)}
                   />
                 ))}
+                {clip.fit === "cover" && (
+                  <Action
+                    label="Reframe"
+                    testID="single-reframe-open"
+                    disabled={busy}
+                    onPress={() => begin({ kind: "single-reframe", clip })}
+                  />
+                )}
               </View>
               {feedback?.scope === "framing" && (
                 <Text accessibilityRole="alert" style={textStyles.error}>
@@ -1134,6 +1145,27 @@ export default function App() {
       page={editor.kind === "template" ? editor.draftId : "single-clip"}
       fullScreen={fullScreen}
     >
+      {activity?.kind === "single-reframe" && (
+        <ReframeSheet
+          id="single"
+          title="Reframe clip"
+          canvas={singleClipCanvas}
+          clip={{
+            uri: activity.clip.uri,
+            width: activity.clip.media.width,
+            height: activity.clip.media.height,
+            trimInUs: frameToUs(activity.clip.selection.startFrame, singleClipCanvas.fps),
+            trimOutUs: frameToUs(activity.clip.selection.endFrame, singleClipCanvas.fps),
+            reframe: activity.clip.reframe,
+          }}
+          onApply={(reframe) => {
+            if (!isCurrentOperation(activity)) return;
+            publishSingleEdit(setSingleClipReframe(activity.clip, reframe));
+            finish(activity);
+          }}
+          onCancel={() => finish(activity)}
+        />
+      )}
       {activity?.kind === "single-trim" && (
         <SingleClipTrim
           clip={activity.clip}
@@ -1153,8 +1185,9 @@ export default function App() {
         />
       )}
       {reframing && (
-        <TemplateReframe
-          slot={activity.slot}
+        <ReframeSheet
+          id={activity.slot.id}
+          title={`Reframe ${activity.slot.label}`}
           clip={activity.clip}
           canvas={activity.editor.template.canvas}
           previewGainDb={getTemplateGainDb(activity.clip.volumePercent, previewTemplateGainDb)}

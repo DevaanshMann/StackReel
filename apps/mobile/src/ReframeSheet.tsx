@@ -8,16 +8,17 @@ import type { GestureResponderEvent, NativeTouchEvent } from "react-native";
 import { ClipPreview, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { createClipSource } from "./clip-source";
-import { defaultTemplateReframe, getTemplateCrop, maxTemplateReframeZoom } from "./template-editor";
-import type { MobileTemplate, TemplateClip, TemplateReframe as Reframe, TemplateVideoSlot } from "./template-editor";
+import { defaultClipReframe, getClipCrop, maxClipReframeZoom } from "./clip-reframe";
+import type { ClipReframe } from "./clip-reframe";
+import type { MobileTemplate } from "./template-editor";
 
 type TouchGeometry = { first: number; second?: number; x: number; y: number; distance: number };
 type Gesture = {
   target: NativeTouchEvent["target"];
-  start: { touches: TouchGeometry; reframe: Reframe; crop: Crop } | null;
+  start: { touches: TouchGeometry; reframe: ClipReframe; crop: Crop } | null;
 };
 
-const zoomRange = maxTemplateReframeZoom - defaultTemplateReframe.zoom;
+const zoomRange = maxClipReframeZoom - defaultClipReframe.zoom;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const percent = (fraction: number) => `${Math.round(fraction * 100)}%`;
 
@@ -45,22 +46,24 @@ function movePlacement(position: number, oldSize: number, newSize: number, start
   return clamp(position + (zoomShift + dragShift) / travel, 0, 1);
 }
 
-export function TemplateReframe({
-  slot,
+export function ReframeSheet({
+  id,
+  title,
   clip,
   canvas,
-  previewGainDb,
+  previewGainDb = 0,
   onApply,
   onCancel,
 }: {
-  slot: TemplateVideoSlot;
-  clip: TemplateClip;
+  id: string;
+  title: string;
+  clip: Size & { uri: string; trimInUs: number; trimOutUs: number; reframe?: ClipReframe | undefined };
   canvas: MobileTemplate["canvas"];
-  previewGainDb: number;
-  onApply: (reframe: Reframe) => void;
+  previewGainDb?: number;
+  onApply: (reframe: ClipReframe) => void;
   onCancel: () => void;
 }) {
-  const [reframe, setReframe] = useState(clip.reframe ?? defaultTemplateReframe);
+  const [reframe, setReframe] = useState(clip.reframe ?? defaultClipReframe);
   const currentReframe = useRef(reframe);
   const [viewportSize, setViewportSize] = useState<Size | null>(null);
   const [gesturing, setGesturing] = useState(false);
@@ -83,12 +86,12 @@ export function TemplateReframe({
     return { source, width, height };
   }, [canvas, clip, previewGainDb]);
 
-  const crop = getTemplateCrop(clip, canvas, reframe);
+  const crop = getClipCrop(clip, canvas, reframe);
   const [scaleX, , left, , scaleY, top] = fitMatrix(clip, canvas, "cover", cropRect(clip, crop));
   const displayX = (viewportSize?.width ?? 1) / canvas.width;
   const displayY = (viewportSize?.height ?? 1) / canvas.height;
 
-  function update(next: Reframe) {
+  function update(next: ClipReframe) {
     currentReframe.current = next;
     setReframe(next);
   }
@@ -105,19 +108,15 @@ export function TemplateReframe({
     const start = active.start;
     if (rebase || !start || start.touches.first !== touches.first || start.touches.second !== touches.second) {
       const reframe = currentReframe.current;
-      active.start = { touches, reframe, crop: getTemplateCrop(clip, canvas, reframe) };
+      active.start = { touches, reframe, crop: getClipCrop(clip, canvas, reframe) };
       return;
     }
 
     const initial = start.reframe;
     const zoom = start.touches.distance
-      ? clamp(
-          (initial.zoom * touches.distance) / start.touches.distance,
-          defaultTemplateReframe.zoom,
-          maxTemplateReframeZoom,
-        )
+      ? clamp((initial.zoom * touches.distance) / start.touches.distance, defaultClipReframe.zoom, maxClipReframeZoom)
       : initial.zoom;
-    const nextCrop = getTemplateCrop(clip, canvas, { ...initial, zoom });
+    const nextCrop = getClipCrop(clip, canvas, { ...initial, zoom });
     update({
       zoom,
       x: movePlacement(
@@ -153,7 +152,7 @@ export function TemplateReframe({
 
   return (
     <Modal animationType="slide" presentationStyle="fullScreen" onRequestClose={onCancel}>
-      <Screen title={`Reframe ${slot.label}`} scrollEnabled={!gesturing}>
+      <Screen title={title} scrollEnabled={!gesturing}>
         <ClipPreview
           canvas={canvas}
           source={preview.source}
@@ -161,7 +160,7 @@ export function TemplateReframe({
           viewport={{
             maxWidth: 180,
             props: {
-              testID: `reframe-preview-${slot.id}`,
+              testID: `reframe-preview-${id}`,
               pointerEvents: "box-only",
               onLayout: ({ nativeEvent: { layout } }) => {
                 if (layout.width > 0 && layout.height > 0)
@@ -201,16 +200,16 @@ export function TemplateReframe({
         <View>
           <Text style={textStyles.muted}>Drag to move the video. Pinch to zoom.</Text>
           <FramingSlider
-            testID={`reframe-zoom-${slot.id}`}
+            testID={`reframe-zoom-${id}`}
             label="Zoom"
-            value={(reframe.zoom - defaultTemplateReframe.zoom) / zoomRange}
+            value={(reframe.zoom - defaultClipReframe.zoom) / zoomRange}
             valueLabel={`${reframe.zoom.toFixed(2)}×`}
             onChange={(value) =>
-              update({ ...currentReframe.current, zoom: defaultTemplateReframe.zoom + value * zoomRange })
+              update({ ...currentReframe.current, zoom: defaultClipReframe.zoom + value * zoomRange })
             }
           />
           <FramingSlider
-            testID={`reframe-horizontal-${slot.id}`}
+            testID={`reframe-horizontal-${id}`}
             label="Horizontal position"
             value={reframe.x}
             valueLabel={percent(reframe.x)}
@@ -218,7 +217,7 @@ export function TemplateReframe({
             onChange={(x) => update({ ...currentReframe.current, x })}
           />
           <FramingSlider
-            testID={`reframe-vertical-${slot.id}`}
+            testID={`reframe-vertical-${id}`}
             label="Vertical position"
             value={reframe.y}
             valueLabel={percent(reframe.y)}
@@ -232,9 +231,9 @@ export function TemplateReframe({
           </Text>
         )}
         <View style={styles.actions}>
-          <Action label="Reset" testID={`reframe-reset-${slot.id}`} onPress={() => update(defaultTemplateReframe)} />
-          <Action label="Cancel" testID={`reframe-cancel-${slot.id}`} onPress={onCancel} />
-          <Action label="Apply" testID={`reframe-apply-${slot.id}`} onPress={apply} disabled={gesturing} primary />
+          <Action label="Reset" testID={`reframe-reset-${id}`} onPress={() => update(defaultClipReframe)} />
+          <Action label="Cancel" testID={`reframe-cancel-${id}`} onPress={onCancel} />
+          <Action label="Apply" testID={`reframe-apply-${id}`} onPress={apply} disabled={gesturing} primary />
         </View>
       </Screen>
     </Modal>
@@ -262,26 +261,36 @@ function FramingSlider({
         <Text style={textStyles.body}>{label}</Text>
         <Text style={styles.value}>{valueLabel}</Text>
       </View>
-      <Slider
+      <View
+        accessible
+        style={styles.sliderControl}
         testID={testID}
         accessibilityRole="adjustable"
         accessibilityLabel={label}
+        accessibilityState={{ disabled }}
+        accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
         accessibilityValue={{ text: disabled ? "No room to move at this zoom" : valueLabel }}
         onAccessibilityAction={({ nativeEvent: { actionName } }) => {
           if (disabled) return;
           if (actionName === "increment") onChange(clamp(value + 0.05, 0, 1));
           if (actionName === "decrement") onChange(clamp(value - 0.05, 0, 1));
         }}
-        disabled={disabled}
-        value={value}
-        minimumTrackTintColor={darkColors.accent}
-        maximumTrackTintColor={darkColors.border}
-        thumbTintColor={darkColors.text}
-        style={styles.slider}
-        tapToSeek={!disabled}
-        onValueChange={onChange}
-        onSlidingComplete={onChange}
-      />
+      >
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Slider
+            accessible={false}
+            disabled={disabled}
+            value={value}
+            minimumTrackTintColor={darkColors.accent}
+            maximumTrackTintColor={darkColors.border}
+            thumbTintColor={darkColors.text}
+            style={styles.slider}
+            tapToSeek={!disabled}
+            onValueChange={onChange}
+            onSlidingComplete={onChange}
+          />
+        </View>
+      </View>
     </View>
   );
 }
@@ -290,6 +299,7 @@ const styles = StyleSheet.create({
   control: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: space[2] },
   controlLabel: { flexBasis: 132, flexShrink: 1 },
   value: { ...textStyles.muted, fontVariant: ["tabular-nums"] },
-  slider: { flex: 1, minWidth: 90, height: 44 },
+  sliderControl: { flex: 1, minWidth: 90 },
+  slider: { height: 44 },
   actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: space[2] },
 });
