@@ -89,6 +89,7 @@ The MP4 fits the picture inside a 720 × 1280 frame at 30 fps and includes the c
 StackReel saves one single-clip draft on your device. Reopen **Single-clip editor**, or tap the video’s filename in
 **Projects**, to resume at the last trim you applied. Replacing the video starts a new cut. To remove the saved
 copy and its trim, open the draft, tap **Delete draft**, and confirm.
+[See a single-clip draft reopened from Projects](../../docs/ios-single-clip-draft.png).
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
