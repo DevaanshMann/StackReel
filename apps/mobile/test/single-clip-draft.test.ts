@@ -1,3 +1,4 @@
+import type { RenderPlan } from "@stackreel/core";
 import { Directory, File, Paths } from "expo-file-system";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "expo-crypto";
@@ -6,11 +7,13 @@ import { createTrimmedClipSource } from "../src/clip-source";
 import type { SingleClipFit } from "../src/clip-source";
 import { discardPickerCopy } from "../src/draft-files";
 import {
+  createSingleClipSource,
   deleteSingleClipDraft,
   importSingleClipDraft,
   loadSingleClipDraft,
   setSingleClipFit,
   setSingleClipReframe,
+  setSingleClipVolume,
   trimSingleClipDraft,
 } from "../src/single-clip-draft";
 import type { SingleClip } from "../src/single-clip-draft";
@@ -70,6 +73,7 @@ describe("single-clip draft storage", () => {
       media,
       selection: trimmed,
       fit: "contain",
+      volumePercent: 100,
     });
     expect(saved.file).toMatch(/^[\da-f-]+\.mp4$/);
     expect(manifest(edited).textSync()).not.toContain("file://");
@@ -84,19 +88,21 @@ describe("single-clip draft storage", () => {
     expect(coldLoad()).toEqual({ ...edited, uri, source: createTrimmedClipSource(uri, media, trimmed) });
   });
 
-  it("opens a version 1 snapshot without fit and writes the framing on the next edit", async () => {
+  it("opens a version 1 snapshot without framing or volume and writes the defaults on the next edit", async () => {
     const clip = (await importVideo())!;
     const snapshot = manifest(clip);
     const saved = JSON.parse(snapshot.textSync());
     delete saved.fit;
+    delete saved.volumePercent;
     snapshot.writeSync(JSON.stringify(saved));
     const before = new Map(storage.files);
     const legacy = loadSingleClipDraft()!;
     expect(legacy).toEqual(clip);
     expect(setSingleClipFit(legacy, "contain")).toBe(legacy);
+    expect(setSingleClipVolume(legacy, 100)).toBe(legacy);
     expect(storage.files).toEqual(before);
     const filled = setSingleClipFit(legacy, "cover");
-    expect(JSON.parse(manifest(filled).textSync())).toEqual({ ...saved, fit: "cover" });
+    expect(JSON.parse(manifest(filled).textSync())).toEqual({ ...saved, fit: "cover", volumePercent: 100 });
     expect(loadSingleClipDraft()).toEqual(filled);
   });
 
@@ -184,15 +190,75 @@ describe("single-clip draft storage", () => {
     },
   );
 
-  it("starts a replacement video in Fit with its full trim range", async () => {
+  it("auditions the saved trim and Fill crop, then commits the same plan and level on apply", async () => {
+    const clip = (await importVideo())!;
+    const filled = setSingleClipFit(trimSingleClipDraft(clip, trimmed), "cover");
+    const reframed = setSingleClipReframe(filled, { zoom: 2, x: 1, y: 0 });
+    const original: RenderPlan = JSON.parse(reframed.source).plan;
+    const before = new Map(storage.files);
+    const audition = createSingleClipSource({ ...reframed, volumePercent: 50 });
+    const gainDb = 20 * Math.log10(0.5);
+    expect(JSON.parse(audition).plan).toEqual({
+      ...original,
+      layers: [{ ...original.layers[0], gainDb }],
+      audio: [{ ...original.audio[0], gainDb }],
+    });
+    expect(storage.files).toEqual(before);
+    const applied = setSingleClipVolume(reframed, 50);
+    expect(applied).toEqual({ ...reframed, volumePercent: 50, source: audition });
+    expect(loadSingleClipDraft()).toEqual(applied);
+    const after = new Map(storage.files);
+    expect(setSingleClipVolume(applied, 50)).toBe(applied);
+    expect(() => setSingleClipVolume(reframed, 100)).toThrow(/changed/);
+    expect(storage.files).toEqual(after);
+    expect(setSingleClipVolume(applied, 100).source).toBe(reframed.source);
+  });
+
+  it("keeps mute through trim, fit, reframe, and reload", async () => {
+    const muted = setSingleClipVolume((await importVideo())!, 0);
+    const retrimmed = trimSingleClipDraft(muted, trimmed);
+    const filled = setSingleClipFit(retrimmed, "cover");
+    const reframed = setSingleClipReframe(filled, { zoom: 2, x: 0, y: 1 });
+    for (const clip of [muted, retrimmed, filled, reframed, loadSingleClipDraft()!]) {
+      expect(clip.volumePercent).toBe(0);
+      const plan: RenderPlan = JSON.parse(clip.source).plan;
+      expect(plan.audio[0]?.gainDb).toBe(-60);
+      expect(plan.layers[0]).toMatchObject({ gainDb: -60 });
+    }
+  });
+
+  it("detects a stale edit even when two volume settings render at the same gain floor", async () => {
+    const muted = setSingleClipVolume((await importVideo())!, 0);
+    const quiet = setSingleClipVolume(muted, 0.01);
+    expect(quiet.source).toBe(muted.source);
+    expect(loadSingleClipDraft()).toEqual(quiet);
+    expect(() => trimSingleClipDraft(muted, trimmed)).toThrow(/changed/);
+    expect(() => setSingleClipVolume(muted, 0)).toThrow(/changed/);
+  });
+
+  it.each([null, false, "50", -1, 101])(
+    "rejects stored volume %j and preserves recovery files",
+    async (volumePercent) => {
+      const clip = (await importVideo())!;
+      const snapshot = manifest(clip);
+      snapshot.writeSync(JSON.stringify({ ...JSON.parse(snapshot.textSync()), volumePercent }));
+      const before = new Map(storage.files);
+      expect(() => loadSingleClipDraft()).toThrow();
+      await expect(importVideo()).rejects.toThrow();
+      expect(storage.files).toEqual(before);
+    },
+  );
+
+  it("starts a replacement video in Fit at full volume with its full trim range", async () => {
     const clip = (await importVideo())!;
     const previous = setSingleClipReframe(setSingleClipFit(trimSingleClipDraft(clip, trimmed), "cover"), {
       zoom: 2,
       x: 1,
       y: 0,
     });
+    setSingleClipVolume(previous, 0);
     const next = (await importVideo())!;
-    expect(next).toMatchObject({ fit: "contain", selection: clip.selection });
+    expect(next).toMatchObject({ fit: "contain", selection: clip.selection, volumePercent: 100 });
     expect(next).not.toHaveProperty("reframe");
     expect(loadSingleClipDraft()).toEqual(next);
     expect(new File(previous.uri).exists).toBe(false);
@@ -205,6 +271,8 @@ describe("single-clip draft storage", () => {
     expect(setSingleClipFit(clip, "contain")).toBe(clip);
     expect(() => trimSingleClipDraft(clip, { startFrame: 20, endFrame: 900 })).toThrow();
     expect(() => setSingleClipFit(clip, "fill" as SingleClipFit)).toThrow(RangeError);
+    for (const percent of [-1, 101, NaN, Infinity])
+      expect(() => setSingleClipVolume(clip, percent)).toThrow(RangeError);
     expect(storage.files).toEqual(before);
   });
 
@@ -252,6 +320,7 @@ describe("single-clip draft storage", () => {
     await expect(importVideo()).rejects.toThrow("Interrupted write");
     expect(() => trimSingleClipDraft(clip, trimmed)).toThrow("Interrupted write");
     expect(() => setSingleClipFit(clip, "cover")).toThrow("Interrupted write");
+    expect(() => setSingleClipVolume(clip, 50)).toThrow("Interrupted write");
     expect(storage.files).toEqual(before);
     expect(loadSingleClipDraft()).toEqual(clip);
   });
