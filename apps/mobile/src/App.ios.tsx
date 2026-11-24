@@ -19,9 +19,17 @@ import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
 import { TemplateVolume, VolumeSheet } from "./TemplateVolume";
 import { VideoImportActions } from "./VideoImportActions";
-import { canvas as singleClipCanvas, createTrimmedClipSource, getClipFrameRange } from "./clip-source";
-import type { ClipFrameRange, ClipMetadata } from "./clip-source";
+import { canvas as singleClipCanvas } from "./clip-source";
+import type { ClipFrameRange } from "./clip-source";
+import { discardPickerCopy } from "./draft-files";
 import { nextDraftName } from "./draft-names";
+import {
+  deleteSingleClipDraft,
+  importSingleClipDraft,
+  loadSingleClipDraft,
+  trimSingleClipDraft,
+} from "./single-clip-draft";
+import type { SingleClip } from "./single-clip-draft";
 import {
   clearTemplateMusic,
   clearTemplateVideoSlot,
@@ -60,8 +68,7 @@ import { importTemplateVideos, removeCachedFile, SlotImportError } from "./templ
 import { pickVideo } from "./video-picker";
 import type { VideoPickerSource } from "./video-picker";
 
-type Clip = { name: string; uri: string; media: ClipMetadata; selection: ClipFrameRange; source: string };
-type SingleDraft = { clip: Clip | null; outputUri: string | null };
+type SingleDraft = { clip: SingleClip | null; outputUri: string | null; loadError?: string };
 type TemplateDraft = TemplateDraftEdits & {
   source: string | null;
   outputUri: string | null;
@@ -88,7 +95,7 @@ type SlotEdit = {
   slot: TemplateVideoSlot;
   clip: TemplateClip;
 };
-type SingleTrimEdit = { kind: "single-trim"; clip: Clip };
+type SingleTrimEdit = { kind: "single-trim"; clip: SingleClip };
 type MusicVolumeEdit = { kind: "music-volume"; editor: TemplateEditor; music: TemplateMusic };
 type SlotSwap = { kind: "swap"; editor: TemplateEditor; draft: TemplateDraft };
 type TextEdit = { kind: "text"; editor: TemplateEditor; textOverrides: TemplateTextOverrides };
@@ -180,6 +187,7 @@ export default function App() {
   const busy = activity !== null && !fullScreen;
 
   useEffect(() => {
+    reopenSingleDraft();
     const drafts: Record<string, Record<string, TemplateDraft>> = {};
     const failed: string[] = [];
     for (const template of mobileTemplates) {
@@ -585,12 +593,48 @@ export default function App() {
     setSingleDraft(draft);
   }
 
+  function reopenSingleDraft() {
+    try {
+      storeSingleDraft({ clip: loadSingleClipDraft(), outputUri: null });
+    } catch {
+      storeSingleDraft({ clip: null, outputUri: null, loadError: "Couldn’t reopen the saved single-clip draft." });
+    }
+  }
+
+  function confirmDeleteSingleDraft() {
+    const operation = { kind: "delete" } as const;
+    if (editor.kind !== "single" || !begin(operation)) return;
+    Alert.alert(
+      "Delete single-clip draft?",
+      "This removes your saved trim and StackReel’s copy of the video. Your original video stays in place.",
+      [
+        { text: "Cancel", style: "cancel", onPress: () => finish(operation) },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            if (!isCurrentOperation(operation)) return;
+            try {
+              deleteSingleClipDraft();
+              storeSingleDraft({ clip: null, outputUri: null });
+              removeCachedFile(singleDraft.outputUri);
+              setFeedback({ kind: "status", message: "Single-clip draft deleted." });
+            } catch (cause) {
+              setFeedback({ kind: "error", message: errorMessage("Couldn’t delete the draft.", cause) });
+            } finally {
+              finish(operation);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   function applySingleTrim(operation: SingleTrimEdit, selection: ClipFrameRange) {
     if (!isCurrentOperation(operation)) return;
-    const { clip } = operation;
-    if (selection.startFrame !== clip.selection.startFrame || selection.endFrame !== clip.selection.endFrame) {
-      const source = createTrimmedClipSource(clip.uri, clip.media, selection);
-      storeSingleDraft({ clip: { ...clip, selection, source }, outputUri: null });
+    const clip = trimSingleClipDraft(operation.clip, selection);
+    if (clip !== operation.clip) {
+      storeSingleDraft({ clip, outputUri: null });
       removeCachedFile(singleDraft.outputUri);
     }
     finish(operation);
@@ -598,7 +642,7 @@ export default function App() {
 
   async function selectSingleVideo(source: VideoPickerSource) {
     const operation: ImportOperation = { kind: "import", source };
-    if (!begin(operation)) return;
+    if (singleDraft.loadError || !begin(operation)) return;
     let pickedUri: string | undefined;
     try {
       const asset = await pickVideo(source);
@@ -607,21 +651,16 @@ export default function App() {
       if (!isCurrentOperation(operation)) return;
       const metadata = await probeVideo(pickedUri);
       if (!isCurrentOperation(operation)) return;
-      const selection = getClipFrameRange(metadata);
-      const clipSource = createTrimmedClipSource(pickedUri, metadata, selection);
-      storeSingleDraft({
-        clip: { name: asset.name, uri: pickedUri, media: metadata, selection, source: clipSource },
-        outputUri: null,
-      });
-      if (singleDraft.clip?.uri !== pickedUri) removeCachedFile(singleDraft.clip?.uri);
+      const clip = await importSingleClipDraft(asset, metadata, () => isCurrentOperation(operation));
+      if (!clip || !isCurrentOperation(operation)) return;
+      storeSingleDraft({ clip, outputUri: null });
       removeCachedFile(outputUri);
-      pickedUri = undefined;
     } catch (cause) {
       if (isCurrentOperation(operation)) {
         setFeedback({ kind: "error", message: errorMessage("Couldn’t import the video.", cause) });
       }
     } finally {
-      if (pickedUri !== singleDraft.clip?.uri) removeCachedFile(pickedUri);
+      discardPickerCopy(pickedUri);
       finish(operation);
     }
   }
@@ -801,6 +840,9 @@ export default function App() {
           <TemplateProjects
             drafts={templateDrafts}
             filter={editor.filter}
+            singleClipDraftName={singleDraft.clip?.name ?? (singleDraft.loadError ? "Single-clip draft" : null)}
+            singleClipLoadError={singleDraft.loadError}
+            onSelectSingleClip={() => navigate({ kind: "single", home: editor })}
             duplicating={activity?.kind === "duplicate" ? activity : null}
             onShowAll={() => selectHomeTab("projects")}
             onOpenDraft={openDraft}
@@ -929,7 +971,7 @@ export default function App() {
           onCancelSwap={swapping ? () => finish(activity) : undefined}
         />
       )}
-      {editor.kind === "single" && (
+      {editor.kind === "single" && !singleDraft.loadError && (
         <VideoImportActions
           replace={clip !== null}
           importingFrom={importing ? activity.source : undefined}
@@ -938,21 +980,46 @@ export default function App() {
           onSelect={selectSingleVideo}
         />
       )}
-      {editor.kind === "single" && clip && (
-        <View style={styles.navigation}>
-          <Action
-            label="Trim clip"
-            testID="single-trim-open"
-            onPress={() => begin({ kind: "single-trim", clip })}
-            disabled={busy}
-          />
-        </View>
+      {editor.kind === "single" && (clip || singleDraft.loadError) && (
+        <>
+          {singleDraft.loadError && (
+            <Text accessibilityRole="alert" style={textStyles.error}>
+              {singleDraft.loadError} Try again or delete this draft to start another.
+            </Text>
+          )}
+          <View style={styles.navigation}>
+            {clip ? (
+              <Action
+                label="Trim clip"
+                testID="single-trim-open"
+                onPress={() => begin({ kind: "single-trim", clip })}
+                disabled={busy}
+              />
+            ) : (
+              <Action
+                label="Try again"
+                onPress={() => {
+                  if (activeOperation.current || !isCurrentScreen()) return;
+                  setFeedback(null);
+                  reopenSingleDraft();
+                }}
+                disabled={busy}
+              />
+            )}
+            <Action
+              label="Delete draft"
+              testID="single-draft-delete"
+              onPress={confirmDeleteSingleDraft}
+              disabled={busy}
+            />
+          </View>
+        </>
       )}
     </>
   );
   const editorActions = (
     <>
-      {editor.kind === "single" && !source && (
+      {editor.kind === "single" && !source && !singleDraft.loadError && (
         <PreviewFrame canvas={canvas}>
           <Text style={textStyles.muted}>Choose a video to preview.</Text>
         </PreviewFrame>

@@ -73,6 +73,9 @@ export function TemplateGallery({
 export function TemplateProjects({
   drafts,
   filter,
+  singleClipDraftName,
+  singleClipLoadError,
+  onSelectSingleClip,
   duplicating,
   onShowAll,
   onOpenDraft,
@@ -83,6 +86,9 @@ export function TemplateProjects({
 }: {
   drafts: ProjectDrafts;
   filter: MobileTemplate | undefined;
+  singleClipDraftName: string | null;
+  singleClipLoadError: string | undefined;
+  onSelectSingleClip: () => void;
   duplicating: { templateId: string; draftId: string } | null;
   onShowAll: () => void;
   onOpenDraft: (template: MobileTemplate, slots: TemplateVideoSlot[], draftId: string) => void;
@@ -93,6 +99,7 @@ export function TemplateProjects({
 }) {
   const busy = duplicating !== null;
   const projects = getDraftProjects(choices, drafts, filter?.id);
+  const showSingleClip = !filter && singleClipDraftName !== null;
 
   return (
     <>
@@ -100,14 +107,26 @@ export function TemplateProjects({
         {filter ? `${filter.name} drafts` : "Projects"}
       </Text>
       {filter && <Action label="Show all projects" onPress={onShowAll} disabled={busy} />}
-      {projects.length === 0 ? (
+      {projects.length === 0 && !showSingleClip ? (
         <View style={[styles.panel, styles.emptyProjects]}>
           <Text style={styles.cardTitle}>{filter ? `No saved ${filter.name} drafts` : "No saved drafts yet"}</Text>
-          <Text style={textStyles.muted}>Make an edit in a template to start a draft.</Text>
+          <Text style={textStyles.muted}>
+            {filter
+              ? "Make an edit in a template to start a draft."
+              : "Edit a template or import a single clip to start a draft."}
+          </Text>
           <Action label="Browse templates" onPress={onBrowseTemplates} />
         </View>
       ) : (
         <View style={styles.list}>
+          {showSingleClip && (
+            <GalleryCard
+              label={singleClipDraftName}
+              details={singleClipLoadError ?? "Single-clip draft"}
+              disabled={busy}
+              onPress={onSelectSingleClip}
+            />
+          )}
           {projects.map(({ template, slots, draftId, draft, label, deleteTarget }) => {
             const name = draft.name ?? template.name;
             const filled = slots.filter(({ id }) => draft.clips[id]).length;
