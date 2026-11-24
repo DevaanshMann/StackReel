@@ -6,7 +6,7 @@ StackReel collects no data about the reels you edit. The iOS editor previews and
 
 ## Media and drafts
 
-You choose which videos to import from Photos or Files and which music to import from Files. If a file is stored in the cloud, its provider may download it to your device. For a template draft, StackReel saves copies of that media along with the draft name, captions, trims, and framing in the app’s storage. The single-clip editor keeps one imported video and its applied trim in app storage so you can resume editing after closing the app. Depending on your settings, device backups can include drafts and their media.
+You choose which videos to import from Photos or Files and which music to import from Files. If a file is stored in the cloud, its provider may download it to your device. For a template draft, StackReel saves copies of that media along with the draft name, captions, trims, and framing in the app’s storage. The single-clip editor keeps one imported video with its trim and framing in app storage so you can resume editing after closing the app. Depending on your settings, device backups can include drafts and their media.
 
 To remove a template draft, open **Projects**, tap **Delete** beside the draft, and confirm. To remove a single-clip draft, open it, tap **Delete draft**, and confirm. StackReel removes the saved edits and cleans up the draft’s media copies. If cleanup is interrupted, some files may remain in app storage. Deleting a draft leaves your originals, other drafts, previous backups, and any exports you saved or shared intact.
 

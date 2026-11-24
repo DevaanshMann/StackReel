@@ -7,7 +7,8 @@ import { ClipPreview, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { trimTimeLabel } from "./TemplateTrim";
 import { canvas, createTrimmedClipSource, getClipFrameRange } from "./clip-source";
-import type { ClipFrameRange, ClipMetadata } from "./clip-source";
+import type { ClipFrameRange } from "./clip-source";
+import type { SingleClip } from "./single-clip-draft";
 
 const boundaries = ["startFrame", "endFrame"] as const;
 type Boundary = (typeof boundaries)[number];
@@ -21,7 +22,7 @@ export function SingleClipTrim({
   onApply,
   onCancel,
 }: {
-  clip: { name: string; uri: string; media: ClipMetadata; selection: ClipFrameRange };
+  clip: SingleClip;
   onApply: (selection: ClipFrameRange) => void;
   onCancel: () => void;
 }) {
@@ -32,7 +33,10 @@ export function SingleClipTrim({
   const sliding = useRef<Boundary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const shown = drag ? { ...selection, [drag.boundary]: drag.frame } : selection;
-  const previewSource = useMemo(() => createTrimmedClipSource(clip.uri, clip.media, selection), [clip, selection]);
+  const previewSource = useMemo(
+    () => createTrimmedClipSource(clip.uri, clip.media, selection, clip.fit),
+    [clip, selection],
+  );
 
   function select(next: ClipFrameRange) {
     current.current = next;

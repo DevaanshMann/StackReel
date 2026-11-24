@@ -83,12 +83,16 @@ Choose **Single-clip editor** from the gallery and pick a video from Photos or F
 it starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f** to adjust by one frame. Play the
 selection to check its picture and sound. **Apply trim** uses that selection for preview and export. To bring back
 footage, reopen **Trim clip** and extend the range, or tap **Reset trim** to select the full video.
-The MP4 fits the picture inside a 720 × 1280 frame at 30 fps and includes the clip’s audio when present.
+The MP4 uses a 720 × 1280 frame at 30 fps and includes the clip’s audio when present.
 [See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
 
+Under **Framing**, choose **Fit** to show the whole picture or **Fill** to crop the center to the vertical frame.
+The preview shows the framing immediately. Export again after switching to save or share the new framing.
+[See Fill applied to a single clip on iPhone](../../docs/ios-single-clip-framing.png).
+
 StackReel saves one single-clip draft on your device. Reopen **Single-clip editor**, or tap the video’s filename in
-**Projects**, to resume at the last trim you applied. Replacing the video starts a new cut. To remove the saved
-copy and its trim, open the draft, tap **Delete draft**, and confirm.
+**Projects**, to resume with your saved trim and framing. Replacing the video starts a new cut in **Fit**.
+To remove the saved copy and its edits, open the draft, tap **Delete draft**, and confirm.
 [See a single-clip draft reopened from Projects](../../docs/ios-single-clip-draft.png).
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
@@ -256,6 +260,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     and check both frame positions in **Trim clip**. Export and check the saved cut. Cancel a replacement and then
     cancel **Delete draft**. Reopen the editor and check that the cut is still there. Confirm **Delete draft**,
     relaunch, and verify the project is gone and the original video is still available in Photos or Files.
+27. Import a landscape clip with a recognizable center and edges. Export in **Fit**, then tap **Fit** again and check
+    that **Share MP4** stays available. Choose **Fill** and check that the picture covers the vertical preview and
+    sharing requires a fresh export. Apply a trim, reopen the draft after relaunch, and export. Check the center
+    crop, duration, and audio in the MP4. Switch back to **Fit** to see the original edges.
 
 ### Export display sleep on iPhone
 
