@@ -20,13 +20,14 @@ import { TemplateTrim } from "./TemplateTrim";
 import { TemplateVolume, VolumeSheet } from "./TemplateVolume";
 import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas } from "./clip-source";
-import type { ClipFrameRange } from "./clip-source";
+import type { ClipFrameRange, SingleClipFit } from "./clip-source";
 import { discardPickerCopy } from "./draft-files";
 import { nextDraftName } from "./draft-names";
 import {
   deleteSingleClipDraft,
   importSingleClipDraft,
   loadSingleClipDraft,
+  setSingleClipFit,
   trimSingleClipDraft,
 } from "./single-clip-draft";
 import type { SingleClip } from "./single-clip-draft";
@@ -113,7 +114,12 @@ type Operation =
   | { kind: "clear-video" | "import-music" | "remove-music" | "share" | "save-photos" | "rename" | "delete" }
   | ExportJob;
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
-type Feedback = { kind: "error" | "status"; message: string; slotId?: string; scope?: "music" | "swap" | "history" };
+type Feedback = {
+  kind: "error" | "status";
+  message: string;
+  slotId?: string;
+  scope?: "music" | "swap" | "history" | "framing";
+};
 
 const homeTabs = [
   { id: "templates", label: "Templates" },
@@ -132,6 +138,10 @@ const emptyTemplateDraft: TemplateDraft = {
 };
 
 const firstScreen: Home = { kind: "home", tab: "templates" };
+const framingOptions = [
+  { fit: "contain", label: "Fit" },
+  { fit: "cover", label: "Fill" },
+] as const;
 const emptyHistoryLabels: HistoryLabels = { undoLabel: null, redoLabel: null };
 const slotEditLabels: Record<SlotEdit["kind"], string> = {
   trim: "trim",
@@ -632,12 +642,25 @@ export default function App() {
 
   function applySingleTrim(operation: SingleTrimEdit, selection: ClipFrameRange) {
     if (!isCurrentOperation(operation)) return;
-    const clip = trimSingleClipDraft(operation.clip, selection);
-    if (clip !== operation.clip) {
-      storeSingleDraft({ clip, outputUri: null });
-      removeCachedFile(singleDraft.outputUri);
-    }
+    publishSingleEdit(trimSingleClipDraft(operation.clip, selection));
     finish(operation);
+  }
+
+  function publishSingleEdit(clip: SingleClip) {
+    if (clip === singleDraft.clip) return;
+    storeSingleDraft({ clip, outputUri: null });
+    removeCachedFile(singleDraft.outputUri);
+  }
+
+  function changeSingleFraming(fit: SingleClipFit) {
+    const clip = singleDraft.clip;
+    if (!clip || clip.fit === fit || activeOperation.current || !isCurrentScreen()) return;
+    try {
+      publishSingleEdit(setSingleClipFit(clip, fit));
+      setFeedback(null);
+    } catch (cause) {
+      setFeedback({ kind: "error", scope: "framing", message: errorMessage("Couldn’t save the framing.", cause) });
+    }
   }
 
   async function selectSingleVideo(source: VideoPickerSource) {
@@ -917,7 +940,7 @@ export default function App() {
       </View>
       {editor.kind === "template" && (
         <>
-          <View role="toolbar" accessibilityLabel="Edit history" style={styles.historyActions}>
+          <View role="toolbar" accessibilityLabel="Edit history" style={styles.buttonRow}>
             <Action
               label={undoLabel ? `Undo ${undoLabel}` : "Undo"}
               testID="template-undo"
@@ -1013,6 +1036,30 @@ export default function App() {
               disabled={busy}
             />
           </View>
+          {clip && (
+            <View style={styles.details}>
+              <Text style={textStyles.body}>Framing</Text>
+              <View style={styles.buttonRow}>
+                {framingOptions.map(({ fit, label }) => (
+                  <Action
+                    key={fit}
+                    label={clip.fit === fit ? `✓ ${label}` : label}
+                    accessibilityLabel={label}
+                    testID={`single-framing-${label.toLowerCase()}`}
+                    selected={clip.fit === fit}
+                    primary={clip.fit === fit}
+                    disabled={busy}
+                    onPress={() => changeSingleFraming(fit)}
+                  />
+                ))}
+              </View>
+              {feedback?.scope === "framing" && (
+                <Text accessibilityRole="alert" style={textStyles.error}>
+                  {feedback.message}
+                </Text>
+              )}
+            </View>
+          )}
         </>
       )}
     </>
@@ -1263,7 +1310,7 @@ const styles = StyleSheet.create({
   activeTabLabel: { color: darkColors.accent },
   navigation: { alignSelf: "flex-start" },
   details: { gap: space[1] },
-  historyActions: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
+  buttonRow: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
   actions: { gap: space[2] },
   progress: { gap: space[2], marginBottom: space[1] },
   progressTrack: { height: 6, borderRadius: radius.full, backgroundColor: darkColors.border, overflow: "hidden" },

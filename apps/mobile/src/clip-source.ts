@@ -4,6 +4,12 @@ import type { AudioEntry, PlanCanvas, RenderPlan, SourceTiming, VideoLayer } fro
 export const canvas = { width: 720, height: 1280, fps: 30, background: "#000000" } satisfies PlanCanvas;
 
 export type ClipMetadata = { width: number; height: number; startUs: number; durationUs: number };
+export type SingleClipFit = "contain" | "cover";
+
+export function isSingleClipFit(value: unknown): value is SingleClipFit {
+  return value === "contain" || value === "cover";
+}
+
 /** Absolute source frames at the output rate. The end frame is exclusive. */
 export type ClipFrameRange = { startFrame: number; endFrame: number };
 
@@ -43,7 +49,13 @@ export function createClipSource(
   return buildClipSource(uri, media, range, targetCanvas, fit, gainDb);
 }
 
-export function createTrimmedClipSource(uri: string, media: ClipMetadata, selection: ClipFrameRange): string {
+export function createTrimmedClipSource(
+  uri: string,
+  media: ClipMetadata,
+  selection: ClipFrameRange,
+  fit: SingleClipFit = "contain",
+): string {
+  if (!isSingleClipFit(fit)) throw new RangeError("Invalid single-clip fit.");
   const bounds = getClipFrameRange(media);
   const { startFrame, endFrame } = selection;
   if (
@@ -55,7 +67,7 @@ export function createTrimmedClipSource(uri: string, media: ClipMetadata, select
   ) {
     throw new RangeError("Select at least one whole frame within the video.");
   }
-  return buildClipSource(uri, media, selection, canvas, "contain", 0);
+  return buildClipSource(uri, media, selection, canvas, fit, 0);
 }
 
 function buildClipSource(

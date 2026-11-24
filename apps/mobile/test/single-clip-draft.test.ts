@@ -2,11 +2,13 @@ import { Directory, File, Paths } from "expo-file-system";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "expo-crypto";
 import { createTrimmedClipSource } from "../src/clip-source";
+import type { SingleClipFit } from "../src/clip-source";
 import { discardPickerCopy } from "../src/draft-files";
 import {
   deleteSingleClipDraft,
   importSingleClipDraft,
   loadSingleClipDraft,
+  setSingleClipFit,
   trimSingleClipDraft,
 } from "../src/single-clip-draft";
 import type { SingleClip } from "../src/single-clip-draft";
@@ -65,6 +67,7 @@ describe("single-clip draft storage", () => {
       name: clip.name,
       media,
       selection: trimmed,
+      fit: "contain",
     });
     expect(saved.file).toMatch(/^[\da-f-]+\.mp4$/);
     expect(manifest(edited).textSync()).not.toContain("file://");
@@ -79,11 +82,62 @@ describe("single-clip draft storage", () => {
     expect(coldLoad()).toEqual({ ...edited, uri, source: createTrimmedClipSource(uri, media, trimmed) });
   });
 
-  it("returns the same object for an unchanged trim and preserves the draft on invalid edits", async () => {
+  it("opens a version 1 snapshot without fit and writes the framing on the next edit", async () => {
+    const clip = (await importVideo())!;
+    const snapshot = manifest(clip);
+    const saved = JSON.parse(snapshot.textSync());
+    delete saved.fit;
+    snapshot.writeSync(JSON.stringify(saved));
+    const before = new Map(storage.files);
+    const legacy = loadSingleClipDraft()!;
+    expect(legacy).toEqual(clip);
+    expect(setSingleClipFit(legacy, "contain")).toBe(legacy);
+    expect(storage.files).toEqual(before);
+    const filled = setSingleClipFit(legacy, "cover");
+    expect(JSON.parse(manifest(filled).textSync())).toEqual({ ...saved, fit: "cover" });
+    expect(loadSingleClipDraft()).toEqual(filled);
+  });
+
+  it("preserves the trim on a framing edit and preserves Fill on a later trim", async () => {
+    const original = (await importVideo())!;
+    const edited = trimSingleClipDraft(original, trimmed);
+    const filled = setSingleClipFit(edited, "cover");
+    expect(filled).toEqual({
+      ...edited,
+      fit: "cover",
+      source: createTrimmedClipSource(edited.uri, media, trimmed, "cover"),
+    });
+    expect(loadSingleClipDraft()).toEqual(filled);
+    expect(() => trimSingleClipDraft(edited, original.selection)).toThrow(/changed/);
+    expect(() => setSingleClipFit(original, "cover")).toThrow(/changed/);
+
+    const shortened = { ...trimmed, endFrame: 80 };
+    const retrimmed = trimSingleClipDraft(filled, shortened);
+    expect(retrimmed).toEqual({
+      ...filled,
+      selection: shortened,
+      source: createTrimmedClipSource(filled.uri, media, shortened, "cover"),
+    });
+    expect(loadSingleClipDraft()).toEqual(retrimmed);
+    expect(setSingleClipFit(retrimmed, "contain")).toMatchObject({ fit: "contain", selection: shortened });
+  });
+
+  it("starts a replacement video in Fit with its full trim range", async () => {
+    const clip = (await importVideo())!;
+    const previous = setSingleClipFit(trimSingleClipDraft(clip, trimmed), "cover");
+    const next = (await importVideo())!;
+    expect(next).toMatchObject({ fit: "contain", selection: clip.selection });
+    expect(loadSingleClipDraft()).toEqual(next);
+    expect(new File(previous.uri).exists).toBe(false);
+  });
+
+  it("returns the same object for unchanged edits and preserves the draft on invalid edits", async () => {
     const clip = (await importVideo())!;
     const before = new Map(storage.files);
     expect(trimSingleClipDraft(clip, { ...clip.selection })).toBe(clip);
+    expect(setSingleClipFit(clip, "contain")).toBe(clip);
     expect(() => trimSingleClipDraft(clip, { startFrame: 20, endFrame: 900 })).toThrow();
+    expect(() => setSingleClipFit(clip, "fill" as SingleClipFit)).toThrow(RangeError);
     expect(storage.files).toEqual(before);
   });
 
@@ -123,16 +177,30 @@ describe("single-clip draft storage", () => {
     expect(new File(external).exists).toBe(true);
   });
 
-  it("keeps the last commit after failed copies, trims and replacement manifest moves", async () => {
+  it("keeps the last commit after failed copies and manifest moves for edits and replacements", async () => {
     const clip = (await importVideo())!;
     const before = new Map(storage.files);
     await expect(importVideo("file:///Files/missing.mov")).rejects.toThrow();
     storage.interruptMove = true;
     await expect(importVideo()).rejects.toThrow("Interrupted write");
     expect(() => trimSingleClipDraft(clip, trimmed)).toThrow("Interrupted write");
+    expect(() => setSingleClipFit(clip, "cover")).toThrow("Interrupted write");
     expect(storage.files).toEqual(before);
     expect(loadSingleClipDraft()).toEqual(clip);
   });
+
+  it.each(["fill", "Cover", null, false, 0, {}])(
+    "rejects a stored fit of %j and preserves the snapshot",
+    async (fit) => {
+      const clip = (await importVideo())!;
+      const snapshot = manifest(clip);
+      snapshot.writeSync(JSON.stringify({ ...JSON.parse(snapshot.textSync()), fit }));
+      const before = new Map(storage.files);
+      expect(() => loadSingleClipDraft()).toThrow(/invalid format/);
+      await expect(importVideo()).rejects.toThrow(/invalid format/);
+      expect(storage.files).toEqual(before);
+    },
+  );
 
   it("preserves in-flight media during discovery and drops a cancelled import", async () => {
     const previous = (await importVideo())!;

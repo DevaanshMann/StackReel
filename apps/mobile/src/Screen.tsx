@@ -111,6 +111,7 @@ export function Action({
   onPress,
   disabled = false,
   primary = false,
+  selected,
 }: {
   label: string;
   accessibilityLabel?: string;
@@ -118,13 +119,14 @@ export function Action({
   onPress: () => void;
   disabled?: boolean;
   primary?: boolean;
+  selected?: boolean;
 }) {
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, selected }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.button, primary && styles.primary, (pressed || disabled) && styles.dimmed]}

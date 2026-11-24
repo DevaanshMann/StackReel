@@ -1,6 +1,7 @@
 import type { RenderPlan } from "@stackreel/core";
 import { describe, expect, it } from "vitest";
 import { createClipSource, createTrimmedClipSource, getClipFrameRange } from "../src/clip-source";
+import type { SingleClipFit } from "../src/clip-source";
 
 const uri = "file:///video%20clip.mov";
 const landscapeVideo = { width: 1920, height: 1080, startUs: 0, durationUs: 2_014_000 };
@@ -82,6 +83,36 @@ describe("createClipSource", () => {
 });
 
 describe("single-clip trim", () => {
+  it("defaults to Fit and center-crops landscape video with Fill without altering its trim or audio", () => {
+    const selection = { startFrame: 2, endFrame: 4 };
+    const fit = createTrimmedClipSource(uri, landscapeVideo, selection, "contain");
+    expect(createTrimmedClipSource(uri, landscapeVideo, selection)).toBe(fit);
+    const contained = parseSource(fit);
+    const covered = parseSource(createTrimmedClipSource(uri, landscapeVideo, selection, "cover"));
+    const scale = 1280 / landscapeVideo.height;
+    const layer = {
+      ...contained.plan.layers[0],
+      fit: "cover",
+      transform: [scale, 0, (720 - landscapeVideo.width * scale) / 2, 0, scale, 0, 0, 0, 1],
+    };
+    expect(covered).toEqual({ ...contained, plan: { ...contained.plan, layers: [layer] } });
+  });
+
+  it("uses the same geometry for Fit and Fill with a 9:16 source", () => {
+    const media = { ...landscapeVideo, width: 1080, height: 1920 };
+    const selection = getClipFrameRange(media);
+    const transform = [2 / 3, 0, 0, 0, 2 / 3, 0, 0, 0, 1];
+    for (const fit of ["contain", "cover"] as const) {
+      const { plan } = parseSource(createTrimmedClipSource(uri, media, selection, fit));
+      expect(plan.layers[0]).toMatchObject({ fit, transform });
+    }
+  });
+
+  it("rejects invalid framing, including stretch-to-fill", () => {
+    const selection = getClipFrameRange(landscapeVideo);
+    expect(() => createTrimmedClipSource(uri, landscapeVideo, selection, "fill" as SingleClipFit)).toThrow(RangeError);
+  });
+
   it("keeps the full import and reset equivalent, including a track that starts before zero", () => {
     const media = { ...landscapeVideo, startUs: -40_000, durationUs: 149_000 };
     const bounds = getClipFrameRange(media);

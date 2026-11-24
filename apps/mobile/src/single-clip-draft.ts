@@ -1,7 +1,7 @@
 import { randomUUID } from "expo-crypto";
 import { Directory, File, FileMode, Paths } from "expo-file-system";
-import { createTrimmedClipSource, getClipFrameRange } from "./clip-source";
-import type { ClipFrameRange, ClipMetadata } from "./clip-source";
+import { createTrimmedClipSource, getClipFrameRange, isSingleClipFit } from "./clip-source";
+import type { ClipFrameRange, ClipMetadata, SingleClipFit } from "./clip-source";
 import {
   allocateDraftMedia,
   commitDraftManifest,
@@ -14,8 +14,17 @@ import {
 } from "./draft-files";
 import type { PickedVideo } from "./video-picker";
 
-export type SingleClip = { name: string; uri: string; media: ClipMetadata; selection: ClipFrameRange; source: string };
-type Manifest = Pick<SingleClip, "name" | "media" | "selection"> & { version: 1; file: string; bytes: number };
+export type SingleClip = {
+  name: string;
+  uri: string;
+  media: ClipMetadata;
+  selection: ClipFrameRange;
+  fit: SingleClipFit;
+  source: string;
+};
+type SingleClipEdits = Pick<SingleClip, "selection" | "fit">;
+type Manifest = SingleClipEdits & Pick<SingleClip, "name" | "media"> & { version: 1; file: string; bytes: number };
+type ReadableManifest = Omit<Manifest, "fit"> & { fit?: unknown };
 const folder = "StackReelSingleClip";
 const staged = new Set<string>();
 
@@ -41,7 +50,7 @@ function readableSize(file: File) {
 function readSnapshot(directory: Directory) {
   const snapshot = draftSnapshots(directory).at(-1);
   if (!snapshot) return null;
-  const saved = JSON.parse(snapshot.file.textSync()) as Manifest | null;
+  const saved = JSON.parse(snapshot.file.textSync()) as ReadableManifest | null;
   if (
     saved?.version !== 1 ||
     typeof saved.name !== "string" ||
@@ -51,14 +60,22 @@ function readSnapshot(directory: Directory) {
     !Number.isSafeInteger(saved.bytes) ||
     saved.bytes <= 0 ||
     !saved.media ||
-    !saved.selection
+    !saved.selection ||
+    (saved.fit !== undefined && !isSingleClipFit(saved.fit))
   ) {
     throw new Error("The saved single-clip draft has an invalid format.");
   }
   const file = new File(directory, saved.file);
   if (!file.exists || readableSize(file) !== saved.bytes) throw new Error("The saved video is missing or damaged.");
-  const { name, media, selection } = saved;
-  const clip = { name, media, selection, uri: file.uri, source: createTrimmedClipSource(file.uri, media, selection) };
+  const { name, media, selection, fit = "contain" } = saved;
+  const clip: SingleClip = {
+    name,
+    media,
+    selection,
+    fit,
+    uri: file.uri,
+    source: createTrimmedClipSource(file.uri, media, selection, fit),
+  };
   return { snapshot, saved, clip };
 }
 
@@ -108,12 +125,14 @@ export async function importSingleClipDraft(
     if (!staged.has(target.uri) || !isCurrent()) return null;
     if (readableSize(target) !== bytes) throw new Error("The imported video is incomplete.");
     const { name } = asset;
-    const clip = {
+    const fit = "contain";
+    const clip: SingleClip = {
       name,
       media,
       selection,
+      fit,
       uri: target.uri,
-      source: createTrimmedClipSource(target.uri, media, selection),
+      source: createTrimmedClipSource(target.uri, media, selection, fit),
     };
     const current = readSnapshot(directory);
     publish(directory, current?.snapshot.revision ?? 0, {
@@ -123,6 +142,7 @@ export async function importSingleClipDraft(
       name,
       media,
       selection,
+      fit,
     });
     committed = true;
     return clip;
@@ -134,6 +154,16 @@ export async function importSingleClipDraft(
 
 export function trimSingleClipDraft(clip: SingleClip, selection: ClipFrameRange): SingleClip {
   if (selection.startFrame === clip.selection.startFrame && selection.endFrame === clip.selection.endFrame) return clip;
+  return saveSingleClipEdits(clip, { selection, fit: clip.fit });
+}
+
+export function setSingleClipFit(clip: SingleClip, fit: SingleClipFit): SingleClip {
+  if (!isSingleClipFit(fit)) throw new RangeError("Invalid single-clip fit.");
+  if (fit === clip.fit) return clip;
+  return saveSingleClipEdits(clip, { selection: clip.selection, fit });
+}
+
+function saveSingleClipEdits(clip: SingleClip, { selection, fit }: SingleClipEdits): SingleClip {
   const directory = new Directory(Paths.document, folder);
   const current = readSnapshot(directory);
   if (!current || current.clip.source !== clip.source)
@@ -141,9 +171,10 @@ export function trimSingleClipDraft(clip: SingleClip, selection: ClipFrameRange)
   const next = {
     ...current.clip,
     selection,
-    source: createTrimmedClipSource(current.clip.uri, current.clip.media, selection),
+    fit,
+    source: createTrimmedClipSource(current.clip.uri, current.clip.media, selection, fit),
   };
-  publish(directory, current.snapshot.revision, { ...current.saved, selection });
+  publish(directory, current.snapshot.revision, { ...current.saved, selection, fit });
   return next;
 }
 
