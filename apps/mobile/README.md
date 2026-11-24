@@ -83,7 +83,7 @@ Choose **Single-clip editor** from the gallery and pick a video from Photos or F
 it starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f** to adjust by one frame. Play the
 selection to check its picture and sound. **Apply trim** uses that selection for preview and export. To bring back
 footage, reopen **Trim clip** and extend the range, or tap **Reset trim** to select the full video.
-The MP4 uses a 720 × 1280 frame at 30 fps and includes the clip’s audio when present.
+The MP4 uses a 720 × 1280 frame at 30 fps.
 [See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
 
 Under **Framing**, choose **Fit** to show the whole picture or **Fill** to fill the vertical frame.
@@ -96,8 +96,12 @@ in the reel, or **Cancel** to keep the previous framing. **Reset** followed by *
 crop. Switching to Fit and back to Fill brings back your last applied crop.
 [See the single-clip framing controls on iPhone](../../docs/ios-single-clip-reframe.png).
 
+To lower background noise, open **Volume** and play the selected cut while adjusting its original audio.
+Choose **Mute** for a silent reel. Tap **Apply volume** to save the level for preview and export.
+Canceling or applying the same level keeps your previous export available to share.
+
 StackReel saves one single-clip draft on your device. Reopen **Single-clip editor**, or tap the video’s filename in
-**Projects**, to resume with your saved trim and framing. Replacing the video starts a new cut in **Fit**.
+**Projects**, to resume with your saved trim, framing, and volume. Replacing the video starts a new cut in **Fit** at full volume.
 To remove the saved copy and its edits, open the draft, tap **Delete draft**, and confirm.
 [See a single-clip draft reopened from Projects](../../docs/ios-single-clip-draft.png).
 
@@ -274,6 +278,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     the subject's position in the preview, **Trim clip**, and the MP4. Change the framing and cancel. Confirm
     the MP4 is still shareable. Switch to Fit and back to Fill, then reopen the draft after relaunch and confirm
     the saved crop. Use **Reset** and **Apply** to return to centered Fill.
+29. Import a single video with recognizable audio, trim it, and export. Open **Volume**, lower the level, and
+    cancel. Verify the previous MP4 is still shareable. Apply 50% and export again, then mute and export a third
+    time. Compare the sound in the three MP4s and verify they all use the same cut. Reopen the draft from
+    **Projects** after relaunch and confirm it is still muted. Replace the clip and check for 100% volume.
 
 ### Export display sleep on iPhone
 
