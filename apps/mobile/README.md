@@ -99,6 +99,7 @@ crop. Switching to Fit and back to Fill brings back your last applied crop.
 To lower the clip’s original audio, open **Volume**, adjust the level, and play the selected cut to hear it.
 Choose **Mute** for a silent reel. Tap **Apply volume** to save the level for preview and export.
 Canceling or applying the same level keeps your previous export available to share.
+[See the single-clip volume control on iPhone](../../docs/ios-single-clip-volume.png).
 
 StackReel saves one single-clip draft on your device. Reopen **Single-clip editor**, or tap the video’s filename in
 **Projects**, to resume with your saved trim, framing, and volume. Replacing the video starts a new cut in **Fit** at full volume.
