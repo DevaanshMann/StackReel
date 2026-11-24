@@ -2,6 +2,14 @@ import { Id } from "@stackreel/template-schema";
 import { randomUUID } from "expo-crypto";
 import { Directory, File, Paths } from "expo-file-system";
 import {
+  allocateDraftMedia,
+  commitDraftManifest,
+  draftSnapshots,
+  mediaName,
+  pendingName,
+  snapshotName,
+} from "./draft-files";
+import {
   createTemplateMusic,
   createTemplateSource,
   getTemplateCrop,
@@ -23,9 +31,6 @@ export type TemplateDraftEdits = {
   missingMusic?: boolean;
 };
 
-const snapshotName = /^draft-(\d{1,15})\.json$/;
-const pendingName = "pending.json";
-const mediaName = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}(?:\.[a-z0-9]{1,10})?$/i;
 const draftUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 const copyingDirectories = new Set<string>();
 type SessionFiles = {
@@ -73,14 +78,6 @@ export function listTemplateDraftIds(template: MobileTemplate): string[] {
   return ids;
 }
 
-function draftSnapshots(directory: Directory) {
-  const snapshots = directory.list().flatMap((entry) => {
-    const revision = entry instanceof File ? snapshotName.exec(entry.name)?.[1] : undefined;
-    return revision === undefined ? [] : [{ file: entry as File, revision: Number(revision) }];
-  });
-  return snapshots.sort((a, b) => a.revision - b.revision);
-}
-
 export function removeDraftFile(file: File) {
   try {
     if (file.exists) file.delete();
@@ -114,12 +111,7 @@ function pruneDraftFiles(directory: Directory, keep: ReadonlySet<string>) {
 
 export function createDraftMediaFile(template: MobileTemplate, importedName: string, draftId = template.id) {
   const directory = draftDirectory(template, draftId);
-  directory.create({ intermediates: true, idempotent: true });
-  const extension = /\.[a-z0-9]{1,10}$/i.exec(importedName)?.[0] ?? "";
-  let file: File;
-  do {
-    file = new File(directory, `${randomUUID()}${extension.toLowerCase()}`);
-  } while (file.exists);
+  const file = allocateDraftMedia(directory, importedName);
   const session = activeSessionFiles.get(directory.uri);
   session?.allocated.add(file.name);
   session?.staged.add(file.name);
@@ -134,20 +126,6 @@ export function deleteTemplateDraft(template: MobileTemplate, draftId = template
   for (const { file } of draftSnapshots(directory)) file.delete();
   activeSessionFiles.delete(directory.uri);
   pruneDraftFiles(directory, new Set());
-}
-
-function commitDraftManifest(directory: Directory, revision: number, manifest: unknown) {
-  const next = new File(directory, `draft-${revision + 1}.json`);
-  // Publish by renaming to a new path so the last committed snapshot survives a failed write.
-  const pending = new File(directory, pendingName);
-  try {
-    pending.writeSync(JSON.stringify(manifest));
-    pending.moveSync(next);
-  } catch (cause) {
-    removeDraftFile(pending);
-    throw cause;
-  }
-  return next.name;
 }
 
 export function renameTemplateDraft(template: MobileTemplate, name: string, draftId = template.id) {
