@@ -86,6 +86,10 @@ footage, reopen **Trim clip** and extend the range, or tap **Reset trim** to sel
 The MP4 fits the picture inside a 720 × 1280 frame at 30 fps and includes the clip’s audio when present.
 [See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
 
+StackReel saves one single-clip draft on your device. Reopen **Single-clip editor**, or tap the video’s filename in
+**Projects**, to resume at the last trim you applied. Replacing the video starts a new cut. To remove the saved
+copy and its trim, open the draft, tap **Delete draft**, and confirm.
+
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
 To keep a file, choose **Share MP4** → **Save to Files**. StackReel clears its temporary exports on the next
@@ -172,8 +176,8 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
 9. Open **Single-clip editor** and select a landscape video from Photos. Check for bars above and below it and export
    an MP4. Cancel **Replace from Photos** and confirm that the clip and export are still available. Use **Replace from Files**
    to select another video and confirm that sharing requires a new export. Start exporting a longer video and tap
-   **Cancel export** while it is encoding. Confirm cancellation is reported and another export is available. Imported
-   and exported copies are kept in the app cache. Use **Save to Files** in the share sheet to keep an MP4 outside the app.
+   **Cancel export** while it is encoding. Confirm cancellation is reported and another export is available.
+   Use **Save to Files** in the share sheet to keep an MP4 outside the app.
 10. On a fresh installation, open **Projects** and check that **Browse templates** opens **Templates**. Make
     different edits in each template, including a video from Photos in one draft and text only in the other. Quit and
     relaunch StackReel. Reopen both drafts from **Projects** and verify that their videos and edits are restored
@@ -247,6 +251,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     both ends, then cancel. Confirm the original MP4 is still shareable. Apply a shorter selection and export again.
     Check the first and last scenes, the sound, and the duration of the exported file. Reopen **Trim clip**, tap
     **Reset trim**, and apply to restore the full recording. Replacing the video should start with its full range.
+26. Import a single clip, apply a trim at each end, and quit StackReel. Relaunch, open **Projects**, tap the filename,
+    and check both frame positions in **Trim clip**. Export and check the saved cut. Cancel a replacement and then
+    cancel **Delete draft**. Reopen the editor and check that the cut is still there. Confirm **Delete draft**,
+    relaunch, and verify the project is gone and the original video is still available in Photos or Files.
 
 ### Export display sleep on iPhone
 
