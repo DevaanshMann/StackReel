@@ -34,7 +34,7 @@ export function SingleClipTrim({
   const [error, setError] = useState<string | null>(null);
   const shown = drag ? { ...selection, [drag.boundary]: drag.frame } : selection;
   const previewSource = useMemo(
-    () => createTrimmedClipSource(clip.uri, clip.media, selection, clip.fit),
+    () => createTrimmedClipSource(clip.uri, clip.media, selection, clip.fit, clip.reframe),
     [clip, selection],
   );
 

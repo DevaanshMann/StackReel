@@ -4,12 +4,15 @@ import { validate } from "@stackreel/template-schema";
 import type { Transition } from "@stackreel/template-schema";
 import beforeAfter from "../../../templates/examples/before-after.json";
 import hookAndReveal from "../../../templates/examples/hook-and-reveal.json";
+import { defaultClipReframe, getClipCrop, isValidSize, normalizeClipReframe, sameCrop } from "./clip-reframe";
+import type { ClipReframe } from "./clip-reframe";
 
+export { maxClipReframeZoom as maxTemplateReframeZoom } from "./clip-reframe";
 export type MobileTemplate = Project["template"];
 export type TemplateVideoSlot = { id: string; label: string; minDurationUs: number };
 export type TemplateTextField = { id: string; label: string; defaultText: string; maxChars?: number };
 export type TemplateTextOverrides = Readonly<Record<string, string>>;
-export type TemplateReframe = { zoom: number; x: number; y: number };
+export type TemplateReframe = ClipReframe;
 export type TemplateClip = {
   uri: string;
   name: string;
@@ -30,8 +33,7 @@ export type TemplateMusic = {
   volumePercent?: number;
 };
 
-export const defaultTemplateReframe: Readonly<TemplateReframe> = Object.freeze({ zoom: 1, x: 0.5, y: 0.5 });
-export const maxTemplateReframeZoom = 3;
+export const defaultTemplateReframe = defaultClipReframe;
 
 const fps = 30;
 const invalidVideo = "This video has invalid dimensions or timing.";
@@ -64,55 +66,20 @@ export function getTemplateGainDb(volumePercent = 100, templateGainDb = 0): numb
   return Math.max(mutedGainDb, templateGainDb + 20 * Math.log10(volumePercent / 100));
 }
 
-function isValidSize({ width, height }: Size): boolean {
-  return [width, height].every(
-    (dimension) => Number.isFinite(dimension) && dimension >= 1 && dimension <= Number.MAX_SAFE_INTEGER,
-  );
-}
-
-/** The visible part of the oriented source. Zoom is relative to cover and x/y are fractions of the available travel. */
 export function getTemplateCrop(
   clip: TemplateClip,
   canvas: Size,
-  { zoom, x, y }: TemplateReframe = clip.reframe ?? defaultTemplateReframe,
+  reframe = clip.reframe ?? defaultTemplateReframe,
 ): Crop {
-  if (!isValidSize(clip) || !isValidSize(canvas)) throw new RangeError("Invalid video or canvas dimensions.");
-  if (!Number.isFinite(zoom) || zoom < 1 || zoom > maxTemplateReframeZoom) {
-    throw new RangeError(`Reframe zoom must be between 1 and ${maxTemplateReframeZoom}.`);
-  }
-  if (![x, y].every((position) => Number.isFinite(position) && position >= 0 && position <= 1)) {
-    throw new RangeError("Reframe positions must be between 0 and 1.");
-  }
-
-  const scaleX = canvas.width / clip.width;
-  const scaleY = canvas.height / clip.height;
-  const coverScale = Math.max(scaleX, scaleY);
-  const width = scaleX / coverScale / zoom;
-  const height = scaleY / coverScale / zoom;
-  return { x: x === 0 ? 0 : (1 - width) * x, y: y === 0 ? 0 : (1 - height) * y, width, height };
-}
-
-function sameCrop(a: Crop, b: Crop): boolean {
-  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+  return getClipCrop(clip, canvas, reframe);
 }
 
 export function setTemplateClipReframe(clip: TemplateClip, canvas: Size, reframe: TemplateReframe): TemplateClip {
-  const crop = getTemplateCrop(clip, canvas, reframe);
-  const defaultCrop = getTemplateCrop(clip, canvas, defaultTemplateReframe);
-  if (sameCrop(crop, clip.reframe ? getTemplateCrop(clip, canvas) : defaultCrop)) return clip;
-  if (sameCrop(crop, defaultCrop)) {
-    const { reframe: _reframe, ...reset } = clip;
-    return reset;
-  }
-
-  return {
-    ...clip,
-    reframe: {
-      zoom: reframe.zoom,
-      x: crop.width === 1 ? defaultTemplateReframe.x : reframe.x,
-      y: crop.height === 1 ? defaultTemplateReframe.y : reframe.y,
-    },
-  };
+  if (sameCrop(getTemplateCrop(clip, canvas, reframe), getTemplateCrop(clip, canvas))) return clip;
+  const normalized = normalizeClipReframe(clip, canvas, reframe);
+  if (normalized) return { ...clip, reframe: normalized };
+  const { reframe: _reframe, ...reset } = clip;
+  return reset;
 }
 
 function iosTransition(transition: Transition | undefined): Transition | undefined {

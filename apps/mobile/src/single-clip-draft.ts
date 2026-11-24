@@ -1,6 +1,8 @@
 import { randomUUID } from "expo-crypto";
 import { Directory, File, FileMode, Paths } from "expo-file-system";
-import { createTrimmedClipSource, getClipFrameRange, isSingleClipFit } from "./clip-source";
+import { normalizeClipReframe } from "./clip-reframe";
+import type { ClipReframe } from "./clip-reframe";
+import { canvas, createTrimmedClipSource, getClipFrameRange, isSingleClipFit } from "./clip-source";
 import type { ClipFrameRange, ClipMetadata, SingleClipFit } from "./clip-source";
 import {
   allocateDraftMedia,
@@ -20,9 +22,10 @@ export type SingleClip = {
   media: ClipMetadata;
   selection: ClipFrameRange;
   fit: SingleClipFit;
+  reframe?: ClipReframe;
   source: string;
 };
-type SingleClipEdits = Pick<SingleClip, "selection" | "fit">;
+type SingleClipEdits = Pick<SingleClip, "selection" | "fit" | "reframe">;
 type Manifest = SingleClipEdits & Pick<SingleClip, "name" | "media"> & { version: 1; file: string; bytes: number };
 type ReadableManifest = Omit<Manifest, "fit"> & { fit?: unknown };
 const folder = "StackReelSingleClip";
@@ -61,20 +64,23 @@ function readSnapshot(directory: Directory) {
     saved.bytes <= 0 ||
     !saved.media ||
     !saved.selection ||
-    (saved.fit !== undefined && !isSingleClipFit(saved.fit))
+    (saved.fit !== undefined && !isSingleClipFit(saved.fit)) ||
+    (saved.reframe !== undefined && (saved.reframe === null || typeof saved.reframe !== "object"))
   ) {
     throw new Error("The saved single-clip draft has an invalid format.");
   }
   const file = new File(directory, saved.file);
   if (!file.exists || readableSize(file) !== saved.bytes) throw new Error("The saved video is missing or damaged.");
   const { name, media, selection, fit = "contain" } = saved;
+  const reframe = saved.reframe === undefined ? undefined : normalizeClipReframe(media, canvas, saved.reframe);
   const clip: SingleClip = {
     name,
     media,
     selection,
     fit,
+    ...(reframe && { reframe }),
     uri: file.uri,
-    source: createTrimmedClipSource(file.uri, media, selection, fit),
+    source: createTrimmedClipSource(file.uri, media, selection, fit, reframe),
   };
   return { snapshot, saved, clip };
 }
@@ -153,29 +159,42 @@ export async function importSingleClipDraft(
 }
 
 export function trimSingleClipDraft(clip: SingleClip, selection: ClipFrameRange): SingleClip {
-  if (selection.startFrame === clip.selection.startFrame && selection.endFrame === clip.selection.endFrame) return clip;
-  return saveSingleClipEdits(clip, { selection, fit: clip.fit });
+  return saveSingleClipEdits(clip, selection, clip.fit, clip.reframe);
 }
 
 export function setSingleClipFit(clip: SingleClip, fit: SingleClipFit): SingleClip {
   if (!isSingleClipFit(fit)) throw new RangeError("Invalid single-clip fit.");
-  if (fit === clip.fit) return clip;
-  return saveSingleClipEdits(clip, { selection: clip.selection, fit });
+  return saveSingleClipEdits(clip, clip.selection, fit, clip.reframe);
 }
 
-function saveSingleClipEdits(clip: SingleClip, { selection, fit }: SingleClipEdits): SingleClip {
+export function setSingleClipReframe(clip: SingleClip, reframe: ClipReframe): SingleClip {
+  const normalized = normalizeClipReframe(clip.media, canvas, reframe);
+  return saveSingleClipEdits(clip, clip.selection, clip.fit, normalized);
+}
+
+function sameReframe(a: ClipReframe | undefined, b: ClipReframe | undefined) {
+  return a?.zoom === b?.zoom && a?.x === b?.x && a?.y === b?.y;
+}
+
+function saveSingleClipEdits(
+  clip: SingleClip,
+  selection: ClipFrameRange,
+  fit: SingleClipFit,
+  reframe: ClipReframe | undefined,
+): SingleClip {
   const directory = new Directory(Paths.document, folder);
   const current = readSnapshot(directory);
-  if (!current || current.clip.source !== clip.source)
+  // Two revisions can produce the same Fit plan while remembering different Fill crops.
+  if (!current || current.clip.source !== clip.source || !sameReframe(current.clip.reframe, clip.reframe))
     throw new Error("The saved draft changed. Reopen it before editing.");
-  const next = {
-    ...current.clip,
-    selection,
-    fit,
-    source: createTrimmedClipSource(current.clip.uri, current.clip.media, selection, fit),
-  };
-  publish(directory, current.snapshot.revision, { ...current.saved, selection, fit });
-  return next;
+  const source = createTrimmedClipSource(current.clip.uri, current.clip.media, selection, fit, reframe);
+  if (source === clip.source && (fit === "cover" || sameReframe(clip.reframe, reframe))) return clip;
+
+  const edits = { selection, fit, ...(reframe && { reframe }) };
+  const { reframe: _oldReframe, ...previous } = current.clip;
+  const { reframe: _savedReframe, ...saved } = current.saved;
+  publish(directory, current.snapshot.revision, { ...saved, ...edits });
+  return { ...previous, ...edits, source };
 }
 
 export function deleteSingleClipDraft(): void {

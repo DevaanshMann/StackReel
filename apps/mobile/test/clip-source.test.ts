@@ -1,5 +1,6 @@
 import type { RenderPlan } from "@stackreel/core";
 import { describe, expect, it } from "vitest";
+import { defaultClipReframe } from "../src/clip-reframe";
 import { createClipSource, createTrimmedClipSource, getClipFrameRange } from "../src/clip-source";
 import type { SingleClipFit } from "../src/clip-source";
 
@@ -96,6 +97,36 @@ describe("single-clip trim", () => {
       transform: [scale, 0, (720 - landscapeVideo.width * scale) / 2, 0, scale, 0, 0, 0, 1],
     };
     expect(covered).toEqual({ ...contained, plan: { ...contained.plan, layers: [layer] } });
+  });
+
+  it("retains the original Fit and centered Fill sources for equivalent crops", () => {
+    const selection = getClipFrameRange(landscapeVideo);
+    const source = (fit: SingleClipFit, reframe?: typeof defaultClipReframe) =>
+      createTrimmedClipSource(uri, landscapeVideo, selection, fit, reframe);
+    expect(source("contain", { zoom: 3, x: 1, y: 1 })).toBe(source("contain"));
+    expect(source("cover", defaultClipReframe)).toBe(source("cover"));
+    expect(source("cover", { zoom: 1, x: 0.5, y: 1 })).toBe(source("cover"));
+  });
+
+  it("changes only crop and transform for an off-center one-frame Fill edit", () => {
+    const media = { width: 1440, height: 1280, startUs: 20_000, durationUs: 55_000 };
+    const selection = getClipFrameRange(media);
+    const original = parseSource(createTrimmedClipSource(uri, media, selection, "cover"));
+    const reframed = parseSource(createTrimmedClipSource(uri, media, selection, "cover", { zoom: 2, x: 1, y: 1 }));
+    expect(reframed).toEqual({
+      ...original,
+      plan: {
+        ...original.plan,
+        layers: [
+          {
+            ...original.plan.layers[0],
+            cropPx: { x: 1080, y: 640, width: 360, height: 640 },
+            transform: [2, 0, -2160, 0, 2, -1280, 0, 0, 1],
+          },
+        ],
+      },
+    });
+    expect(reframed.plan.durationUs).toBe(33_333);
   });
 
   it("uses the same geometry for Fit and Fill with a 9:16 source", () => {

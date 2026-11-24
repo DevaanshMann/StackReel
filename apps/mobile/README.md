@@ -86,9 +86,15 @@ footage, reopen **Trim clip** and extend the range, or tap **Reset trim** to sel
 The MP4 uses a 720 × 1280 frame at 30 fps and includes the clip’s audio when present.
 [See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
 
-Under **Framing**, choose **Fit** to show the whole picture or **Fill** to crop the center to the vertical frame.
-The preview shows the framing immediately. Export again after switching to save or share the new framing.
+Under **Framing**, choose **Fit** to show the whole picture or **Fill** to fill the vertical frame.
+Fill starts with a centered crop. Export again after changing the framing to save or share the result.
 [See Fill applied to a single clip on iPhone](../../docs/ios-single-clip-framing.png).
+
+To keep an off-center subject in view, tap **Reframe** in Fill. Drag the picture and pinch to zoom up to 3×,
+or use the **Zoom**, **Horizontal position**, and **Vertical position** sliders. Tap **Apply** to use the crop
+in the reel, or **Cancel** to keep the previous framing. **Reset** followed by **Apply** restores the centered
+crop. Switching to Fit and back to Fill brings back your last applied crop.
+[See the single-clip framing controls on iPhone](../../docs/ios-single-clip-reframe.png).
 
 StackReel saves one single-clip draft on your device. Reopen **Single-clip editor**, or tap the video’s filename in
 **Projects**, to resume with your saved trim and framing. Replacing the video starts a new cut in **Fit**.
@@ -264,6 +270,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     that **Share MP4** stays available. Choose **Fill** and check that the picture covers the vertical preview and
     sharing requires a fresh export. Apply a trim, reopen the draft after relaunch, and export. Check the center
     crop, duration, and audio in the MP4. Switch back to **Fit** to see the original edges.
+28. In **Fill**, open **Reframe** and move an off-center subject into view. Zoom in, apply, and export. Compare
+    the subject's position in the preview, **Trim clip**, and the MP4. Change the framing and cancel. Confirm
+    the MP4 is still shareable. Switch to Fit and back to Fill, then reopen the draft after relaunch and confirm
+    the saved crop. Use **Reset** and **Apply** to return to centered Fill.
 
 ### Export display sleep on iPhone
 
