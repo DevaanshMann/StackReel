@@ -57,6 +57,7 @@ export function createTrimmedClipSource(
   selection: ClipFrameRange,
   fit: SingleClipFit = "contain",
   reframe?: ClipReframe,
+  gainDb = 0,
 ): string {
   if (!isSingleClipFit(fit)) throw new RangeError("Invalid single-clip fit.");
   const bounds = getClipFrameRange(media);
@@ -73,7 +74,7 @@ export function createTrimmedClipSource(
   const crop = reframe === undefined ? undefined : getClipCrop(media, canvas, reframe);
   // Centered cover already has its historical full-source rectangle and transform.
   const customCrop = fit === "cover" && crop && !sameCrop(crop, getClipCrop(media, canvas)) ? crop : undefined;
-  return buildClipSource(uri, media, selection, canvas, fit, 0, customCrop);
+  return buildClipSource(uri, media, selection, canvas, fit, gainDb, customCrop);
 }
 
 function buildClipSource(

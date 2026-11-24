@@ -6,8 +6,9 @@ import { Modal, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { trimTimeLabel } from "./TemplateTrim";
-import { canvas, createTrimmedClipSource, getClipFrameRange } from "./clip-source";
+import { canvas, getClipFrameRange } from "./clip-source";
 import type { ClipFrameRange } from "./clip-source";
+import { createSingleClipSource } from "./single-clip-draft";
 import type { SingleClip } from "./single-clip-draft";
 
 const boundaries = ["startFrame", "endFrame"] as const;
@@ -33,10 +34,7 @@ export function SingleClipTrim({
   const sliding = useRef<Boundary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const shown = drag ? { ...selection, [drag.boundary]: drag.frame } : selection;
-  const previewSource = useMemo(
-    () => createTrimmedClipSource(clip.uri, clip.media, selection, clip.fit, clip.reframe),
-    [clip, selection],
-  );
+  const previewSource = useMemo(() => createSingleClipSource({ ...clip, selection }), [clip, selection]);
 
   function select(next: ClipFrameRange) {
     current.current = next;

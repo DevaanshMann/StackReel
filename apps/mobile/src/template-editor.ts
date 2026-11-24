@@ -6,7 +6,9 @@ import beforeAfter from "../../../templates/examples/before-after.json";
 import hookAndReveal from "../../../templates/examples/hook-and-reveal.json";
 import { defaultClipReframe, getClipCrop, isValidSize, normalizeClipReframe, sameCrop } from "./clip-reframe";
 import type { ClipReframe } from "./clip-reframe";
+import { getVolumeGainDb as getTemplateGainDb, validateVolumePercent } from "./volume";
 
+export { getTemplateGainDb };
 export { maxClipReframeZoom as maxTemplateReframeZoom } from "./clip-reframe";
 export type MobileTemplate = Project["template"];
 export type TemplateVideoSlot = { id: string; label: string; minDurationUs: number };
@@ -38,15 +40,6 @@ export const defaultTemplateReframe = defaultClipReframe;
 const fps = 30;
 const invalidVideo = "This video has invalid dimensions or timing.";
 const invalidMusic = "This audio has invalid timing or no playable frames.";
-// Both the resolver's ducking calculation and the native audio mix treat this gain as silent.
-const mutedGainDb = -60;
-
-function validateVolumePercent(percent: number) {
-  if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
-    throw new RangeError("Volume must be between 0 and 100 percent.");
-  }
-}
-
 function setVolumePercent<T extends { volumePercent?: number }>(media: T, percent: number): T {
   validateVolumePercent(percent);
   if ((media.volumePercent ?? 100) === percent) return media;
@@ -58,13 +51,6 @@ function setVolumePercent<T extends { volumePercent?: number }>(media: T, percen
 
 export const setTemplateClipVolume = setVolumePercent<TemplateClip>;
 export const setTemplateMusicVolume = setVolumePercent<TemplateMusic>;
-
-export function getTemplateGainDb(volumePercent = 100, templateGainDb = 0): number {
-  validateVolumePercent(volumePercent);
-  if (volumePercent === 100) return templateGainDb;
-  if (volumePercent === 0) return mutedGainDb;
-  return Math.max(mutedGainDb, templateGainDb + 20 * Math.log10(volumePercent / 100));
-}
 
 export function getTemplateCrop(
   clip: TemplateClip,

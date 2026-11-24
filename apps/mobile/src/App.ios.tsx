@@ -25,11 +25,13 @@ import type { ClipFrameRange, SingleClipFit } from "./clip-source";
 import { discardPickerCopy } from "./draft-files";
 import { nextDraftName } from "./draft-names";
 import {
+  createSingleClipSource,
   deleteSingleClipDraft,
   importSingleClipDraft,
   loadSingleClipDraft,
   setSingleClipFit,
   setSingleClipReframe,
+  setSingleClipVolume,
   trimSingleClipDraft,
 } from "./single-clip-draft";
 import type { SingleClip } from "./single-clip-draft";
@@ -70,6 +72,7 @@ import { getTemplateSafeZoneGuide } from "./template-safe-zones";
 import { importTemplateVideos, removeCachedFile, SlotImportError } from "./template-video-import";
 import { pickVideo } from "./video-picker";
 import type { VideoPickerSource } from "./video-picker";
+import { getVolumeGainDb } from "./volume";
 
 type SingleDraft = { clip: SingleClip | null; outputUri: string | null; loadError?: string };
 type TemplateDraft = TemplateDraftEdits & {
@@ -108,7 +111,7 @@ type Operation =
   | { kind: "fullscreen" }
   | SlotEdit
   | SingleTrimEdit
-  | { kind: "single-reframe"; clip: SingleClip }
+  | { kind: "single-reframe" | "single-volume"; clip: SingleClip }
   | MusicVolumeEdit
   | SlotSwap
   | TextEdit
@@ -936,9 +939,12 @@ export default function App() {
           {canvas.width} × {canvas.height} · {canvas.fps} fps
         </Text>
         {editor.kind === "single" && clip && (
-          <Text numberOfLines={1} style={textStyles.body}>
-            {clip.name}
-          </Text>
+          <>
+            <Text numberOfLines={1} style={textStyles.body}>
+              {clip.name}
+            </Text>
+            <Text style={textStyles.muted}>Original audio {clip.volumePercent}%</Text>
+          </>
         )}
       </View>
       {editor.kind === "template" && (
@@ -1015,12 +1021,21 @@ export default function App() {
           )}
           <View style={styles.navigation}>
             {clip ? (
-              <Action
-                label="Trim clip"
-                testID="single-trim-open"
-                onPress={() => begin({ kind: "single-trim", clip })}
-                disabled={busy}
-              />
+              <View style={styles.buttonRow}>
+                <Action
+                  label="Trim clip"
+                  testID="single-trim-open"
+                  onPress={() => begin({ kind: "single-trim", clip })}
+                  disabled={busy}
+                />
+                <Action
+                  label="Volume"
+                  accessibilityLabel="Original audio volume"
+                  testID="single-volume-open"
+                  onPress={() => begin({ kind: "single-volume", clip })}
+                  disabled={busy}
+                />
+              </View>
             ) : (
               <Action
                 label="Try again"
@@ -1150,6 +1165,7 @@ export default function App() {
           id="single"
           title="Reframe clip"
           canvas={singleClipCanvas}
+          previewGainDb={getVolumeGainDb(activity.clip.volumePercent)}
           clip={{
             uri: activity.clip.uri,
             width: activity.clip.media.width,
@@ -1161,6 +1177,25 @@ export default function App() {
           onApply={(reframe) => {
             if (!isCurrentOperation(activity)) return;
             publishSingleEdit(setSingleClipReframe(activity.clip, reframe));
+            finish(activity);
+          }}
+          onCancel={() => finish(activity)}
+        />
+      )}
+      {activity?.kind === "single-volume" && (
+        <VolumeSheet
+          id="single"
+          title="Clip volume"
+          filename={activity.clip.name}
+          levelLabel="Original audio"
+          accessibilitySubject="original audio"
+          sliderLabel="Original audio volume"
+          initialVolume={activity.clip.volumePercent}
+          canvas={singleClipCanvas}
+          createPreview={(volumePercent) => createSingleClipSource({ ...activity.clip, volumePercent })}
+          onApply={(volumePercent) => {
+            if (!isCurrentOperation(activity)) return;
+            publishSingleEdit(setSingleClipVolume(activity.clip, volumePercent));
             finish(activity);
           }}
           onCancel={() => finish(activity)}

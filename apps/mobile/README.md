@@ -96,7 +96,7 @@ in the reel, or **Cancel** to keep the previous framing. **Reset** followed by *
 crop. Switching to Fit and back to Fill brings back your last applied crop.
 [See the single-clip framing controls on iPhone](../../docs/ios-single-clip-reframe.png).
 
-To lower background noise, open **Volume** and play the selected cut while adjusting its original audio.
+To lower the clip’s original audio, open **Volume**, adjust the level, and play the selected cut to hear it.
 Choose **Mute** for a silent reel. Tap **Apply volume** to save the level for preview and export.
 Canceling or applying the same level keeps your previous export available to share.
 
