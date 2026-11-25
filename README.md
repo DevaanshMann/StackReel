@@ -484,7 +484,7 @@ _Runs in parallel with Phase 3._
    - [x] Undo and redo applied edits in an open iOS template draft
    - [ ] Android clip volume, mute, and undo/redo controls
 5. **Projects**
-   - [x] Resume the last iOS single-clip draft with its applied trim after relaunch
+   - [x] Keep multiple iOS single-clip drafts and reopen each reel with its saved trim, framing, and volume
    - [ ] Auto-save every edit (debounced) to SQLite and the app sandbox
    - [ ] Project list with thumbnails. Duplicate, rename, delete.
    - [ ] Handle missing media (the user deleted a clip from Photos): show a relink prompt
