@@ -27,22 +27,29 @@ export function getDraftProjects<
   return choices.flatMap((choice) => {
     const { template } = choice;
     if (filterId !== undefined && filterId !== template.id) return [];
-    const siblings = Object.entries(drafts[template.id] ?? {});
-    const idsByName = new Map<string, string[]>();
-    for (const [draftId, draft] of siblings) {
-      const name = (draft.name ?? template.name).toLowerCase();
-      const ids = idsByName.get(name);
-      if (ids) ids.push(draftId);
-      else idsByName.set(name, [draftId]);
-    }
-    for (const ids of idsByName.values()) ids.sort();
-    return siblings.map(([draftId, draft]) => {
-      const name = draft.name ?? template.name;
-      // Keep identically named cards and their confirmation dialogs distinguishable after relaunch.
-      const ids = idsByName.get(name.toLowerCase())!;
-      const label = ids.length > 1 ? `${name} (${ids.indexOf(draftId) + 1} of ${ids.length})` : name;
+    return getNamedDrafts(drafts[template.id] ?? {}, (draft) => draft.name ?? template.name).map((project) => {
+      const { name, label } = project;
       const deleteTarget = sharedNames.has(name.toLowerCase()) ? `“${label}” from ${template.name}` : `${label} draft`;
-      return { ...choice, draftId, draft, label, deleteTarget };
+      return { ...choice, ...project, deleteTarget };
     });
+  });
+}
+
+// Keep identically named cards and their confirmation dialogs distinguishable after relaunch.
+export function getNamedDrafts<Draft>(drafts: Readonly<Record<string, Draft>>, getName: (draft: Draft) => string) {
+  const siblings = Object.entries(drafts).map(([draftId, draft]) => ({ draftId, draft, name: getName(draft) }));
+  const idsByName = new Map<string, string[]>();
+  for (const { draftId, name } of siblings) {
+    const key = name.toLowerCase();
+    const ids = idsByName.get(key);
+    if (ids) ids.push(draftId);
+    else idsByName.set(key, [draftId]);
+  }
+  for (const ids of idsByName.values()) ids.sort();
+  return siblings.map((project) => {
+    const { name, draftId } = project;
+    const ids = idsByName.get(name.toLowerCase())!;
+    const label = ids.length > 1 ? `${name} (${ids.indexOf(draftId) + 1} of ${ids.length})` : name;
+    return { ...project, label };
   });
 }

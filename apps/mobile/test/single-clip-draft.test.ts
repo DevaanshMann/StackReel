@@ -7,9 +7,12 @@ import { createTrimmedClipSource } from "../src/clip-source";
 import type { SingleClipFit } from "../src/clip-source";
 import { discardPickerCopy } from "../src/draft-files";
 import {
+  createSingleClipDraftId,
   createSingleClipSource,
   deleteSingleClipDraft,
   importSingleClipDraft,
+  legacySingleClipDraftId,
+  listSingleClipDraftIds,
   loadSingleClipDraft,
   setSingleClipFit,
   setSingleClipReframe,
@@ -26,11 +29,12 @@ const media = { width: 1920, height: 1080, startUs: 1_000_000, durationUs: 4_000
 const external = "file:///Files/from-outside.mov";
 const trimmed = { startFrame: 45, endFrame: 99 };
 
-function importVideo(uri = external, isCurrent = () => true) {
+function importVideo(uri = external, isCurrent = () => true, draftId?: string) {
   return importSingleClipDraft(
     { name: "Concert take.MOV", draftFileName: "representation.MP4", uri },
     media,
     isCurrent,
+    draftId,
   );
 }
 
@@ -493,5 +497,183 @@ describe("single-clip draft storage", () => {
     deleteSingleClipDraft();
     expect(await pending).toBeNull();
     expect(loadSingleClipDraft()).toBeNull();
+  });
+});
+
+describe("multiple single-clip projects", () => {
+  it("keeps the legacy draft in place and reopens independent projects after restart", async () => {
+    const legacy = (await importVideo())!;
+    const directories = new Set(storage.directories);
+    const firstId = createSingleClipDraftId();
+    const secondId = createSingleClipDraftId();
+    expect(firstId).not.toBe(secondId);
+    expect(storage.directories).toEqual(directories);
+    expect(listSingleClipDraftIds()).toEqual([legacySingleClipDraftId]);
+    expect(loadSingleClipDraft(firstId)).toBeNull();
+    expect(legacy.draftId).toBe(legacySingleClipDraftId);
+    expect(new File(legacy.uri).parentDirectory.uri).toBe(`${storage.document}/StackReelSingleClip`);
+    const legacySnapshot = manifest(legacy).textSync();
+
+    const first = (await importVideo(external, () => true, firstId))!;
+    const second = (await importVideo(external, () => true, secondId))!;
+    expect(new File(first.uri).parentDirectory.name).toBe(firstId);
+    expect(new File(second.uri).parentDirectory.name).toBe(secondId);
+    const edited = setSingleClipVolume(setSingleClipFit(trimSingleClipDraft(first, trimmed), "cover"), 50);
+    const reframed = setSingleClipReframe(edited, { zoom: 2, x: 0.25, y: 0.75 });
+    const replacement = (await importVideo(external, () => true, secondId))!;
+    expect(replacement).toMatchObject({ draftId: secondId, fit: "contain", volumePercent: 100 });
+    expect(new File(second.uri).exists).toBe(false);
+    expect(new File(first.uri).exists).toBe(true);
+    expect(manifest(legacy).textSync()).toBe(legacySnapshot);
+
+    vi.resetModules();
+    const cold = await import("../src/single-clip-draft");
+    expect(cold.listSingleClipDraftIds()).toEqual([legacySingleClipDraftId, ...[firstId, secondId].sort()]);
+    expect(cold.loadSingleClipDraft()).toEqual(legacy);
+    expect(cold.loadSingleClipDraft(firstId)).toEqual(reframed);
+    expect(cold.loadSingleClipDraft(secondId)).toEqual(replacement);
+
+    cold.deleteSingleClipDraft(firstId);
+    expect(cold.listSingleClipDraftIds()).toEqual([legacySingleClipDraftId, secondId]);
+    expect(cold.loadSingleClipDraft(firstId)).toBeNull();
+    expect(cold.loadSingleClipDraft(secondId)).toEqual(replacement);
+    expect(cold.loadSingleClipDraft()).toEqual(legacy);
+    expect(new File(first.uri).exists).toBe(false);
+    expect(new File(external).textSync()).toBe("video contents");
+  });
+
+  it("rejects invalid project paths before accessing the filesystem", async () => {
+    const clip = (await importVideo())!;
+    const files = new Map(storage.files);
+    const directories = new Set(storage.directories);
+    const uuid = createSingleClipDraftId();
+    const list = vi.spyOn(Directory.prototype, "list");
+    for (const invalidId of ["", ".", "..", "../StackReelSingleClip", `file:///${uuid}`, `${uuid}/`, `${uuid}\n`]) {
+      expect(() => loadSingleClipDraft(invalidId)).toThrow(/invalid single-clip draft ID/i);
+      expect(() => deleteSingleClipDraft(invalidId)).toThrow(/invalid single-clip draft ID/i);
+      expect(() => trimSingleClipDraft({ ...clip, draftId: invalidId }, trimmed)).toThrow(
+        /invalid single-clip draft ID/i,
+      );
+      await expect(importVideo(external, () => true, invalidId)).rejects.toThrow(/invalid single-clip draft ID/i);
+    }
+    expect(list).not.toHaveBeenCalled();
+    expect(storage.files).toEqual(files);
+    expect(storage.directories).toEqual(directories);
+  });
+
+  it("discovers unreadable projects and preserves their files until explicit deletion", async () => {
+    const healthyId = createSingleClipDraftId();
+    const unreadableId = createSingleClipDraftId();
+    const healthy = (await importVideo(external, () => true, healthyId))!;
+    const unreadable = (await importVideo(external, () => true, unreadableId))!;
+    const directory = new File(unreadable.uri).parentDirectory;
+    const recovery = new File(directory, randomUUID() + ".mov");
+    recovery.writeSync("recovery media");
+    storage.blockedListing = directory.uri;
+    expect(listSingleClipDraftIds()).toEqual([healthyId, unreadableId].sort());
+    expect(() => loadSingleClipDraft(unreadableId)).toThrow(/cannot list/i);
+    expect(loadSingleClipDraft(healthyId)).toEqual(healthy);
+    expect(recovery.textSync()).toBe("recovery media");
+
+    storage.blockedListing = "";
+    manifest(unreadable).writeSync("{");
+    const damaged = new Map(storage.files);
+    expect(listSingleClipDraftIds()).toEqual([healthyId, unreadableId].sort());
+    expect(() => loadSingleClipDraft(unreadableId)).toThrow();
+    await expect(importVideo(external, () => true, unreadableId)).rejects.toThrow();
+    expect(storage.files).toEqual(damaged);
+    deleteSingleClipDraft(unreadableId);
+    expect(recovery.exists).toBe(false);
+    expect(listSingleClipDraftIds()).toEqual([healthyId]);
+    expect(loadSingleClipDraft(healthyId)).toEqual(healthy);
+  });
+
+  it("recovers a file at a project path without disturbing its siblings", async () => {
+    const healthyId = createSingleClipDraftId();
+    const blockedId = createSingleClipDraftId();
+    const healthy = (await importVideo(external, () => true, healthyId))!;
+    const projects = new File(healthy.uri).parentDirectory.parentDirectory;
+    const blocker = new File(projects, blockedId);
+    blocker.writeSync("keep this file");
+    expect(listSingleClipDraftIds()).toEqual([healthyId, blockedId].sort());
+    expect(() => loadSingleClipDraft(blockedId)).toThrow(/folder is unreadable/);
+    await expect(importVideo(external, () => true, blockedId)).rejects.toThrow();
+    expect(blocker.textSync()).toBe("keep this file");
+    deleteSingleClipDraft(blockedId);
+    expect(new File(projects, blockedId).exists).toBe(false);
+    expect(listSingleClipDraftIds()).toEqual([healthyId]);
+    expect(loadSingleClipDraft(healthyId)).toEqual(healthy);
+    const preserved = projects.list().find((entry) => entry instanceof File);
+    expect(preserved).toBeInstanceOf(File);
+    expect((preserved as File).textSync()).toBe("keep this file");
+  });
+
+  it("keeps first imports hidden and prunes abandoned project files without touching a saved sibling", async () => {
+    const healthyId = createSingleClipDraftId();
+    const pendingId = createSingleClipDraftId();
+    const healthy = (await importVideo(external, () => true, healthyId))!;
+    const healthyDirectory = new File(healthy.uri).parentDirectory;
+    const healthyOrphan = new File(healthyDirectory, randomUUID() + ".mov");
+    healthyOrphan.writeSync("prune on load");
+    const projects = healthyDirectory.parentDirectory;
+    const pendingDirectory = new Directory(projects, pendingId);
+    const copy = File.prototype.copy;
+    const copyVideo = vi.spyOn(File.prototype, "copy").mockImplementationOnce(async function (this: File, destination) {
+      expect(listSingleClipDraftIds()).toEqual([healthyId]);
+      await copy.call(this, destination);
+      expect(listSingleClipDraftIds()).toEqual([healthyId]);
+      expect(destination.exists).toBe(true);
+      expect(loadSingleClipDraft(pendingId)).toBeNull();
+      expect(destination.exists).toBe(true);
+    });
+    storage.interruptMove = true;
+    await expect(importVideo(external, () => true, pendingId)).rejects.toThrow("Interrupted write");
+    storage.interruptMove = false;
+    expect(pendingDirectory.exists).toBe(false);
+
+    let current = true;
+    copyVideo.mockImplementationOnce(async function (this: File, destination) {
+      await copy.call(this, destination);
+      current = false;
+    });
+    await expect(importVideo(external, () => current, pendingId)).resolves.toBeNull();
+    expect(pendingDirectory.exists).toBe(false);
+
+    pendingDirectory.create();
+    new File(pendingDirectory, "pending.json").writeSync("interrupted manifest");
+    new File(pendingDirectory, randomUUID() + ".mov").writeSync("interrupted media");
+    expect(listSingleClipDraftIds()).toEqual([healthyId]);
+    expect(pendingDirectory.exists).toBe(false);
+    expect(healthyOrphan.exists).toBe(true);
+    expect(loadSingleClipDraft(healthyId)).toEqual(healthy);
+    expect(healthyOrphan.exists).toBe(false);
+  });
+
+  it("cancels only the deleted project's imports, even when their copies finish later", async () => {
+    const deletedId = createSingleClipDraftId();
+    const siblingId = createSingleClipDraftId();
+    const deleted = (await importVideo(external, () => true, deletedId))!;
+    let resumeCopy!: () => void;
+    const held = new Promise<void>((resolve) => {
+      resumeCopy = resolve;
+    });
+    const copy = File.prototype.copy;
+    vi.spyOn(File.prototype, "copy").mockImplementation(async function (this: File, destination) {
+      await held;
+      await copy.call(this, destination);
+    });
+    const pendingDeleted = importVideo(external, () => true, deletedId);
+    const pendingSibling = importVideo(external, () => true, siblingId);
+    deleteSingleClipDraft(deletedId);
+    expect(listSingleClipDraftIds()).toEqual([]);
+    expect(new File(deleted.uri).exists).toBe(false);
+    resumeCopy();
+    await expect(pendingDeleted).resolves.toBeNull();
+    const sibling = await pendingSibling;
+    expect(sibling?.draftId).toBe(siblingId);
+    expect(loadSingleClipDraft(siblingId)).toEqual(sibling);
+    expect(loadSingleClipDraft(deletedId)).toBeNull();
+    expect(new File(deleted.uri).parentDirectory.exists).toBe(false);
+    expect(listSingleClipDraftIds()).toEqual([siblingId]);
   });
 });

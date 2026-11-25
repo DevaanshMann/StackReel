@@ -101,10 +101,12 @@ Choose **Mute** for a silent reel. Tap **Apply volume** to save the level for pr
 Canceling or applying the same level keeps your previous export available to share.
 [See the single-clip volume control on iPhone](../../docs/ios-single-clip-volume.png).
 
-StackReel saves one single-clip draft on your device. Reopen **Single-clip editor**, or tap the video’s filename in
-**Projects**, to resume with your saved trim, framing, and volume. Replacing the video starts a new cut in **Fit** at full volume.
-To remove the saved copy and its edits, open the draft, tap **Delete draft**, and confirm.
-[See a single-clip draft reopened from Projects](../../docs/ios-single-clip-draft.png).
+To start a second single-clip reel, go to **Templates**, tap **New draft** on the **Single-clip editor** card, and
+choose a video. The new draft appears in **Projects** after import. Tap either filename to reopen that reel with
+its saved trim, framing, and volume. A single-clip draft saved by an earlier version also appears in **Projects**.
+Use **Replace from Photos** or **Replace from Files** inside a draft to replace its video and start its cut in
+**Fit** at full volume. To remove one reel, open it, tap **Delete draft**, and confirm.
+[See two single-clip reels in Projects on iPhone](../../docs/ios-single-clip-projects.png).
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
@@ -283,6 +285,11 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     cancel. Verify the previous MP4 is still shareable. Apply 50% and export again, then mute and export a third
     time. Compare the sound in the three MP4s and verify they all use the same cut. Reopen the draft from
     **Projects** after relaunch and confirm it is still muted. Replace the clip and check for 100% volume.
+30. Import a single clip, apply a trim, and mute it. Return to **Templates**, tap **New draft** on the
+    **Single-clip editor** card, then cancel the picker and return to **Projects**. Check that only the first
+    draft appears. Start another draft and import a different video. Relaunch, reopen both filenames, and
+    verify that the first kept its trim and mute and the second kept its full length and sound. Delete the
+    second draft, relaunch, and export the first. Check the cut and audio in the MP4.
 
 ### Export display sleep on iPhone
 

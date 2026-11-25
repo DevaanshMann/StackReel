@@ -18,6 +18,7 @@ import type { PickedVideo } from "./video-picker";
 import { getVolumeGainDb } from "./volume";
 
 export type SingleClip = {
+  draftId: string;
   name: string;
   uri: string;
   media: ClipMetadata;
@@ -30,8 +31,10 @@ export type SingleClip = {
 type SingleClipEdits = Pick<SingleClip, "selection" | "fit" | "reframe" | "volumePercent">;
 type Manifest = SingleClipEdits & Pick<SingleClip, "name" | "media"> & { version: 1; file: string; bytes: number };
 type ReadableManifest = Omit<Manifest, "fit" | "volumePercent"> & { fit?: unknown; volumePercent?: number };
-const folder = "StackReelSingleClip";
-const staged = new Set<string>();
+export const legacySingleClipDraftId = "legacy";
+const draftUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
+type StagedImport = { cancelled: boolean };
+const stagedMedia = new Map<string, Map<string, StagedImport>>();
 
 export function createSingleClipSource({
   uri,
@@ -40,15 +43,56 @@ export function createSingleClipSource({
   fit,
   reframe,
   volumePercent,
-}: Omit<SingleClip, "source" | "name">) {
+}: Omit<SingleClip, "draftId" | "source" | "name">) {
   return createTrimmedClipSource(uri, media, selection, fit, reframe, getVolumeGainDb(volumePercent));
 }
 
-function draftEntry() {
-  const directory = new Directory(Paths.document, folder);
+function projectsDirectory() {
+  return new Directory(Paths.document, "StackReelSingleClipProjects");
+}
+
+function draftDirectory(draftId: string) {
+  if (draftId === legacySingleClipDraftId) return new Directory(Paths.document, "StackReelSingleClip");
+  if (typeof draftId !== "string" || !draftUuid.test(draftId)) throw new Error("Invalid single-clip draft ID.");
+  return new Directory(projectsDirectory(), draftId);
+}
+
+function existingEntry(directory: Directory) {
   if (directory.exists) return directory;
-  // Expo's exists getter also returns false when access is denied.
-  return Paths.document.list().find((entry) => entry.name === folder);
+  const parent = directory.parentDirectory;
+  // A file or inaccessible directory can occupy the reserved path.
+  if (parent.exists) return parent.list().find((entry) => entry.name === directory.name);
+}
+
+export function createSingleClipDraftId(): string {
+  let draftId: string;
+  do {
+    draftId = randomUUID();
+  } while (existingEntry(draftDirectory(draftId)));
+  return draftId;
+}
+
+function hasDiscoverableDraft(entry: Directory | File) {
+  if (entry instanceof File) return true;
+  try {
+    if (entry.list().some((file) => file instanceof File && snapshotName.test(file.name))) return true;
+  } catch {
+    // Let the individual load report the failure without hiding the project.
+    return true;
+  }
+  prune(entry);
+  return false;
+}
+
+export function listSingleClipDraftIds(): string[] {
+  const legacy = existingEntry(draftDirectory(legacySingleClipDraftId));
+  const ids = legacy && hasDiscoverableDraft(legacy) ? [legacySingleClipDraftId] : [];
+  const projects = existingEntry(projectsDirectory());
+  if (projects instanceof Directory) {
+    const saved = projects.list().filter((entry) => draftUuid.test(entry.name) && hasDiscoverableDraft(entry));
+    ids.push(...saved.map((entry) => entry.name).sort());
+  }
+  return ids;
 }
 
 function readableSize(file: File) {
@@ -63,7 +107,7 @@ function readableSize(file: File) {
   }
 }
 
-function readSnapshot(directory: Directory) {
+function readSnapshot(directory: Directory, draftId: string) {
   const snapshot = draftSnapshots(directory).at(-1);
   if (!snapshot) return null;
   const saved = JSON.parse(snapshot.file.textSync()) as ReadableManifest | null;
@@ -95,26 +139,35 @@ function readSnapshot(directory: Directory) {
     volumePercent,
     uri: file.uri,
   };
-  return { snapshot, saved, clip: { ...edits, source: createSingleClipSource(edits) } };
+  return { snapshot, saved, clip: { ...edits, draftId, source: createSingleClipSource(edits) } };
+}
+
+function removeEmptyDirectory(directory: Directory) {
+  try {
+    if (!stagedMedia.has(directory.uri) && directory.list().length === 0) directory.delete();
+  } catch {
+    // A later load can retry cleanup.
+  }
 }
 
 function prune(directory: Directory, manifest?: string, media?: string) {
+  const staged = stagedMedia.get(directory.uri);
   try {
     for (const file of directory.list()) {
-      if (!(file instanceof File) || staged.has(file.uri) || file.name === manifest || file.name === media) continue;
+      if (!(file instanceof File) || staged?.has(file.name) || file.name === manifest || file.name === media) continue;
       if (file.name === pendingName || snapshotName.test(file.name) || mediaName.test(file.name)) discardFile(file);
     }
-    if (!manifest && !staged.size && !directory.list().length) directory.delete();
+    if (!manifest) removeEmptyDirectory(directory);
   } catch {
     // A cleanup failure does not invalidate a published snapshot.
   }
 }
 
-export function loadSingleClipDraft(): SingleClip | null {
-  const directory = draftEntry();
+export function loadSingleClipDraft(draftId = legacySingleClipDraftId): SingleClip | null {
+  const directory = existingEntry(draftDirectory(draftId));
   if (!directory) return null;
   if (!(directory instanceof Directory)) throw new Error("The saved single-clip draft folder is unreadable.");
-  const current = readSnapshot(directory);
+  const current = readSnapshot(directory, draftId);
   prune(directory, current?.snapshot.file.name, current?.saved.file);
   return current?.clip ?? null;
 }
@@ -128,31 +181,42 @@ export async function importSingleClipDraft(
   asset: PickedVideo,
   media: ClipMetadata,
   isCurrent: () => boolean,
+  draftId = legacySingleClipDraftId,
 ): Promise<SingleClip | null> {
+  const directory = draftDirectory(draftId);
   if (!isCurrent()) return null;
   if (!asset.name.trim()) throw new Error("The selected video is missing its name.");
   const selection = getClipFrameRange(media);
-  const directory = new Directory(Paths.document, folder);
-  const target = allocateDraftMedia(directory, asset.draftFileName);
-  staged.add(target.uri);
+  const imports = stagedMedia.get(directory.uri) ?? new Map<string, StagedImport>();
+  let target: File;
+  do {
+    target = allocateDraftMedia(directory, asset.draftFileName);
+  } while (imports.has(target.name));
+  const staged = { cancelled: false };
+  imports.set(target.name, staged);
+  stagedMedia.set(directory.uri, imports);
   let committed = false;
   try {
     const file = new File(asset.uri);
     const bytes = file.size;
     if (isPickerCacheFile(file)) await file.move(target);
     else await file.copy(target);
-    if (!staged.has(target.uri) || !isCurrent()) return null;
+    if (staged.cancelled || !isCurrent()) return null;
     if (readableSize(target) !== bytes) throw new Error("The imported video is incomplete.");
     const edits = { name: asset.name, media, selection, fit: "contain", volumePercent: 100 } as const;
     const imported = { ...edits, uri: target.uri };
-    const clip = { ...imported, source: createSingleClipSource(imported) };
-    const current = readSnapshot(directory);
+    const clip = { ...imported, draftId, source: createSingleClipSource(imported) };
+    const current = readSnapshot(directory, draftId);
     publish(directory, current?.snapshot.revision ?? 0, { version: 1, file: target.name, bytes, ...edits });
     committed = true;
     return clip;
   } finally {
-    staged.delete(target.uri);
-    if (!committed) discardFile(target);
+    imports.delete(target.name);
+    if (imports.size === 0) stagedMedia.delete(directory.uri);
+    if (!committed) {
+      discardFile(target);
+      removeEmptyDirectory(directory);
+    }
   }
 }
 
@@ -179,8 +243,9 @@ function sameReframe(a: ClipReframe | undefined, b: ClipReframe | undefined) {
 }
 
 function saveSingleClipEdits(clip: SingleClip, changes: Partial<SingleClipEdits>): SingleClip {
-  const directory = new Directory(Paths.document, folder);
-  const current = readSnapshot(directory);
+  const directory = existingEntry(draftDirectory(clip.draftId));
+  if (!(directory instanceof Directory)) throw new Error("The saved draft changed. Reopen it before editing.");
+  const current = readSnapshot(directory, clip.draftId);
   // Fit can hide a remembered Fill crop, and multiple levels can resolve to the mute floor.
   if (
     !current ||
@@ -206,18 +271,18 @@ function saveSingleClipEdits(clip: SingleClip, changes: Partial<SingleClipEdits>
   return { ...previous, ...edits, source };
 }
 
-export function deleteSingleClipDraft(): void {
-  const directory = draftEntry();
-  if (!directory) return;
-  if (directory instanceof File) {
+export function deleteSingleClipDraft(draftId = legacySingleClipDraftId): void {
+  const directory = draftDirectory(draftId);
+  const entry = existingEntry(directory);
+  if (entry instanceof File) {
     // Preserve unexpected contents while freeing the reserved draft path.
-    directory.moveSync(new File(Paths.document, `${folder}-recovered-${randomUUID()}`));
-    staged.clear();
-    return;
+    entry.moveSync(new File(entry.parentDirectory, `${entry.name}-recovered-${randomUUID()}`));
+  } else if (entry) {
+    // Removing snapshots oldest first prevents an interrupted deletion from reviving an older edit.
+    for (const { file } of draftSnapshots(entry)) file.delete();
   }
-  staged.clear();
-  // Removing snapshots oldest first prevents an interrupted deletion from reviving an older edit.
-  for (const { file } of draftSnapshots(directory)) file.delete();
+  // Keep staged paths reserved until their asynchronous copies settle.
+  for (const staged of stagedMedia.get(directory.uri)?.values() ?? []) staged.cancelled = true;
   // Once the last manifest is gone the UI can discard the draft. Retry orphan cleanup on the next load.
-  prune(directory);
+  if (entry instanceof Directory) prune(entry);
 }

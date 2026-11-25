@@ -7,7 +7,7 @@ import { File } from "expo-file-system";
 import { useKeepAwake } from "expo-keep-awake";
 import { Asset, requestPermissionsAsync } from "expo-media-library";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { ReframeSheet } from "./ReframeSheet";
@@ -23,11 +23,14 @@ import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas } from "./clip-source";
 import type { ClipFrameRange, SingleClipFit } from "./clip-source";
 import { discardPickerCopy } from "./draft-files";
-import { nextDraftName } from "./draft-names";
+import { getNamedDrafts, nextDraftName } from "./draft-names";
 import {
+  createSingleClipDraftId,
   createSingleClipSource,
   deleteSingleClipDraft,
   importSingleClipDraft,
+  legacySingleClipDraftId,
+  listSingleClipDraftIds,
   loadSingleClipDraft,
   setSingleClipFit,
   setSingleClipReframe,
@@ -75,6 +78,7 @@ import type { VideoPickerSource } from "./video-picker";
 import { getVolumeGainDb } from "./volume";
 
 type SingleDraft = { clip: SingleClip | null; outputUri: string | null; loadError?: string };
+type SingleDrafts = Readonly<Record<string, SingleDraft>>;
 type TemplateDraft = TemplateDraftEdits & {
   source: string | null;
   outputUri: string | null;
@@ -85,7 +89,7 @@ type TemplateDraft = TemplateDraftEdits & {
 type TemplateDrafts = Readonly<Record<string, Readonly<Record<string, TemplateDraft>>>>;
 type HistoryLabels = Pick<TemplateDraftSession, "undoLabel" | "redoLabel">;
 type HistoryDirection = "undo" | "redo";
-type Home = { kind: "home"; tab: HomeTab; filter?: MobileTemplate };
+type Home = { kind: "home"; tab: HomeTab; filter?: MobileTemplate | "single" };
 type TemplateEditor = {
   kind: "template";
   template: MobileTemplate;
@@ -93,7 +97,7 @@ type TemplateEditor = {
   slots: TemplateVideoSlot[];
   home: Home;
 };
-type Editor = Home | { kind: "single"; home: Home } | TemplateEditor;
+type Editor = Home | { kind: "single"; draftId: string; home: Home } | TemplateEditor;
 type ImportOperation = { kind: "import"; source: VideoPickerSource; slotId?: string };
 type SlotEdit = {
   kind: "trim" | "reframe" | "volume";
@@ -133,6 +137,7 @@ const homeTabs = [
 ] as const;
 type HomeTab = (typeof homeTabs)[number]["id"];
 
+const emptySingleDraft: SingleDraft = { clip: null, outputUri: null };
 const emptyTemplateDraft: TemplateDraft = {
   clips: {},
   textOverrides: {},
@@ -154,6 +159,15 @@ const slotEditLabels: Record<SlotEdit["kind"], string> = {
   reframe: "reframe",
   volume: "clip volume",
 };
+
+function readSingleDraft(draftId: string): SingleDraft | null {
+  try {
+    const clip = loadSingleClipDraft(draftId);
+    return clip ? { clip, outputUri: null } : null;
+  } catch {
+    return { ...emptySingleDraft, loadError: "Couldn’t reopen the saved single-clip draft." };
+  }
+}
 
 function getEditorDraft(drafts: TemplateDrafts | null, editor: Editor) {
   return editor.kind === "template"
@@ -187,8 +201,8 @@ export default function App() {
   const [discoveryErrors, setDiscoveryErrors] = useState<string[]>([]);
   const [editor, setEditor] = useState<Editor>(firstScreen);
   const [activity, setActivity] = useState<Activity | null>(null);
-  const [singleDraft, setSingleDraft] = useState<SingleDraft>({ clip: null, outputUri: null });
-  const currentSingleDraft = useRef(singleDraft);
+  const [singleDrafts, setSingleDrafts] = useState<SingleDrafts>({});
+  const currentSingleDrafts = useRef(singleDrafts);
   const [templateDrafts, setTemplateDrafts] = useState<TemplateDrafts | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [historyLabels, setHistoryLabels] = useState(emptyHistoryLabels);
@@ -196,6 +210,13 @@ export default function App() {
   const template = editor.kind === "template" ? editor.template : null;
   const textFields = template ? getTemplateTextFields(template) : [];
   const templateDraft = getEditorDraft(templateDrafts, editor);
+  const singleDraft = editor.kind === "single" ? (singleDrafts[editor.draftId] ?? emptySingleDraft) : emptySingleDraft;
+  const singleProjects = useMemo(
+    () => getNamedDrafts(singleDrafts, (draft) => draft.clip?.name ?? "Single-clip draft"),
+    [singleDrafts],
+  );
+  const singleProjectLabel =
+    editor.kind === "single" ? singleProjects.find((project) => project.draftId === editor.draftId)?.label : undefined;
   const source = template ? templateDraft.source : (singleDraft.clip?.source ?? null);
   const outputUri = template ? templateDraft.outputUri : singleDraft.outputUri;
   const canvas = template?.canvas ?? singleClipCanvas;
@@ -203,9 +224,21 @@ export default function App() {
   const busy = activity !== null && !fullScreen;
 
   useEffect(() => {
-    reopenSingleDraft();
     const drafts: Record<string, Record<string, TemplateDraft>> = {};
     const failed: string[] = [];
+    let singleIds: string[];
+    try {
+      singleIds = listSingleClipDraftIds();
+    } catch {
+      failed.push("Single-clip editor");
+      singleIds = [legacySingleClipDraftId];
+    }
+    const singles: Record<string, SingleDraft> = {};
+    for (const id of singleIds) {
+      const draft = readSingleDraft(id);
+      if (draft) singles[id] = draft;
+    }
+    storeSingleDrafts(singles);
     for (const template of mobileTemplates) {
       const siblings: Record<string, TemplateDraft> = {};
       drafts[template.id] = siblings;
@@ -263,8 +296,9 @@ export default function App() {
   function isCurrentScreen() {
     if (!mounted.current || currentEditor.current !== editor) return false;
     // Ignore queued handlers from before a synchronous commit or a change to the Projects list.
-    if (editor.kind === "home") return currentTemplateDrafts.current === templateDrafts;
-    if (editor.kind === "single") return currentSingleDraft.current === singleDraft;
+    if (editor.kind === "home")
+      return currentTemplateDrafts.current === templateDrafts && currentSingleDrafts.current === singleDrafts;
+    if (editor.kind === "single") return currentSingleDrafts.current === singleDrafts;
     return getEditorDraft(currentTemplateDrafts.current, editor) === templateDraft;
   }
 
@@ -604,25 +638,46 @@ export default function App() {
     }
   }
 
-  function storeSingleDraft(draft: SingleDraft) {
-    currentSingleDraft.current = draft;
-    setSingleDraft(draft);
+  function storeSingleDrafts(drafts: SingleDrafts) {
+    currentSingleDrafts.current = drafts;
+    setSingleDrafts(drafts);
   }
 
-  function reopenSingleDraft() {
+  function storeSingleDraft(draftId: string, draft: SingleDraft | null) {
+    const drafts = { ...currentSingleDrafts.current };
+    if (draft) drafts[draftId] = draft;
+    else delete drafts[draftId];
+    storeSingleDrafts(drafts);
+  }
+
+  function newSingleDraft() {
+    if (editor.kind !== "home" || activeOperation.current || !isCurrentScreen()) return;
     try {
-      storeSingleDraft({ clip: loadSingleClipDraft(), outputUri: null });
+      navigate({ kind: "single", draftId: createSingleClipDraftId(), home: editor });
     } catch {
-      storeSingleDraft({ clip: null, outputUri: null, loadError: "Couldn’t reopen the saved single-clip draft." });
+      Alert.alert("Couldn’t start the draft", "Try again from Templates.");
     }
+  }
+
+  function openSingleDraft(draftId: string) {
+    if (editor.kind !== "home" || !isCurrentScreen() || !singleDrafts[draftId]) return;
+    navigate({ kind: "single", draftId, home: editor });
+  }
+
+  function openSingleEditor() {
+    if (editor.kind !== "home" || !isCurrentScreen()) return;
+    const ids = Object.keys(singleDrafts);
+    if (ids.length > 1) navigate({ kind: "home", tab: "projects", filter: "single" });
+    else if (ids[0]) openSingleDraft(ids[0]);
+    else newSingleDraft();
   }
 
   function confirmDeleteSingleDraft() {
     const operation = { kind: "delete" } as const;
-    if (editor.kind !== "single" || !begin(operation)) return;
+    if (editor.kind !== "single" || !singleProjectLabel || !begin(operation)) return;
     Alert.alert(
-      "Delete single-clip draft?",
-      "This removes your saved trim and StackReel’s copy of the video. Your original video stays in place.",
+      `Delete “${singleProjectLabel}”?`,
+      "This removes this draft’s edits and StackReel’s copy of its video. Your original video stays in place.",
       [
         { text: "Cancel", style: "cancel", onPress: () => finish(operation) },
         {
@@ -631,8 +686,8 @@ export default function App() {
           onPress: () => {
             if (!isCurrentOperation(operation)) return;
             try {
-              deleteSingleClipDraft();
-              storeSingleDraft({ clip: null, outputUri: null });
+              deleteSingleClipDraft(editor.draftId);
+              storeSingleDraft(editor.draftId, null);
               removeCachedFile(singleDraft.outputUri);
               setFeedback({ kind: "status", message: "Single-clip draft deleted." });
             } catch (cause) {
@@ -654,7 +709,7 @@ export default function App() {
 
   function publishSingleEdit(clip: SingleClip) {
     if (clip === singleDraft.clip) return;
-    storeSingleDraft({ clip, outputUri: null });
+    storeSingleDraft(clip.draftId, { clip, outputUri: null });
     removeCachedFile(singleDraft.outputUri);
   }
 
@@ -671,7 +726,7 @@ export default function App() {
 
   async function selectSingleVideo(source: VideoPickerSource) {
     const operation: ImportOperation = { kind: "import", source };
-    if (singleDraft.loadError || !begin(operation)) return;
+    if (editor.kind !== "single" || singleDraft.loadError || !begin(operation)) return;
     let pickedUri: string | undefined;
     try {
       const asset = await pickVideo(source);
@@ -680,9 +735,9 @@ export default function App() {
       if (!isCurrentOperation(operation)) return;
       const metadata = await probeVideo(pickedUri);
       if (!isCurrentOperation(operation)) return;
-      const clip = await importSingleClipDraft(asset, metadata, () => isCurrentOperation(operation));
+      const clip = await importSingleClipDraft(asset, metadata, () => isCurrentOperation(operation), editor.draftId);
       if (!clip || !isCurrentOperation(operation)) return;
-      storeSingleDraft({ clip, outputUri: null });
+      storeSingleDraft(clip.draftId, { clip, outputUri: null });
       removeCachedFile(outputUri);
     } catch (cause) {
       if (isCurrentOperation(operation)) {
@@ -771,8 +826,8 @@ export default function App() {
       if (isCurrentOperation(job)) {
         if (editor.kind === "template") {
           storeTemplateDraft(editor, { ...templateDraft, outputUri: uri });
-        } else {
-          storeSingleDraft({ ...singleDraft, outputUri: uri });
+        } else if (editor.kind === "single") {
+          storeSingleDraft(editor.draftId, { ...singleDraft, outputUri: uri });
         }
         if (uri !== outputUri) removeCachedFile(outputUri);
       } else {
@@ -855,7 +910,7 @@ export default function App() {
     const homeTab = editor.tab;
     return (
       <Screen
-        page={editor.filter?.id ?? homeTab}
+        page={editor.filter === "single" ? "single-projects" : (editor.filter?.id ?? homeTab)}
         footer={templateDrafts && <HomeTabBar activeTab={homeTab} disabled={busy} onSelect={selectHomeTab} />}
       >
         {discoveryErrors.length > 0 && (
@@ -869,9 +924,8 @@ export default function App() {
           <TemplateProjects
             drafts={templateDrafts}
             filter={editor.filter}
-            singleClipDraftName={singleDraft.clip?.name ?? (singleDraft.loadError ? "Single-clip draft" : null)}
-            singleClipLoadError={singleDraft.loadError}
-            onSelectSingleClip={() => navigate({ kind: "single", home: editor })}
+            singleProjects={singleProjects}
+            onSelectSingleClip={openSingleDraft}
             duplicating={activity?.kind === "duplicate" ? activity : null}
             onShowAll={() => selectHomeTab("projects")}
             onOpenDraft={openDraft}
@@ -885,7 +939,9 @@ export default function App() {
             drafts={templateDrafts}
             onSelectTemplate={openTemplate}
             onNewDraft={createDraft}
-            onSelectSingleClip={() => navigate({ kind: "single", home: editor })}
+            singleDraftCount={singleProjects.length}
+            onNewSingleClip={newSingleDraft}
+            onSelectSingleClip={openSingleEditor}
           />
         )}
       </Screen>
@@ -938,14 +994,8 @@ export default function App() {
         <Text style={textStyles.muted}>
           {canvas.width} × {canvas.height} · {canvas.fps} fps
         </Text>
-        {editor.kind === "single" && clip && (
-          <>
-            <Text numberOfLines={1} style={textStyles.body}>
-              {clip.name}
-            </Text>
-            <Text style={textStyles.muted}>Original audio {clip.volumePercent}%</Text>
-          </>
-        )}
+        {singleProjectLabel && <Text style={textStyles.body}>{singleProjectLabel}</Text>}
+        {clip && <Text style={textStyles.muted}>Original audio {clip.volumePercent}%</Text>}
       </View>
       {editor.kind === "template" && (
         <>
@@ -1016,7 +1066,7 @@ export default function App() {
         <>
           {singleDraft.loadError && (
             <Text accessibilityRole="alert" style={textStyles.error}>
-              {singleDraft.loadError} Try again or delete this draft to start another.
+              {singleDraft.loadError} Try again, or choose New draft in Templates to start another reel.
             </Text>
           )}
           <View style={styles.navigation}>
@@ -1042,7 +1092,7 @@ export default function App() {
                 onPress={() => {
                   if (activeOperation.current || !isCurrentScreen()) return;
                   setFeedback(null);
-                  reopenSingleDraft();
+                  storeSingleDraft(editor.draftId, readSingleDraft(editor.draftId));
                 }}
                 disabled={busy}
               />
@@ -1155,11 +1205,7 @@ export default function App() {
     </>
   );
   const editorScreen = (
-    <Screen
-      ref={editorScreenRef}
-      page={editor.kind === "template" ? editor.draftId : "single-clip"}
-      fullScreen={fullScreen}
-    >
+    <Screen ref={editorScreenRef} page={editor.draftId} fullScreen={fullScreen}>
       {activity?.kind === "single-reframe" && (
         <ReframeSheet
           id="single"
