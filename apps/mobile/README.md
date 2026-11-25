@@ -106,6 +106,7 @@ choose a video. The new draft appears in **Projects** after import. Tap either f
 its saved trim, framing, and volume. A single-clip draft saved by an earlier version also appears in **Projects**.
 Use **Replace from Photos** or **Replace from Files** inside a draft to replace its video and start its cut in
 **Fit** at full volume. To remove one reel, open it, tap **Delete draft**, and confirm.
+[See two single-clip reels in Projects on iPhone](../../docs/ios-single-clip-projects.png).
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.

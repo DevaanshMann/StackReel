@@ -24,11 +24,15 @@ type ProjectDrafts = Readonly<Record<string, Readonly<Record<string, ProjectDraf
 export function TemplateGallery({
   drafts,
   onNewDraft,
+  singleDraftCount,
+  onNewSingleClip,
   onSelectTemplate,
   onSelectSingleClip,
 }: {
   drafts: ProjectDrafts;
   onNewDraft: SelectTemplate;
+  singleDraftCount: number;
+  onNewSingleClip: () => void;
   onSelectTemplate: SelectTemplate;
   onSelectSingleClip: () => void;
 }) {
@@ -63,8 +67,15 @@ export function TemplateGallery({
       </View>
       <GalleryCard
         label="Single-clip editor"
-        details="Trim, preview, and export one video"
+        details={
+          singleDraftCount > 1 ? `Choose from ${singleDraftCount} drafts` : "Trim, preview, and export one video"
+        }
         onPress={onSelectSingleClip}
+        actions={
+          singleDraftCount > 0 && (
+            <Action label="New draft" accessibilityLabel="New single-clip draft" onPress={onNewSingleClip} />
+          )
+        }
       />
     </>
   );
@@ -73,8 +84,7 @@ export function TemplateGallery({
 export function TemplateProjects({
   drafts,
   filter,
-  singleClipDraftName,
-  singleClipLoadError,
+  singleProjects,
   onSelectSingleClip,
   duplicating,
   onShowAll,
@@ -85,10 +95,9 @@ export function TemplateProjects({
   onBrowseTemplates,
 }: {
   drafts: ProjectDrafts;
-  filter: MobileTemplate | undefined;
-  singleClipDraftName: string | null;
-  singleClipLoadError: string | undefined;
-  onSelectSingleClip: () => void;
+  filter: MobileTemplate | "single" | undefined;
+  singleProjects: readonly { draftId: string; label: string; draft: { loadError?: string } }[];
+  onSelectSingleClip: (draftId: string) => void;
   duplicating: { templateId: string; draftId: string } | null;
   onShowAll: () => void;
   onOpenDraft: (template: MobileTemplate, slots: TemplateVideoSlot[], draftId: string) => void;
@@ -98,35 +107,45 @@ export function TemplateProjects({
   onBrowseTemplates: () => void;
 }) {
   const busy = duplicating !== null;
-  const projects = getDraftProjects(choices, drafts, filter?.id);
-  const showSingleClip = !filter && singleClipDraftName !== null;
+  const projects = filter === "single" ? [] : getDraftProjects(choices, drafts, filter?.id);
+  const singles = !filter || filter === "single" ? singleProjects : [];
+  const filteredTitle = filter === "single" ? "Single-clip drafts" : filter && `${filter.name} drafts`;
 
   return (
     <>
       <Text accessibilityRole="header" style={textStyles.heading}>
-        {filter ? `${filter.name} drafts` : "Projects"}
+        {filteredTitle ?? "Projects"}
       </Text>
       {filter && <Action label="Show all projects" onPress={onShowAll} disabled={busy} />}
-      {projects.length === 0 && !showSingleClip ? (
+      {projects.length === 0 && singles.length === 0 ? (
         <View style={[styles.panel, styles.emptyProjects]}>
-          <Text style={styles.cardTitle}>{filter ? `No saved ${filter.name} drafts` : "No saved drafts yet"}</Text>
+          <Text style={styles.cardTitle}>
+            {filter === "single"
+              ? "No saved single-clip drafts"
+              : filter
+                ? `No saved ${filter.name} drafts`
+                : "No saved drafts yet"}
+          </Text>
           <Text style={textStyles.muted}>
-            {filter
-              ? "Make an edit in a template to start a draft."
-              : "Edit a template or import a single clip to start a draft."}
+            {filter === "single"
+              ? "Import a video in the single-clip editor to start a draft."
+              : filter
+                ? "Make an edit in a template to start a draft."
+                : "Edit a template or import a single clip to start a draft."}
           </Text>
           <Action label="Browse templates" onPress={onBrowseTemplates} />
         </View>
       ) : (
         <View style={styles.list}>
-          {showSingleClip && (
+          {singles.map(({ draftId, label, draft }) => (
             <GalleryCard
-              label={singleClipDraftName}
-              details={singleClipLoadError ?? "Single-clip draft"}
+              key={draftId}
+              label={label}
+              details={draft.loadError ?? "Single-clip draft"}
               disabled={busy}
-              onPress={onSelectSingleClip}
+              onPress={() => onSelectSingleClip(draftId)}
             />
-          )}
+          ))}
           {projects.map(({ template, slots, draftId, draft, label, deleteTarget }) => {
             const name = draft.name ?? template.name;
             const filled = slots.filter(({ id }) => draft.clips[id]).length;

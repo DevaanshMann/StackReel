@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDraftProjects, nextDraftName } from "../src/draft-names";
+import { getDraftProjects, getNamedDrafts, nextDraftName } from "../src/draft-names";
 
 describe("draft names", () => {
   it("uses the saved name and numbers repeat copies across case differences", () => {
@@ -49,5 +49,20 @@ describe("project delete labels", () => {
       "“travel” from Before / After",
       "“Travel” from Travel",
     ]);
+  });
+});
+
+describe("single-clip project labels", () => {
+  it("keeps same-filename cuts distinguishable across discovery order and replacement", () => {
+    const name = (draft: { clip: { name: string } | null }) => draft.clip?.name ?? "Single-clip draft";
+    const first = { clip: { name: "Concert.mov" } };
+    const second = { clip: { name: "CONCERT.MOV" } };
+    const damaged = { clip: null };
+    const labels = (drafts: Record<string, typeof first | typeof damaged>) =>
+      Object.fromEntries(getNamedDrafts(drafts, name).map(({ draftId, label }) => [draftId, label]));
+    const expected = { a: "Concert.mov (1 of 2)", b: "CONCERT.MOV (2 of 2)", c: "Single-clip draft" };
+    expect(labels({ a: first, b: second, c: damaged })).toEqual(expected);
+    expect(labels({ c: damaged, b: second, a: first })).toEqual(expected);
+    expect(labels({ a: first, b: { clip: { name: "Encore.mov" } } })).toEqual({ a: "Concert.mov", b: "Encore.mov" });
   });
 });
