@@ -1,9 +1,10 @@
 import { checkTrim, createProject, frameToUs, itemKey, resolve, US_PER_SECOND, usToFrame } from "@stackreel/core";
 import type { AssetInfo, AudioEntry, Crop, Project, Size, SlotBinding, VideoLayer } from "@stackreel/core";
 import { validate } from "@stackreel/template-schema";
-import type { Transition } from "@stackreel/template-schema";
+import type { TextItem, Transition } from "@stackreel/template-schema";
 import beforeAfter from "../../../templates/examples/before-after.json";
 import hookAndReveal from "../../../templates/examples/hook-and-reveal.json";
+import top5Countdown from "../../../templates/examples/top-5-countdown.json";
 import { defaultClipReframe, getClipCrop, isValidSize, normalizeClipReframe, sameCrop } from "./clip-reframe";
 import type { ClipReframe } from "./clip-reframe";
 import { getVolumeGainDb as getTemplateGainDb, validateVolumePercent } from "./volume";
@@ -74,6 +75,17 @@ function iosTransition(transition: Transition | undefined): Transition | undefin
   return transition;
 }
 
+function fitCountdownName(item: TextItem): TextItem {
+  if (!item.slot?.startsWith("name") || !item.style) return item;
+  // iOS wraps text at the canvas width minus its background padding. Wrap names
+  // inside the side margins and let additional lines grow down below the rank.
+  return {
+    ...item,
+    style: { ...item.style, background: { color: "#00000000", paddingPx: 112, cornerRadiusPx: 0 } },
+    position: { anchor: "top-right", x: 0.97, y: 0.56 },
+  };
+}
+
 function loadTemplate(document: { id: string }): MobileTemplate {
   const result = validate(document);
   if (!result.ok) throw new Error(`Invalid mobile template "${document.id}" at ${result.errors[0]?.path || "/"}`);
@@ -85,8 +97,9 @@ function loadTemplate(document: { id: string }): MobileTemplate {
     }),
     tracks: template.tracks.map((track) => {
       if (track.type === "overlay") {
-        // The example's arrow sticker has no asset bundled with the app.
-        return { ...track, items: track.items.filter((item) => item.kind === "text") };
+        // The example stickers have no assets bundled with the app.
+        const items = track.items.filter((item) => item.kind === "text");
+        return { ...track, items: template.id === top5Countdown.id ? items.map(fitCountdownName) : items };
       }
       if (track.type !== "video") return track;
       return {
@@ -100,7 +113,7 @@ function loadTemplate(document: { id: string }): MobileTemplate {
   };
 }
 
-export const mobileTemplates: readonly MobileTemplate[] = [loadTemplate(beforeAfter), loadTemplate(hookAndReveal)];
+export const mobileTemplates: readonly MobileTemplate[] = [beforeAfter, hookAndReveal, top5Countdown].map(loadTemplate);
 
 const textFieldLabels: Readonly<Record<string, string>> = {
   "before-after/labels/0": "Before label",
