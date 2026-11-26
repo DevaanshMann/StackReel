@@ -1,5 +1,6 @@
 import ExpoModulesCore
 import Foundation
+import StackReelComposition
 
 public final class StackReelEngineModule: Module {
   private static let moduleName = "StackReelEngine"
@@ -10,7 +11,7 @@ public final class StackReelEngineModule: Module {
     Name(Self.moduleName)
     Events(Self.progressEvent)
 
-    OnCreate { _ = ExportCache.shared }
+    OnCreate { ExportCache.prepareForLaunch() }
 
     AsyncFunction("probeVideo") { (uri: String) async throws -> [String: Double] in
       try await LocalMedia.probeVideo(uri)

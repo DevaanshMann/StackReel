@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import StackReelExpoSupport
+@testable import StackReelComposition
 
 final class ExportCacheTests: XCTestCase {
   private func makeDirectory() throws -> URL {

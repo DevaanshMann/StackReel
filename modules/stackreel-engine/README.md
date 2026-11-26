@@ -56,6 +56,10 @@ failures. After `onReady`, call `seekTo(seconds)` on the `StackReelPreviewViewRe
 position to the timeline. Changing `source` or removing the view releases the active preview and
 interrupts pending seeks.
 
+On the iOS 27.0 Simulator, preparing an edited preview includes rendering a temporary local MP4. The
+preview can take longer to open for a long cut. Once it opens, you can play and scrub the rendered edits
+and hear their audio mix. Use **Export MP4** in the editor to create a file you can share.
+
 Use a fresh `exportId` for each job. Progress events carry that ID and a fraction from 0 to 1.
 `cancelExport` requests cancellation and the export promise rejects with `ERR_EXPORT_CANCELLED` if
 cancellation takes effect. A successful export returns a temporary `file:` URI in the app cache.
@@ -82,12 +86,12 @@ Use `result.timelineDuration` for the full timeline, which may extend past the l
 The instructions cover the full timeline and carry layers in draw order, active transitions, and the track
 IDs that supply source frames. Held inputs identify the clip whose last playable frame the compositor needs.
 
-On the main actor, create a `StackReelPreviewPlayer` from the composition result. It plays the render
-asset with the custom video composition and the plan's audio mix. On iOS, attach it to a
-`StackReelPreviewView` and add the view to your UIKit layout:
+On the main actor, prepare a player from the composition result. It plays the edited timeline and its
+audio mix using the playback path for the current runtime. On iOS, attach it to a `StackReelPreviewView`
+and add the view to your UIKit layout.
 
 ```swift
-let preview = try StackReelPreviewPlayer(composition: result)
+let preview = try await StackReelPreviewPlayer.prepare(composition: result)
 let view = StackReelPreviewView(frame: .zero)
 view.preview = preview
 preview.isLooping = true

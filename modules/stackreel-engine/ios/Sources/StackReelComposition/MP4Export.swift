@@ -21,6 +21,13 @@ extension VideoComposition {
     to destination: URL, progress: @escaping @Sendable (Double) -> Void = { _ in },
     isolation: isolated (any Actor)? = #isolation
   ) async throws {
+    try await writeMP4(to: destination, progress: progress, movieTimeScale: nil, isolation: isolation)
+  }
+
+  func writeMP4(
+    to destination: URL, progress: @escaping @Sendable (Double) -> Void = { _ in },
+    movieTimeScale: CMTimeScale?, isolation: isolated (any Actor)? = #isolation
+  ) async throws {
     try Task.checkCancellation()
     guard destination.isFileURL else { throw ExportError.nonFileDestination }
     let files = FileManager.default
@@ -34,7 +41,7 @@ extension VideoComposition {
     let encoding = try MP4Encoding(
       asset: render.asset, videoComposition: render.videoComposition, audioMix: audioMix,
       duration: timelineDuration, stagedFile: stagingDirectory.appendingPathComponent("output.mp4"),
-      destination: destination, progress: progress)
+      destination: destination, movieTimeScale: movieTimeScale, progress: progress)
     try await encoding.run()
   }
 }
@@ -65,11 +72,12 @@ private final class MP4Encoding: @unchecked Sendable {
 
   init(
     asset: AVComposition, videoComposition: AVVideoComposition, audioMix: AVAudioMix?,
-    duration: CMTime, stagedFile: URL, destination: URL,
+    duration: CMTime, stagedFile: URL, destination: URL, movieTimeScale: CMTimeScale?,
     progress: @escaping @Sendable (Double) -> Void
   ) throws {
     let reader = try AVAssetReader(asset: asset)
     let writer = try AVAssetWriter(outputURL: stagedFile, fileType: .mp4)
+    if let movieTimeScale { writer.movieTimeScale = movieTimeScale }
     reader.timeRange = CMTimeRange(start: .zero, duration: duration)
     let video = AVAssetReaderVideoCompositionOutput(
       videoTracks: asset.tracks(withMediaType: .video),
@@ -77,7 +85,7 @@ private final class MP4Encoding: @unchecked Sendable {
     video.videoComposition = videoComposition
     var streams = [
       try Self.connect(
-        video, mediaType: .video, reader: reader, writer: writer,
+        video, mediaType: .video, reader: reader, writer: writer, mediaTimeScale: movieTimeScale,
         settings: [
           AVVideoCodecKey: AVVideoCodecType.h264,
           AVVideoWidthKey: videoComposition.renderSize.width,
@@ -117,13 +125,14 @@ private final class MP4Encoding: @unchecked Sendable {
 
   private static func connect(
     _ output: AVAssetReaderOutput, mediaType: AVMediaType, reader: AVAssetReader,
-    writer: AVAssetWriter, settings: [String: Any]
+    writer: AVAssetWriter, mediaTimeScale: CMTimeScale? = nil, settings: [String: Any]
   ) throws -> Stream {
     guard reader.canAdd(output) else { throw ExportError.cannotAddReaderOutput(mediaType) }
     guard writer.canApply(outputSettings: settings, forMediaType: mediaType) else {
       throw ExportError.unsupportedEncodingSettings(mediaType)
     }
     let input = AVAssetWriterInput(mediaType: mediaType, outputSettings: settings)
+    if let mediaTimeScale { input.mediaTimeScale = mediaTimeScale }
     guard writer.canAdd(input) else { throw ExportError.cannotAddWriterInput(mediaType) }
     output.alwaysCopiesSampleData = false
     reader.add(output)

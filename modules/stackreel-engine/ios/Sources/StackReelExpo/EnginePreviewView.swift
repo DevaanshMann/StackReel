@@ -87,9 +87,10 @@ final class EnginePreviewView: ExpoView {
     loadTask = Task { @MainActor [weak self] in
       do {
         let composition = try await LocalMedia.composition(source)
+        try Task.checkCancellation()
+        let preview = try await StackReelPreviewPlayer.prepare(composition: composition)
         guard let self, self.requestID == id, !Task.isCancelled else { return }
         self.loadTask = nil
-        let preview = try StackReelPreviewPlayer(composition: composition)
         preview.isLooping = self.looping
         preview.onPositionChange = { [weak self] time in
           guard let self, self.requestID == id else { return }

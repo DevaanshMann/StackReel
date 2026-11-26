@@ -1,10 +1,19 @@
 import Darwin
 import Foundation
 
-struct ExportCache: Sendable {
-  static let shared = ExportCache(
+public struct ExportCache: Sendable {
+  public static let shared = ExportCache(
     directory: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
       .appendingPathComponent("StackReelExports", isDirectory: true))
+
+  static let previews = ExportCache(
+    directory: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+      .appendingPathComponent("StackReelPreviews", isDirectory: true))
+
+  public static func prepareForLaunch() {
+    _ = shared
+    _ = previews
+  }
 
   private let directory: URL
   let cleanup: Task<Void, Never>
@@ -15,7 +24,7 @@ struct ExportCache: Sendable {
     cleanup = Task.detached(priority: .utility) { Self.removePreviousExports(in: directory) }
   }
 
-  func nextOutputURL() async throws -> URL {
+  public func nextOutputURL() async throws -> URL {
     await cleanup.value
     try Task.checkCancellation()
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

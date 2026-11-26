@@ -174,10 +174,15 @@ final class MP4ExportTests: XCTestCase {
   @MainActor
   private func writeWhiteMovie(to url: URL) async throws {
     let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+    #if os(iOS)
+      let codec = AVVideoCodecType.h264
+    #else
+      let codec = AVVideoCodecType.jpeg
+    #endif
     let input = AVAssetWriterInput(
       mediaType: .video,
       outputSettings: [
-        AVVideoCodecKey: AVVideoCodecType.jpeg, AVVideoWidthKey: 64, AVVideoHeightKey: 64,
+        AVVideoCodecKey: codec, AVVideoWidthKey: 64, AVVideoHeightKey: 64,
       ])
     let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input)
     writer.add(input)
