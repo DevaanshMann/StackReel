@@ -17,6 +17,7 @@ export function readSingleClipCaption(value: unknown): string | undefined {
 }
 
 export function singleClipCaptionLayer(text: string, canvas: PlanCanvas, endUs: number): TextLayer {
+  const scale = canvas.width / 720;
   return {
     id: "caption/0",
     trackId: "caption",
@@ -29,10 +30,10 @@ export function singleClipCaptionLayer(text: string, canvas: PlanCanvas, endUs: 
     text,
     style: {
       font: "Inter-Bold",
-      sizePx: 38,
+      sizePx: 38 * scale,
       align: "center",
       color: "#FFFFFF",
-      background: { color: "#000000BF", paddingPx: 20, cornerRadiusPx: 16 },
+      background: { color: "#000000BF", paddingPx: 20 * scale, cornerRadiusPx: 16 * scale },
     },
     placement: { anchor: "bottom", xPx: canvas.width / 2, yPx: canvas.height * 0.75, rotationDeg: 0 },
     animation: { in: "none", out: "none", inDurationUs: 0, outDurationUs: 0 },

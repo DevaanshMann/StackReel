@@ -22,7 +22,7 @@ import { TemplateTrim } from "./TemplateTrim";
 import { TemplateVolume, VolumeSheet } from "./TemplateVolume";
 import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas } from "./clip-source";
-import type { ClipFrameRange, SingleClipFit } from "./clip-source";
+import type { ClipFrameRange, SingleClipFit, SingleClipResolution } from "./clip-source";
 import { discardPickerCopy } from "./draft-files";
 import { getNamedDrafts, nextDraftName } from "./draft-names";
 import {
@@ -34,6 +34,7 @@ import {
   listSingleClipDraftIds,
   loadSingleClipDraft,
   setSingleClipCaption,
+  setSingleClipExportResolution,
   setSingleClipFit,
   setSingleClipReframe,
   setSingleClipVolume,
@@ -726,6 +727,17 @@ export default function App() {
     }
   }
 
+  function changeExportResolution(resolution: SingleClipResolution) {
+    const clip = singleDraft.clip;
+    if (!clip || clip.exportResolution === resolution || activeOperation.current || !isCurrentScreen()) return;
+    try {
+      publishSingleEdit(setSingleClipExportResolution(clip, resolution));
+      setFeedback(null);
+    } catch (cause) {
+      setFeedback({ kind: "error", message: errorMessage("Couldn’t save the export resolution.", cause) });
+    }
+  }
+
   async function selectSingleVideo(source: VideoPickerSource) {
     const operation: ImportOperation = { kind: "import", source };
     if (editor.kind !== "single" || singleDraft.loadError || !begin(operation)) return;
@@ -824,7 +836,9 @@ export default function App() {
     const job: ExportJob = { kind: "export", id: randomUUID(), cancelling: false };
     if (!begin(job)) return;
     try {
-      const { uri } = await exportMP4(source, job.id);
+      const clip = singleDraft.clip;
+      const exportSource = clip ? createSingleClipSource(clip, clip.exportResolution) : source;
+      const { uri } = await exportMP4(exportSource, job.id);
       if (isCurrentOperation(job)) {
         if (editor.kind === "template") {
           storeTemplateDraft(editor, { ...templateDraft, outputUri: uri });
@@ -994,7 +1008,7 @@ export default function App() {
           {templateDraft.name ?? template?.name ?? "Single-clip editor"}
         </Text>
         <Text style={textStyles.muted}>
-          {canvas.width} × {canvas.height} · {canvas.fps} fps
+          {template ? `${canvas.width} × ${canvas.height}` : "9:16"} · {canvas.fps} fps
         </Text>
         {singleProjectLabel && <Text style={textStyles.body}>{singleProjectLabel}</Text>}
         {clip && <Text style={textStyles.muted}>Original audio {clip.volumePercent}%</Text>}
@@ -1171,6 +1185,28 @@ export default function App() {
         />
       )}
       <View style={styles.actions}>
+        {clip && (
+          <View style={styles.details}>
+            <Text style={textStyles.body}>Export resolution</Text>
+            <View style={styles.buttonRow}>
+              {([720, 1080] as const).map((resolution) => {
+                const selected = clip.exportResolution === resolution;
+                return (
+                  <Action
+                    key={resolution}
+                    label={`${selected ? "✓ " : ""}${resolution}p`}
+                    accessibilityLabel={`${resolution}p export resolution`}
+                    testID={`single-export-${resolution}p`}
+                    selected={selected}
+                    primary={selected}
+                    disabled={busy}
+                    onPress={() => changeExportResolution(resolution)}
+                  />
+                );
+              })}
+            </View>
+          </View>
+        )}
         {feedback && feedback.slotId === undefined && feedback.scope === undefined && (
           <Text accessibilityRole="alert" style={feedback.kind === "error" ? textStyles.error : textStyles.muted}>
             {feedback.message}

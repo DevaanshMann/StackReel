@@ -8,9 +8,19 @@ export const canvas = { width: 720, height: 1280, fps: 30, background: "#000000"
 
 export type ClipMetadata = { width: number; height: number; startUs: number; durationUs: number };
 export type SingleClipFit = "contain" | "cover";
+export type SingleClipResolution = 720 | 1080;
+
+const exportCanvases: Record<SingleClipResolution, PlanCanvas> = {
+  720: canvas,
+  1080: { ...canvas, width: 1080, height: 1920 },
+};
 
 export function isSingleClipFit(value: unknown): value is SingleClipFit {
   return value === "contain" || value === "cover";
+}
+
+export function isSingleClipResolution(value: unknown): value is SingleClipResolution {
+  return value === 720 || value === 1080;
 }
 
 /** Absolute source frames at the output rate. The end frame is exclusive. */
@@ -60,8 +70,10 @@ export function createTrimmedClipSource(
   reframe?: ClipReframe,
   gainDb = 0,
   caption?: string,
+  resolution: SingleClipResolution = 720,
 ): string {
   if (!isSingleClipFit(fit)) throw new RangeError("Invalid single-clip fit.");
+  if (!isSingleClipResolution(resolution)) throw new RangeError("Invalid single-clip resolution.");
   const bounds = getClipFrameRange(media);
   const { startFrame, endFrame } = selection;
   if (
@@ -76,7 +88,7 @@ export function createTrimmedClipSource(
   const crop = reframe === undefined ? undefined : getClipCrop(media, canvas, reframe);
   // Centered cover already has its historical full-source rectangle and transform.
   const customCrop = fit === "cover" && crop && !sameCrop(crop, getClipCrop(media, canvas)) ? crop : undefined;
-  return buildClipSource(uri, media, selection, canvas, fit, gainDb, customCrop, caption);
+  return buildClipSource(uri, media, selection, exportCanvases[resolution], fit, gainDb, customCrop, caption);
 }
 
 function buildClipSource(

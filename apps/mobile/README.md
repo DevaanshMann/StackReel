@@ -83,8 +83,12 @@ Choose **Single-clip editor** from the gallery and pick a video from Photos or F
 it starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f** to adjust by one frame. Play the
 selection to check its picture and sound. **Apply trim** uses that selection for preview and export. To bring back
 footage, reopen **Trim clip** and extend the range, or tap **Reset trim** to select the full video.
-The MP4 uses a 720 × 1280 frame at 30 fps.
 [See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
+
+Under **Export resolution**, choose **720p** (720 × 1280) or **1080p** (1080 × 1920), then tap **Export MP4**.
+Both sizes use the same framing, caption, and sound at 30 fps. Drafts start at 720p and remember your choice
+when you reopen them or replace the video. After changing resolution, export again to save or share that size.
+[See the export resolution picker on iPhone](../../docs/ios-single-clip-export-resolution.png).
 
 Tap **Add caption**, enter up to 80 characters, then tap **Apply caption**. The caption wraps to fit and appears
 throughout the selected cut in preview and in the exported MP4. Use **Edit caption** to change it, or **Clear caption**
@@ -296,6 +300,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     draft appears. Start another draft and import a different video. Relaunch, reopen both filenames, and
     verify that the first kept its trim and mute and the second kept its full length and sound. Delete the
     second draft, relaunch, and export the first. Check the cut and audio in the MP4.
+31. Open a single-clip draft with a trim and caption. Export at **720p** and save to Photos. Tap **720p** again
+    and check that **Share MP4** is still available. Choose **1080p**, export again, and save the second MP4.
+    In Photos, swipe up on each video to check its dimensions. Compare the framing, caption, duration, and audio.
+    Relaunch StackReel, reopen the draft from **Projects**, and check that **1080p** is selected.
 
 ### Export display sleep on iPhone
 

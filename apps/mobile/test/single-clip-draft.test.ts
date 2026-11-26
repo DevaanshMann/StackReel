@@ -16,6 +16,7 @@ import {
   listSingleClipDraftIds,
   loadSingleClipDraft,
   setSingleClipCaption,
+  setSingleClipExportResolution,
   setSingleClipFit,
   setSingleClipReframe,
   setSingleClipVolume,
@@ -64,6 +65,42 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("single-clip draft storage", () => {
+  it("remembers export resolution per project while keeping the editor preview at 720p", async () => {
+    const id = createSingleClipDraftId();
+    const otherId = createSingleClipDraftId();
+    const clip = (await importVideo(external, () => true, id))!;
+    const other = (await importVideo(external, () => true, otherId))!;
+    const fullHD = setSingleClipExportResolution(clip, 1080);
+    expect(fullHD).toEqual({ ...clip, exportResolution: 1080 });
+    expect(loadSingleClipDraft(id)).toEqual(fullHD);
+    expect(loadSingleClipDraft(otherId)?.exportResolution).toBe(720);
+    expect(JSON.parse(createSingleClipSource(fullHD, fullHD.exportResolution)).plan.canvas).toMatchObject({
+      width: 1080,
+      height: 1920,
+    });
+    expect(JSON.parse(fullHD.source).plan.canvas).toMatchObject({ width: 720, height: 1280 });
+    const before = new Map(storage.files);
+    expect(setSingleClipExportResolution(fullHD, 1080)).toBe(fullHD);
+    expect(() => setSingleClipCaption(clip, "stale edit")).toThrow(/changed/);
+    expect(storage.files).toEqual(before);
+
+    const replacement = (await importVideo(external, () => true, id))!;
+    expect(replacement.exportResolution).toBe(1080);
+    expect(setSingleClipExportResolution(replacement, 720).exportResolution).toBe(720);
+    expect(loadSingleClipDraft(id)?.exportResolution).toBe(720);
+    expect(loadSingleClipDraft(otherId)).toEqual(other);
+  });
+
+  it("preserves an unreadable resolution for recovery", async () => {
+    const clip = (await importVideo())!;
+    const snapshot = manifest(clip);
+    const saved = { ...JSON.parse(snapshot.textSync()), exportResolution: 2160 };
+    snapshot.writeSync(JSON.stringify(saved));
+    const before = new Map(storage.files);
+    expect(() => loadSingleClipDraft()).toThrow(/invalid format/);
+    expect(storage.files).toEqual(before);
+  });
+
   it("renders the saved caption above the whole cut, including a one-frame trim audition", async () => {
     const original = (await importVideo())!;
     const text = "Look at the drummer 👩🏽‍🎤";
@@ -151,6 +188,7 @@ describe("single-clip draft storage", () => {
       selection: trimmed,
       fit: "contain",
       volumePercent: 100,
+      exportResolution: 720,
     });
     expect(saved.file).toMatch(/^[\da-f-]+\.mp4$/);
     expect(manifest(edited).textSync()).not.toContain("file://");
@@ -165,21 +203,28 @@ describe("single-clip draft storage", () => {
     expect(coldLoad()).toEqual({ ...edited, uri, source: createTrimmedClipSource(uri, media, trimmed) });
   });
 
-  it("opens a version 1 snapshot without framing or volume and writes the defaults on the next edit", async () => {
+  it("opens an older version 1 snapshot and writes its defaults on the next edit", async () => {
     const clip = (await importVideo())!;
     const snapshot = manifest(clip);
     const saved = JSON.parse(snapshot.textSync());
     delete saved.fit;
     delete saved.volumePercent;
+    delete saved.exportResolution;
     snapshot.writeSync(JSON.stringify(saved));
     const before = new Map(storage.files);
     const legacy = loadSingleClipDraft()!;
     expect(legacy).toEqual(clip);
     expect(setSingleClipFit(legacy, "contain")).toBe(legacy);
     expect(setSingleClipVolume(legacy, 100)).toBe(legacy);
+    expect(setSingleClipExportResolution(legacy, 720)).toBe(legacy);
     expect(storage.files).toEqual(before);
     const filled = setSingleClipFit(legacy, "cover");
-    expect(JSON.parse(manifest(filled).textSync())).toEqual({ ...saved, fit: "cover", volumePercent: 100 });
+    expect(JSON.parse(manifest(filled).textSync())).toEqual({
+      ...saved,
+      fit: "cover",
+      volumePercent: 100,
+      exportResolution: 720,
+    });
     expect(loadSingleClipDraft()).toEqual(filled);
   });
 
