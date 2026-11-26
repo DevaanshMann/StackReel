@@ -21,12 +21,41 @@ public final class StackReelPreviewPlayer {
   private var wantsPlayback = false
   private var pendingSeek: (id: UUID, target: CMTime)?
 
-  public init(composition: VideoComposition) throws {
+  private let renderedFile: URL?
+
+  /// Prepares a preview for display, including a private rendered movie on iOS 27.0 Simulator.
+  public static func prepare(composition: VideoComposition) async throws -> StackReelPreviewPlayer {
+    #if os(iOS) && targetEnvironment(simulator)
+      let version = ProcessInfo.processInfo.operatingSystemVersion
+      if version.majorVersion == 27 && version.minorVersion == 0 {
+        // This runtime accepts the composition until a display is attached, then fails with
+        // -12784 before requesting a frame, even with Apple's built-in compositor.
+        let file = try await ExportCache.previews.nextOutputURL()
+        // Keep the movie and video track clocks precise enough for a seek to the exact plan end.
+        // The timeline uses either microseconds or the canvas frame rate.
+        let scale = composition.timelineDuration.timescale
+        let movieTimeScale = scale * max(1, VideoCompositionBuilder.timescale / scale)
+        try await composition.writeMP4(to: file, movieTimeScale: movieTimeScale)
+        let preview = StackReelPreviewPlayer(
+          item: AVPlayerItem(url: file), duration: composition.timelineDuration, renderedFile: file)
+        try Task.checkCancellation()
+        return preview
+      }
+    #endif
+    return try StackReelPreviewPlayer(composition: composition)
+  }
+
+  public convenience init(composition: VideoComposition) throws {
     let render = try composition.makeRenderComposition()
-    duration = composition.timelineDuration
     let item = AVPlayerItem(asset: render.asset)
     item.videoComposition = render.videoComposition
     item.audioMix = composition.audioMix
+    self.init(item: item, duration: composition.timelineDuration, renderedFile: nil)
+  }
+
+  private init(item: AVPlayerItem, duration: CMTime, renderedFile: URL?) {
+    self.duration = duration
+    self.renderedFile = renderedFile
     item.forwardPlaybackEndTime = duration
     item.seekingWaitsForVideoCompositionRendering = true
     player = AVPlayer(playerItem: item)
@@ -61,6 +90,10 @@ public final class StackReelPreviewPlayer {
     }
     observers = Observers(
       player: player, position: position, notifications: [end, failure], status: status)
+  }
+
+  deinit {
+    if let renderedFile { try? FileManager.default.removeItem(at: renderedFile) }
   }
 
   /// Starts or resumes playback, rewinding first if the preview is at its end.
