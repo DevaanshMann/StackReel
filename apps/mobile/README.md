@@ -3,6 +3,7 @@
 StackReel opens to the iOS template gallery. **Before / After** takes two videos, and **Hook & Reveal** takes three.
 For a ranked list, open **Top 5 Countdown** and pick five videos in order, from number 5 to number 1. Tap **Edit text**
 to set the list title and name each pick. The template adds the rank numbers and ends the 25-second reel on your winner.
+[See the countdown in the iPhone preview](../../docs/ios-top-5-countdown.png).
 
 Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
 video. Use **Replace from Photos** or **Replace from Files** to choose a different video. The iOS Photos picker gives StackReel access
