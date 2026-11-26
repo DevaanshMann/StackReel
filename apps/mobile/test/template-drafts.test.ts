@@ -1470,6 +1470,35 @@ describe("ordered template video import", () => {
     expect(storage.files.get(restored.clips.clip2!.uri)).toBe("Acorn.mp4");
   });
 
+  it("reopens the five countdown picks in rank order with the edited title and names", async () => {
+    const countdown = mobileTemplates.find(({ id }) => id === "top-5-countdown")!;
+    const rankedNames = ["Ridge", "Cove", "Falls", "Dunes", "Peak"];
+    const editedText = Object.fromEntries(
+      ["Weekend hikes", ...rankedNames].map((value, index) => [`names/${index}`, value]),
+    );
+    const files = rankedNames.map((name) => `${name}.mov`);
+    pick(files);
+    await importTemplateVideos({
+      template: countdown,
+      draftId: firstDraftId,
+      slots: getVideoSlots(countdown),
+      source: "Photos",
+      isCurrent: () => true,
+      commit: (clips) => saveTemplateDraft(countdown, { clips, textOverrides: editedText, music: null }, firstDraftId),
+    });
+
+    expect(pickOrderedVideos).toHaveBeenCalledWith(5);
+    expect(listTemplateDraftIds(countdown)).toEqual([firstDraftId]);
+    const saved = loadTemplateDraft(countdown, firstDraftId)!;
+    expect(saved.textOverrides).toEqual(editedText);
+    expect(saved.missingSlots).toEqual([]);
+    const rankedFiles = ["item5", "item4", "item3", "item2", "item1"].map((slotId) =>
+      new File(saved.clips[slotId]!.uri).textSync(),
+    );
+    expect(rankedFiles).toEqual(files);
+    expect(createTemplateSource(countdown, saved.clips, saved.textOverrides, saved.music)).not.toBeNull();
+  });
+
   it("stages ordered videos in the selected draft and preserves its sibling's import", async () => {
     pick(["Original.mov", "Original B-roll.mp4"]);
     await run();

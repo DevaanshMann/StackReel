@@ -26,6 +26,7 @@ import type { MobileTemplate, TemplateClip, TemplateTextOverrides } from "../src
 
 const beforeAfter = mobileTemplates[0]!;
 const hookAndReveal = mobileTemplates[1]!;
+const countdown = mobileTemplates[2]!;
 const videoSize = { width: 1080, height: 1920 };
 
 function fillSlots(template: MobileTemplate): Record<string, TemplateClip> {
@@ -47,10 +48,11 @@ function parseSource(source: string | null): { plan: RenderPlan; assets: Record<
 }
 
 describe("mobile template catalog", () => {
-  it("exposes the two validated templates and includes transition tails in the video minimums", () => {
+  it("exposes the validated templates and includes transition tails in the video minimums", () => {
     expect(mobileTemplates.map(({ id, name, durationUs }) => ({ id, name, durationUs }))).toEqual([
       { id: "before-after", name: "Before / After", durationUs: 8_000_000 },
       { id: "hook-and-reveal", name: "Hook & Reveal", durationUs: 9_000_000 },
+      { id: "top-5-countdown", name: "Top 5 Countdown", durationUs: 25_000_000 },
     ]);
     expect(mobileTemplates.every((template) => validate(template).ok)).toBe(true);
     expect(getVideoSlots(beforeAfter)).toEqual([
@@ -61,6 +63,13 @@ describe("mobile template catalog", () => {
       { id: "clip1", label: "Your hook shot", minDurationUs: 3_266_667 },
       { id: "clip2", label: "B-roll", minDurationUs: 2_200_000 },
       { id: "clip3", label: "The reveal", minDurationUs: 4_000_000 },
+    ]);
+    expect(getVideoSlots(countdown)).toEqual([
+      { id: "item5", label: "Number 5", minDurationUs: 5_300_000 },
+      { id: "item4", label: "Number 4", minDurationUs: 4_800_000 },
+      { id: "item3", label: "Number 3", minDurationUs: 4_800_000 },
+      { id: "item2", label: "Number 2", minDurationUs: 4_766_667 },
+      { id: "item1", label: "Number 1", minDurationUs: 6_500_000 },
     ]);
   });
 });
@@ -247,6 +256,14 @@ describe("template text editing", () => {
     expect(getTemplateTextFields(hookAndReveal)).toEqual([
       { id: "text/0", label: "Hook text", defaultText: "Wait for it…", maxChars: 40 },
     ]);
+    expect(getTemplateTextFields(countdown)).toEqual([
+      { id: "names/0", label: "List title", defaultText: "Top 5 places in Portugal", maxChars: 36 },
+      { id: "names/1", label: "Name of number 5", defaultText: "Sintra", maxChars: 24 },
+      { id: "names/2", label: "Name of number 4", defaultText: "Porto", maxChars: 24 },
+      { id: "names/3", label: "Name of number 3", defaultText: "Lagos", maxChars: 24 },
+      { id: "names/4", label: "Name of number 2", defaultText: "Évora", maxChars: 24 },
+      { id: "names/5", label: "Name of number 1", defaultText: "Madeira", maxChars: 24 },
+    ]);
   });
 
   it.each(mobileTemplates)("changes only the text of each targeted item in $name", (template) => {
@@ -428,6 +445,57 @@ describe("createTemplateSource", () => {
       },
     ]);
     expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
+  it("resolves the five ranked clips, fixed numbers and four leftward slides for Top 5 Countdown", () => {
+    const { plan, assets } = parseSource(createTemplateSource(countdown, fillSlots(countdown)));
+    expect(plan).toMatchObject({ templateId: "top-5-countdown", durationUs: 25_000_000, warnings: [] });
+    const ranks = ["5", "4", "3", "2", "1"];
+    const videos = plan.layers.filter((layer) => layer.kind === "video");
+    expect(videos.map(({ source }) => assets[source.assetUri])).toEqual(
+      ranks.map((rank) => `file:///item${rank}/sample%20clip.mov`),
+    );
+    expect(
+      plan.layers.flatMap((layer) => (layer.kind === "text" && layer.trackId === "numbers" ? [layer.text] : [])),
+    ).toEqual(ranks);
+    const overlaps = [
+      [5_000_000, 5_300_000],
+      [9_500_000, 9_800_000],
+      [14_000_000, 14_300_000],
+      [18_500_000, 18_766_667],
+    ];
+    expect(plan.transitions).toMatchObject(
+      overlaps.map(([startUs, endUs], i) => ({
+        type: "slide",
+        direction: "left",
+        startUs,
+        endUs,
+        fromLayerId: videos[i]!.id,
+        toLayerId: videos[i + 1]!.id,
+      })),
+    );
+    expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
+  it("wraps long countdown names within the frame and below the rank numerals", () => {
+    const longName = "GRAND CANYON OVERLOOK";
+    const overrides = Object.fromEntries([1, 2, 3, 4, 5].map((i) => [`names/${i}`, longName]));
+    const { plan } = parseSource(createTemplateSource(countdown, fillSlots(countdown), overrides));
+    const names = plan.layers.filter((layer) => layer.kind === "text").filter((layer) => layer.text === longName);
+    expect(names).toHaveLength(5);
+    for (const { style, placement } of names) {
+      // At 76 px the bundled Inter ExtraBold measures this name at 1,079 px on one line.
+      // The 280 px Inter Black rank centered at y=960 extends to y=1,135 including its stroke.
+      const padding = style.background?.paddingPx ?? 0;
+      const wrapWidth = plan.canvas.width - 2 * padding;
+      const right = placement.xPx - padding;
+      const stroke = style.stroke?.widthPx ?? 0;
+      expect(placement.anchor).toBe("top-right");
+      expect(wrapWidth).toBeLessThan(1_079);
+      expect(right - wrapWidth - stroke).toBeGreaterThan(0);
+      expect(right + stroke).toBeLessThan(plan.canvas.width);
+      expect(placement.yPx + padding - stroke).toBeGreaterThan(1_135);
+    }
   });
 
   it.each(mobileTemplates)("uses the full video and audio edit at the minimum lengths for $name", (template) => {
@@ -773,6 +841,23 @@ describe("template clip boundaries", () => {
   const hookSlot = getVideoSlots(hookAndReveal)[0]!;
   const uri = "file:///hook.mov";
   const longVideo = { ...videoSize, startUs: 50_000, durationUs: 5_994_000 };
+
+  it("requires all 143 playable frames of Number 2 through the slide into Number 1", () => {
+    const slot = getVideoSlots(countdown).find(({ id }) => id === "item2")!;
+    const importClip = (durationUs: number) =>
+      createTemplateClip(slot, uri, "runner-up.mov", { ...videoSize, startUs: 50_000, durationUs });
+    // The leading half frame is unplayable. The last required frame ends at 4,833,333 µs.
+    expect(() => importClip(4_783_332)).toThrow("Number 2");
+    const item2 = importClip(4_783_333);
+    const { plan } = parseSource(createTemplateSource(countdown, { ...fillSlots(countdown), item2 }));
+    const edit = {
+      startUs: 14_000_000,
+      endUs: 18_766_667,
+      source: { sourceStartUs: 66_667, sourceEndUs: 4_833_333, rate: 4_766_666 / 4_766_667, fitMode: "trim" },
+    };
+    expect(plan.layers.find((layer) => layer.id === "main/3")).toMatchObject(edit);
+    expect(plan.audio.find((entry) => entry.id === "main/3")).toMatchObject(edit);
+  });
 
   it("retains the probe bounds and selects the earliest whole-frame window on import", () => {
     const clip = createTemplateClip(hookSlot, uri, "hook.mov", longVideo);
