@@ -83,8 +83,11 @@ Choose **Single-clip editor** from the gallery and pick a video from Photos or F
 it starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f** to adjust by one frame. Play the
 selection to check its picture and sound. **Apply trim** uses that selection for preview and export. To bring back
 footage, reopen **Trim clip** and extend the range, or tap **Reset trim** to select the full video.
-The MP4 uses a 720 × 1280 frame at 30 fps.
 [See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
+
+Under **Export resolution**, choose **720p** (720 × 1280) or **1080p** (1080 × 1920), then tap **Export MP4**.
+Both sizes use the same framing, caption, and sound at 30 fps. Drafts start at 720p and remember your choice
+when you reopen them or replace the video. After changing resolution, export again to save or share that size.
 
 Tap **Add caption**, enter up to 80 characters, then tap **Apply caption**. The caption wraps to fit and appears
 throughout the selected cut in preview and in the exported MP4. Use **Edit caption** to change it, or **Clear caption**

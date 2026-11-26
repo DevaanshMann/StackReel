@@ -1,8 +1,13 @@
 import type { RenderPlan } from "@stackreel/core";
 import { describe, expect, it } from "vitest";
 import { defaultClipReframe } from "../src/clip-reframe";
-import { createClipSource, createTrimmedClipSource, getClipFrameRange } from "../src/clip-source";
-import type { SingleClipFit } from "../src/clip-source";
+import {
+  createClipSource,
+  createTrimmedClipSource,
+  getClipFrameRange,
+  isSingleClipResolution,
+} from "../src/clip-source";
+import type { SingleClipFit, SingleClipResolution } from "../src/clip-source";
 
 const uri = "file:///video%20clip.mov";
 const landscapeVideo = { width: 1920, height: 1080, startUs: 0, durationUs: 2_014_000 };
@@ -188,5 +193,73 @@ describe("single-clip trim", () => {
   ])("rejects invalid source frame boundaries %s and %s", (startFrame, endFrame) => {
     const media = { ...landscapeVideo, startUs: 20_000, durationUs: 89_000 };
     expect(() => createTrimmedClipSource(uri, media, { startFrame, endFrame })).toThrow(RangeError);
+  });
+});
+
+describe("single-clip export resolution", () => {
+  it("fits the original footage at 1080p and scales the caption with the picture", () => {
+    const media = { ...landscapeVideo, width: 3840, height: 2160 };
+    const selection = { startFrame: 2, endFrame: 32 };
+    const caption = "The boat passes the lighthouse and turns back toward the shore.";
+    const source = (resolution?: SingleClipResolution) =>
+      createTrimmedClipSource(uri, media, selection, "contain", undefined, -6, caption, resolution);
+    expect(source(720)).toBe(source());
+    const preview = parseSource(source());
+    const hd = parseSource(source(1080));
+
+    expect(hd.assets).toEqual({ clip: uri });
+    expect(hd.plan.canvas).toEqual({ width: 1080, height: 1920, fps: 30, background: "#000000" });
+    expect(hd.plan.durationUs).toBe(1_000_000);
+    expect(hd.plan.audio).toEqual(preview.plan.audio);
+    expect(hd.plan.layers[0]).toEqual({
+      ...preview.plan.layers[0],
+      sourceSize: { width: 3840, height: 2160 },
+      cropPx: { x: 0, y: 0, width: 3840, height: 2160 },
+      transform: [0.28125, 0, 0, 0, 0.28125, 656.25, 0, 0, 1],
+    });
+    expect(hd.plan.layers[1]).toMatchObject({
+      kind: "text",
+      text: caption,
+      startUs: 0,
+      endUs: hd.plan.durationUs,
+      style: {
+        sizePx: 57,
+        background: { color: "#000000BF", paddingPx: 30, cornerRadiusPx: 24 },
+      },
+      placement: { anchor: "bottom", xPx: 540, yPx: 1440, rotationDeg: 0 },
+    });
+  });
+
+  it("maps the same off-center Fill crop to the full 1080p frame", () => {
+    const media = { width: 1440, height: 1280, startUs: 20_000, durationUs: 55_000 };
+    const selection = getClipFrameRange(media);
+    const reframe = { zoom: 2, x: 1, y: 1 };
+    const preview = parseSource(createTrimmedClipSource(uri, media, selection, "cover", reframe));
+    const hd = parseSource(createTrimmedClipSource(uri, media, selection, "cover", reframe, 0, undefined, 1080));
+    expect(hd.plan.layers).toEqual([
+      {
+        ...preview.plan.layers[0],
+        cropPx: { x: 1080, y: 640, width: 360, height: 640 },
+        transform: [3, 0, -3240, 0, 3, -1920, 0, 0, 1],
+      },
+    ]);
+    expect(hd.plan.durationUs).toBe(33_333);
+    expect(hd.plan.audio).toEqual(preview.plan.audio);
+  });
+
+  it.each([540, 2160, "1080", null])("rejects unsupported resolution %s", (value) => {
+    expect(isSingleClipResolution(value)).toBe(false);
+    expect(() =>
+      createTrimmedClipSource(
+        uri,
+        landscapeVideo,
+        getClipFrameRange(landscapeVideo),
+        "contain",
+        undefined,
+        0,
+        undefined,
+        value as SingleClipResolution,
+      ),
+    ).toThrow(RangeError);
   });
 });

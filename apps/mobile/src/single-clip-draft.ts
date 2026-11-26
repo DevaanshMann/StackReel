@@ -2,8 +2,14 @@ import { randomUUID } from "expo-crypto";
 import { Directory, File, FileMode, Paths } from "expo-file-system";
 import { normalizeClipReframe } from "./clip-reframe";
 import type { ClipReframe } from "./clip-reframe";
-import { canvas, createTrimmedClipSource, getClipFrameRange, isSingleClipFit } from "./clip-source";
-import type { ClipFrameRange, ClipMetadata, SingleClipFit } from "./clip-source";
+import {
+  canvas,
+  createTrimmedClipSource,
+  getClipFrameRange,
+  isSingleClipFit,
+  isSingleClipResolution,
+} from "./clip-source";
+import type { ClipFrameRange, ClipMetadata, SingleClipFit, SingleClipResolution } from "./clip-source";
 import {
   allocateDraftMedia,
   commitDraftManifest,
@@ -28,26 +34,46 @@ export type SingleClip = {
   reframe?: ClipReframe | undefined;
   volumePercent: number;
   caption?: string | undefined;
+  exportResolution: SingleClipResolution;
   source: string;
 };
-type SingleClipEdits = Pick<SingleClip, "selection" | "fit" | "reframe" | "volumePercent" | "caption">;
+type SingleClipEdits = Pick<
+  SingleClip,
+  "selection" | "fit" | "reframe" | "volumePercent" | "caption" | "exportResolution"
+>;
 type Manifest = SingleClipEdits & Pick<SingleClip, "name" | "media"> & { version: 1; file: string; bytes: number };
-type ReadableManifest = Omit<Manifest, "fit" | "volumePercent"> & { fit?: unknown; volumePercent?: number };
+type ReadableManifest = Omit<Manifest, "fit" | "volumePercent" | "exportResolution"> & {
+  fit?: unknown;
+  volumePercent?: number;
+  exportResolution?: unknown;
+};
 export const legacySingleClipDraftId = "legacy";
 const draftUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 type StagedImport = { cancelled: boolean };
 const stagedMedia = new Map<string, Map<string, StagedImport>>();
 
-export function createSingleClipSource({
-  uri,
-  media,
-  selection,
-  fit,
-  reframe,
-  volumePercent,
-  caption,
-}: Omit<SingleClip, "draftId" | "source" | "name">) {
-  return createTrimmedClipSource(uri, media, selection, fit, reframe, getVolumeGainDb(volumePercent), caption);
+export function createSingleClipSource(
+  {
+    uri,
+    media,
+    selection,
+    fit,
+    reframe,
+    volumePercent,
+    caption,
+  }: Omit<SingleClip, "draftId" | "source" | "name" | "exportResolution">,
+  resolution: SingleClipResolution = 720,
+) {
+  return createTrimmedClipSource(
+    uri,
+    media,
+    selection,
+    fit,
+    reframe,
+    getVolumeGainDb(volumePercent),
+    caption,
+    resolution,
+  );
 }
 
 function projectsDirectory() {
@@ -125,13 +151,14 @@ function readSnapshot(directory: Directory, draftId: string) {
     !saved.media ||
     !saved.selection ||
     (saved.fit !== undefined && !isSingleClipFit(saved.fit)) ||
+    (saved.exportResolution !== undefined && !isSingleClipResolution(saved.exportResolution)) ||
     (saved.reframe !== undefined && (saved.reframe === null || typeof saved.reframe !== "object"))
   ) {
     throw new Error("The saved single-clip draft has an invalid format.");
   }
   const file = new File(directory, saved.file);
   if (!file.exists || readableSize(file) !== saved.bytes) throw new Error("The saved video is missing or damaged.");
-  const { name, media, selection, fit = "contain", volumePercent = 100 } = saved;
+  const { name, media, selection, fit = "contain", volumePercent = 100, exportResolution = 720 } = saved;
   const caption = readSingleClipCaption(saved.caption);
   const reframe = saved.reframe === undefined ? undefined : normalizeClipReframe(media, canvas, saved.reframe);
   const edits = {
@@ -142,6 +169,7 @@ function readSnapshot(directory: Directory, draftId: string) {
     ...(reframe && { reframe }),
     ...(caption && { caption }),
     volumePercent,
+    exportResolution,
     uri: file.uri,
   };
   return { snapshot, saved, clip: { ...edits, draftId, source: createSingleClipSource(edits) } };
@@ -208,10 +236,11 @@ export async function importSingleClipDraft(
     else await file.copy(target);
     if (staged.cancelled || !isCurrent()) return null;
     if (readableSize(target) !== bytes) throw new Error("The imported video is incomplete.");
-    const edits = { name: asset.name, media, selection, fit: "contain", volumePercent: 100 } as const;
+    const current = readSnapshot(directory, draftId);
+    const exportResolution = current?.clip.exportResolution ?? 720;
+    const edits = { name: asset.name, media, selection, fit: "contain", volumePercent: 100, exportResolution } as const;
     const imported = { ...edits, uri: target.uri };
     const clip = { ...imported, draftId, source: createSingleClipSource(imported) };
-    const current = readSnapshot(directory, draftId);
     publish(directory, current?.snapshot.revision ?? 0, { version: 1, file: target.name, bytes, ...edits });
     committed = true;
     return clip;
@@ -247,6 +276,11 @@ export function setSingleClipCaption(clip: SingleClip, value: string): SingleCli
   return saveSingleClipEdits(clip, { caption: readSingleClipCaption(value) });
 }
 
+export function setSingleClipExportResolution(clip: SingleClip, exportResolution: SingleClipResolution): SingleClip {
+  if (!isSingleClipResolution(exportResolution)) throw new RangeError("Choose 720p or 1080p.");
+  return saveSingleClipEdits(clip, { exportResolution });
+}
+
 function sameReframe(a: ClipReframe | undefined, b: ClipReframe | undefined) {
   return a?.zoom === b?.zoom && a?.x === b?.x && a?.y === b?.y;
 }
@@ -259,21 +293,30 @@ function saveSingleClipEdits(clip: SingleClip, changes: Partial<SingleClipEdits>
   if (
     !current ||
     current.clip.source !== clip.source ||
+    current.clip.exportResolution !== clip.exportResolution ||
     current.clip.volumePercent !== clip.volumePercent ||
     !sameReframe(current.clip.reframe, clip.reframe)
   )
     throw new Error("The saved draft changed. Reopen it before editing.");
   const updated = { ...current.clip, ...changes };
-  const { selection, fit, reframe, volumePercent, caption } = updated;
+  const { selection, fit, reframe, volumePercent, caption, exportResolution } = updated;
   const source = createSingleClipSource(updated);
   if (
     source === clip.source &&
+    exportResolution === clip.exportResolution &&
     volumePercent === clip.volumePercent &&
     (fit === "cover" || sameReframe(clip.reframe, reframe))
   )
     return clip;
 
-  const edits = { selection, fit, volumePercent, ...(reframe && { reframe }), ...(caption && { caption }) };
+  const edits = {
+    selection,
+    fit,
+    volumePercent,
+    exportResolution,
+    ...(reframe && { reframe }),
+    ...(caption && { caption }),
+  };
   const { reframe: _oldReframe, caption: _oldCaption, ...previous } = current.clip;
   const { reframe: _savedReframe, caption: _savedCaption, ...saved } = current.saved;
   publish(directory, current.snapshot.revision, { ...saved, ...edits });
