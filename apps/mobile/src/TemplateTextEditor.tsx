@@ -1,6 +1,7 @@
-import { darkColors, radius, space } from "@stackreel/ui";
-import { useEffect, useState } from "react";
-import { AccessibilityInfo, Modal, StyleSheet, Text, TextInput, View } from "react-native";
+import { space } from "@stackreel/ui";
+import { useState } from "react";
+import { AccessibilityInfo, Modal, StyleSheet, Text, View } from "react-native";
+import { CaptionField } from "./CaptionField";
 import { errorMessage } from "./ClipPreview";
 import { Action, Screen, textStyles } from "./Screen";
 import { applyTemplateTextEdits } from "./template-editor";
@@ -45,9 +46,12 @@ export function TemplateTextEditor({
       <Screen title="Edit text" adjustForKeyboard>
         <Text style={textStyles.muted}>Clear a field to hide its text on the video.</Text>
         {inputs.map(({ field, value, count, overLimit }) => (
-          <TextField
+          <CaptionField
             key={field.id}
-            field={field}
+            testID={`template-text-${field.id}`}
+            label={field.label}
+            defaultText={field.defaultText}
+            maxChars={field.maxChars}
             value={value}
             count={count}
             overLimit={overLimit}
@@ -78,62 +82,6 @@ export function TemplateTextEditor({
   );
 }
 
-function TextField({
-  field: { id, label, defaultText, maxChars },
-  value,
-  count,
-  overLimit,
-  onChange,
-}: {
-  field: TemplateTextField;
-  value: string;
-  count: number;
-  overLimit: boolean;
-  onChange: (value: string) => void;
-}) {
-  useEffect(() => {
-    if (overLimit) AccessibilityInfo.announceForAccessibility(`${label} has a limit of ${maxChars} characters.`);
-  }, [label, maxChars, overLimit]);
-
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        accessibilityHint={maxChars === undefined ? undefined : `Up to ${maxChars} characters`}
-        testID={`template-text-${id}`}
-        value={value}
-        onChangeText={onChange}
-        placeholder="Hidden"
-        placeholderTextColor={darkColors.textMuted}
-        keyboardAppearance="dark"
-        multiline
-        style={[styles.input, overLimit && styles.invalid]}
-      />
-      {maxChars !== undefined && (
-        <Text style={overLimit ? textStyles.error : textStyles.muted}>
-          {count} / {maxChars} characters{overLimit ? " · limit exceeded" : ""}
-        </Text>
-      )}
-      <Text style={textStyles.muted}>{defaultText ? `Default “${defaultText}”` : "Default is blank"}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  field: { gap: space[1] },
-  label: { ...textStyles.body, fontWeight: "600" },
-  input: {
-    ...textStyles.body,
-    backgroundColor: darkColors.surface,
-    borderColor: darkColors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    minHeight: 48,
-    maxHeight: 120,
-    paddingHorizontal: space[3],
-    paddingVertical: space[2],
-  },
-  invalid: { borderColor: darkColors.danger },
   actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: space[2] },
 });

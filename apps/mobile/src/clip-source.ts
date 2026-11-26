@@ -2,6 +2,7 @@ import { RENDER_PLAN_VERSION, cropRect, fitMatrix, frameToUs, usToFrame } from "
 import type { AudioEntry, Crop, PlanCanvas, RenderPlan, SourceTiming, VideoLayer } from "@stackreel/core";
 import { getClipCrop, sameCrop } from "./clip-reframe";
 import type { ClipReframe } from "./clip-reframe";
+import { singleClipCaptionLayer } from "./single-clip-caption";
 
 export const canvas = { width: 720, height: 1280, fps: 30, background: "#000000" } satisfies PlanCanvas;
 
@@ -58,6 +59,7 @@ export function createTrimmedClipSource(
   fit: SingleClipFit = "contain",
   reframe?: ClipReframe,
   gainDb = 0,
+  caption?: string,
 ): string {
   if (!isSingleClipFit(fit)) throw new RangeError("Invalid single-clip fit.");
   const bounds = getClipFrameRange(media);
@@ -74,7 +76,7 @@ export function createTrimmedClipSource(
   const crop = reframe === undefined ? undefined : getClipCrop(media, canvas, reframe);
   // Centered cover already has its historical full-source rectangle and transform.
   const customCrop = fit === "cover" && crop && !sameCrop(crop, getClipCrop(media, canvas)) ? crop : undefined;
-  return buildClipSource(uri, media, selection, canvas, fit, gainDb, customCrop);
+  return buildClipSource(uri, media, selection, canvas, fit, gainDb, customCrop, caption);
 }
 
 function buildClipSource(
@@ -85,6 +87,7 @@ function buildClipSource(
   fit: VideoLayer["fit"],
   gainDb: number,
   crop?: Crop,
+  caption?: string,
 ): string {
   if (!Number.isFinite(gainDb) || gainDb < -60 || gainDb > 12) {
     throw new RangeError("Clip gain must be between -60 and 12 dB.");
@@ -132,7 +135,7 @@ function buildClipSource(
     templateId: "single-clip",
     canvas: targetCanvas,
     durationUs: timelineEndUs,
-    layers: [layer],
+    layers: caption ? [layer, singleClipCaptionLayer(caption, targetCanvas, timelineEndUs)] : [layer],
     transitions: [],
     audio: [clip],
     warnings: [],
