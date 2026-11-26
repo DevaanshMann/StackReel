@@ -1,6 +1,9 @@
 # StackReel mobile
 
 StackReel opens to the iOS template gallery. **Before / After** takes two videos, and **Hook & Reveal** takes three.
+For a ranked list, open **Top 5 Countdown** and pick five videos in order, from number 5 to number 1. Tap **Edit text**
+to set the list title and name each pick. The template adds the rank numbers and ends the 25-second reel on your winner.
+
 Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
 video. Use **Replace from Photos** or **Replace from Files** to choose a different video. The iOS Photos picker gives StackReel access
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
@@ -304,6 +307,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
     and check that **Share MP4** is still available. Choose **1080p**, export again, and save the second MP4.
     In Photos, swipe up on each video to check its dimensions. Compare the framing, caption, duration, and audio.
     Relaunch StackReel, reopen the draft from **Projects**, and check that **1080p** is selected.
+32. Open **Top 5 Countdown** and use **Choose videos from Photos** to pick five different videos of at least seven
+    seconds each, starting with fifth place. Change the list title and all five names in **Edit text**. Reopen the
+    draft from **Projects**, preview it, and export. Play the saved MP4 and check the title, each clip against its
+    rank and name, and the winner at the end of the 25-second reel.
 
 ### Export display sleep on iPhone
 

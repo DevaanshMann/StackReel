@@ -7,7 +7,7 @@
 A free, open-source, on-device editor for vertical video (Reels, TikTok, YouTube Shorts).
 Pick a template, drop in your clips, and export. StackReel edits and renders your reel on your device.
 
-**Available on iOS as a development build.** Open **Before / After** or **Hook & Reveal**, add videos from Photos or Files,
+**Available on iOS as a development build.** Choose **Before / After**, **Hook & Reveal**, or **Top 5 Countdown**. Add videos from Photos or Files,
 trim and reframe clips, and edit the template text. You can resume a saved draft, preview the reel, and export an H.264 MP4
 to share or save to Photos. Android, web, and desktop editors are planned.
 
