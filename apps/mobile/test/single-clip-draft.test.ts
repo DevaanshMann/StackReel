@@ -6,6 +6,7 @@ import { defaultClipReframe } from "../src/clip-reframe";
 import { createTrimmedClipSource } from "../src/clip-source";
 import type { SingleClipFit } from "../src/clip-source";
 import { discardPickerCopy } from "../src/draft-files";
+import { captionLimit } from "../src/single-clip-caption";
 import {
   createSingleClipDraftId,
   createSingleClipSource,
@@ -14,6 +15,7 @@ import {
   legacySingleClipDraftId,
   listSingleClipDraftIds,
   loadSingleClipDraft,
+  setSingleClipCaption,
   setSingleClipFit,
   setSingleClipReframe,
   setSingleClipVolume,
@@ -62,6 +64,77 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("single-clip draft storage", () => {
+  it("renders the saved caption above the whole cut, including a one-frame trim audition", async () => {
+    const original = (await importVideo())!;
+    const text = "Look at the drummer 👩🏽‍🎤";
+    const captioned = setSingleClipCaption(original, text);
+    const { plan, assets } = JSON.parse(captioned.source);
+    const baseline = JSON.parse(original.source);
+    expect(assets).toEqual(baseline.assets);
+    expect(plan).toEqual({
+      ...baseline.plan,
+      layers: [
+        baseline.plan.layers[0],
+        expect.objectContaining({
+          kind: "text",
+          text,
+          z: 1,
+          startUs: 0,
+          endUs: plan.durationUs,
+          placement: expect.objectContaining({ anchor: "bottom", xPx: plan.canvas.width / 2 }),
+        }),
+      ],
+    });
+    const selection = { startFrame: 60, endFrame: 61 };
+    const audition = createSingleClipSource({ ...captioned, selection });
+    const cut = trimSingleClipDraft(captioned, selection);
+    expect(cut.source).toBe(audition);
+    const filled = setSingleClipFit(cut, "cover");
+    const reframed = setSingleClipReframe(filled, { zoom: 2, x: 1, y: 0 });
+    const muted = setSingleClipVolume(reframed, 0);
+    for (const clip of [cut, filled, reframed, muted, loadSingleClipDraft()!]) {
+      const edited: RenderPlan = JSON.parse(clip.source).plan;
+      expect(clip.caption).toBe(text);
+      expect(edited.durationUs).toBe(33_333);
+      expect(edited.layers[1]).toEqual({ ...plan.layers[1], endUs: edited.durationUs });
+    }
+  });
+
+  it("preserves the export for equivalent captions and changes the source only when wording changes", async () => {
+    const id = createSingleClipDraftId();
+    const untouchedId = createSingleClipDraftId();
+    const original = (await importVideo(external, () => true, id))!;
+    const untouched = (await importVideo(external, () => true, untouchedId))!;
+    const captioned = setSingleClipCaption(original, "My first cut");
+    expect(loadSingleClipDraft(id)).toEqual(captioned);
+    const before = new Map(storage.files);
+    // publishSingleEdit retains the cached MP4 when an applied setting returns the current clip.
+    expect(setSingleClipCaption(captioned, "  My\nfirst cut  ")).toBe(captioned);
+    expect(() => setSingleClipCaption(original, "stale")).toThrow(/changed/);
+    expect(storage.files).toEqual(before);
+    const changed = setSingleClipCaption(captioned, "My second cut");
+    expect(changed.source).not.toBe(captioned.source);
+    const cleared = setSingleClipCaption(changed, " \n ");
+    expect(cleared.source).toBe(original.source);
+    expect(JSON.parse(manifest(cleared).textSync())).not.toHaveProperty("caption");
+    expect(loadSingleClipDraft(id)).toEqual(original);
+    expect(setSingleClipCaption(cleared, "")).toBe(cleared);
+    expect(loadSingleClipDraft(untouchedId)).toEqual(untouched);
+  });
+
+  it("wraps pasted captions as one paragraph and counts astral emoji without splitting them", async () => {
+    const clip = (await importVideo())!;
+    const prefix = "🎬".repeat(captionLimit - 2);
+    const captioned = setSingleClipCaption(clip, `${prefix}\n\r\u0085\u2028\u2029   🎉`);
+    const text = `${prefix} 🎉`;
+    expect(captioned.caption).toBe(text);
+    expect(JSON.parse(captioned.source).plan.layers[1].text).toBe(text);
+    expect(loadSingleClipDraft()).toEqual(captioned);
+    const before = new Map(storage.files);
+    expect(() => setSingleClipCaption(captioned, text + "🎉")).toThrow(/80 characters/);
+    expect(storage.files).toEqual(before);
+  });
+
   it("reopens the trim in a fresh module after the documents container moves", async () => {
     expect(loadSingleClipDraft()).toBeNull();
     const clip = (await importVideo())!;
@@ -253,17 +326,18 @@ describe("single-clip draft storage", () => {
     },
   );
 
-  it("starts a replacement video in Fit at full volume with its full trim range", async () => {
+  it("starts a replacement video in Fit at full volume with its full trim range and no caption", async () => {
     const clip = (await importVideo())!;
     const previous = setSingleClipReframe(setSingleClipFit(trimSingleClipDraft(clip, trimmed), "cover"), {
       zoom: 2,
       x: 1,
       y: 0,
     });
-    setSingleClipVolume(previous, 0);
+    setSingleClipCaption(setSingleClipVolume(previous, 0), "Concert opener");
     const next = (await importVideo())!;
     expect(next).toMatchObject({ fit: "contain", selection: clip.selection, volumePercent: 100 });
     expect(next).not.toHaveProperty("reframe");
+    expect(next).not.toHaveProperty("caption");
     expect(loadSingleClipDraft()).toEqual(next);
     expect(new File(previous.uri).exists).toBe(false);
   });

@@ -86,6 +86,12 @@ footage, reopen **Trim clip** and extend the range, or tap **Reset trim** to sel
 The MP4 uses a 720 × 1280 frame at 30 fps.
 [See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
 
+Tap **Add caption**, enter up to 80 characters, then tap **Apply caption**. The caption wraps to fit and appears
+throughout the selected cut in preview and in the exported MP4. Use **Edit caption** to change it, or **Clear caption**
+and then **Apply caption** to remove it. The caption stays with the project when you trim or reframe. Export again
+after changing the caption. Canceling or applying the same wording keeps the previous MP4 available to share.
+[See a caption on a single clip on iPhone](../../docs/ios-single-clip-caption.png).
+
 Under **Framing**, choose **Fit** to show the whole picture or **Fill** to fill the vertical frame.
 Fill starts with a centered crop. Export again after changing the framing to save or share the result.
 [See Fill applied to a single clip on iPhone](../../docs/ios-single-clip-framing.png).
@@ -103,9 +109,9 @@ Canceling or applying the same level keeps your previous export available to sha
 
 To start a second single-clip reel, go to **Templates**, tap **New draft** on the **Single-clip editor** card, and
 choose a video. The new draft appears in **Projects** after import. Tap either filename to reopen that reel with
-its saved trim, framing, and volume. A single-clip draft saved by an earlier version also appears in **Projects**.
+its saved trim, framing, volume, and caption. A single-clip draft saved by an earlier version also appears in **Projects**.
 Use **Replace from Photos** or **Replace from Files** inside a draft to replace its video and start its cut in
-**Fit** at full volume. To remove one reel, open it, tap **Delete draft**, and confirm.
+**Fit** at full volume with an empty caption. To remove one reel, open it, tap **Delete draft**, and confirm.
 [See two single-clip reels in Projects on iPhone](../../docs/ios-single-clip-projects.png).
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.

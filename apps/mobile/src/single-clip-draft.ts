@@ -14,6 +14,7 @@ import {
   pendingName,
   snapshotName,
 } from "./draft-files";
+import { readSingleClipCaption } from "./single-clip-caption";
 import type { PickedVideo } from "./video-picker";
 import { getVolumeGainDb } from "./volume";
 
@@ -26,9 +27,10 @@ export type SingleClip = {
   fit: SingleClipFit;
   reframe?: ClipReframe | undefined;
   volumePercent: number;
+  caption?: string | undefined;
   source: string;
 };
-type SingleClipEdits = Pick<SingleClip, "selection" | "fit" | "reframe" | "volumePercent">;
+type SingleClipEdits = Pick<SingleClip, "selection" | "fit" | "reframe" | "volumePercent" | "caption">;
 type Manifest = SingleClipEdits & Pick<SingleClip, "name" | "media"> & { version: 1; file: string; bytes: number };
 type ReadableManifest = Omit<Manifest, "fit" | "volumePercent"> & { fit?: unknown; volumePercent?: number };
 export const legacySingleClipDraftId = "legacy";
@@ -43,8 +45,9 @@ export function createSingleClipSource({
   fit,
   reframe,
   volumePercent,
+  caption,
 }: Omit<SingleClip, "draftId" | "source" | "name">) {
-  return createTrimmedClipSource(uri, media, selection, fit, reframe, getVolumeGainDb(volumePercent));
+  return createTrimmedClipSource(uri, media, selection, fit, reframe, getVolumeGainDb(volumePercent), caption);
 }
 
 function projectsDirectory() {
@@ -129,6 +132,7 @@ function readSnapshot(directory: Directory, draftId: string) {
   const file = new File(directory, saved.file);
   if (!file.exists || readableSize(file) !== saved.bytes) throw new Error("The saved video is missing or damaged.");
   const { name, media, selection, fit = "contain", volumePercent = 100 } = saved;
+  const caption = readSingleClipCaption(saved.caption);
   const reframe = saved.reframe === undefined ? undefined : normalizeClipReframe(media, canvas, saved.reframe);
   const edits = {
     name,
@@ -136,6 +140,7 @@ function readSnapshot(directory: Directory, draftId: string) {
     selection,
     fit,
     ...(reframe && { reframe }),
+    ...(caption && { caption }),
     volumePercent,
     uri: file.uri,
   };
@@ -238,6 +243,10 @@ export function setSingleClipVolume(clip: SingleClip, volumePercent: number): Si
   return saveSingleClipEdits(clip, { volumePercent });
 }
 
+export function setSingleClipCaption(clip: SingleClip, value: string): SingleClip {
+  return saveSingleClipEdits(clip, { caption: readSingleClipCaption(value) });
+}
+
 function sameReframe(a: ClipReframe | undefined, b: ClipReframe | undefined) {
   return a?.zoom === b?.zoom && a?.x === b?.x && a?.y === b?.y;
 }
@@ -255,7 +264,7 @@ function saveSingleClipEdits(clip: SingleClip, changes: Partial<SingleClipEdits>
   )
     throw new Error("The saved draft changed. Reopen it before editing.");
   const updated = { ...current.clip, ...changes };
-  const { selection, fit, reframe, volumePercent } = updated;
+  const { selection, fit, reframe, volumePercent, caption } = updated;
   const source = createSingleClipSource(updated);
   if (
     source === clip.source &&
@@ -264,9 +273,9 @@ function saveSingleClipEdits(clip: SingleClip, changes: Partial<SingleClipEdits>
   )
     return clip;
 
-  const edits = { selection, fit, volumePercent, ...(reframe && { reframe }) };
-  const { reframe: _oldReframe, ...previous } = current.clip;
-  const { reframe: _savedReframe, ...saved } = current.saved;
+  const edits = { selection, fit, volumePercent, ...(reframe && { reframe }), ...(caption && { caption }) };
+  const { reframe: _oldReframe, caption: _oldCaption, ...previous } = current.clip;
+  const { reframe: _savedReframe, caption: _savedCaption, ...saved } = current.saved;
   publish(directory, current.snapshot.revision, { ...saved, ...edits });
   return { ...previous, ...edits, source };
 }

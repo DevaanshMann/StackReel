@@ -13,6 +13,7 @@ import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { ReframeSheet } from "./ReframeSheet";
 import { Action, Screen, textStyles } from "./Screen";
 import type { ScreenRef } from "./Screen";
+import { SingleClipCaptionEditor } from "./SingleClipCaptionEditor";
 import { SingleClipTrim } from "./SingleClipTrim";
 import { TemplateMusicControls } from "./TemplateMusicControls";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
@@ -32,6 +33,7 @@ import {
   legacySingleClipDraftId,
   listSingleClipDraftIds,
   loadSingleClipDraft,
+  setSingleClipCaption,
   setSingleClipFit,
   setSingleClipReframe,
   setSingleClipVolume,
@@ -115,7 +117,7 @@ type Operation =
   | { kind: "fullscreen" }
   | SlotEdit
   | SingleTrimEdit
-  | { kind: "single-reframe" | "single-volume"; clip: SingleClip }
+  | { kind: "single-reframe" | "single-volume" | "single-caption"; clip: SingleClip }
   | MusicVolumeEdit
   | SlotSwap
   | TextEdit
@@ -1085,6 +1087,12 @@ export default function App() {
                   onPress={() => begin({ kind: "single-volume", clip })}
                   disabled={busy}
                 />
+                <Action
+                  label={clip.caption ? "Edit caption" : "Add caption"}
+                  testID="single-caption-open"
+                  onPress={() => begin({ kind: "single-caption", clip })}
+                  disabled={busy}
+                />
               </View>
             ) : (
               <Action
@@ -1338,6 +1346,17 @@ export default function App() {
   return (
     <>
       {editorScreen}
+      {activity?.kind === "single-caption" && (
+        <SingleClipCaptionEditor
+          caption={activity.clip.caption}
+          onApply={(value) => {
+            if (!isCurrentOperation(activity)) return;
+            publishSingleEdit(setSingleClipCaption(activity.clip, value));
+            finish(activity);
+          }}
+          onCancel={() => finish(activity)}
+        />
+      )}
       {editingText && (
         <TemplateTextEditor
           fields={textFields}
