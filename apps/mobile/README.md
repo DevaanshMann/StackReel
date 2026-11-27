@@ -20,6 +20,7 @@ video. Use **Replace from Photos** or **Replace from Files** to choose a differe
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
 MP4. If a clip meets the minimum and ends before its slot does, the reel holds the last frame. The clip’s
 own audio ends with the footage. For example, five four-second clips fill the 25-second **Top 5 Countdown**.
+[See the winner’s source cut and held frame on iPhone](../../docs/ios-template-short-clips.jpg).
 
 Use **Undo** and **Redo** in an open template draft to compare cuts or recover a previous edit. You can step back
 through the last 20 edits, including trims, framing, captions, volume changes, swaps, and adding, replacing, or
