@@ -9,6 +9,11 @@ Tap **Watch example** on a template card to see its cuts, captions, and transiti
 The silent examples come with the app and play offline. Tap **Close example** to return to the gallery, then tap
 the template name to start or resume a reel. [See a gallery example on iPhone](../../docs/ios-gallery-example.jpg).
 
+To try an edit with footage already in place, tap **Edit sample reel** on the **Before / After** card. This opens
+**Balcony in bloom**, an eight-second project with two balcony shots. Change “Three pots, one summer” in **Edit text**,
+replace either video, or tap **Export MP4** to render the reel. The sample works offline without Photos access.
+Reopen it from **Projects** to continue editing. Tapping **Edit sample reel** again creates a separate copy.
+
 Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
 video. Use **Replace from Photos** or **Replace from Files** to choose a different video. The iOS Photos picker gives StackReel access
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264

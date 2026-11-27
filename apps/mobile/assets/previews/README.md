@@ -2,6 +2,10 @@
 
 The ten scenes are original illustrations created for this gallery and cleared for distribution with Stack Reel. Each shot uses camera motion, with local foliage or water movement where appropriate.
 
+The editable **Balcony in bloom** sample uses the same two balcony illustrations. The separate silent H.264 sources
+in `../samples/` run for six and seven seconds at 720×1280 and 30 fps, leaving room to move each trim window.
+The editor adds the labels, caption, and crossfade when it renders the reel.
+
 | Movie           | Source shots in slot order                                                | Editable captions                                                                                   |
 | --------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | Before / After  | An empty balcony, then the same balcony in bloom                          | BEFORE · AFTER · Three pots, one summer                                                             |
