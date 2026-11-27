@@ -21,12 +21,14 @@ import {
   createTemplateMusic,
   createTemplateSource,
   getEmptyVideoSlots,
+  getTemplateMusicStartRange,
   getTemplateTextFields,
   getVideoSlots,
   mobileTemplates,
   setTemplateClipReframe,
   setTemplateClipTrim,
   setTemplateClipVolume,
+  setTemplateMusicStart,
   setTemplateMusicVolume,
   setTemplateText,
   swapTemplateClips,
@@ -65,7 +67,7 @@ const metadata = { width: 1920, height: 1080, startUs: 0, durationUs: 9_000_000 
 const firstDraftId = "11111111-1111-4111-8111-111111111111";
 const secondDraftId = "22222222-2222-4222-8222-222222222222";
 
-function fixture(draftId = beforeAfter.id) {
+function fixture(draftId = beforeAfter.id, musicDurationUs = 2_000_000) {
   const beforeFile = createDraftMediaFile(beforeAfter, "Before.mov", draftId);
   const afterFile = createDraftMediaFile(beforeAfter, "After.mov", draftId);
   const musicFile = createDraftMediaFile(beforeAfter, "Track.m4a", draftId);
@@ -81,7 +83,7 @@ function fixture(draftId = beforeAfter.id) {
       [after.id]: createTemplateClip(after, afterFile.uri, "After.mov", metadata),
     },
     textOverrides: setTemplateText(getTemplateTextFields(beforeAfter)[0]!, {}, "First cut"),
-    music: createTemplateMusic(musicFile.uri, "Track.m4a", { startUs: 25_000, durationUs: 2_000_000 }),
+    music: createTemplateMusic(musicFile.uri, "Track.m4a", { startUs: 25_000, durationUs: musicDurationUs }),
   };
   return { edits, beforeFile, afterFile, musicFile };
 }
@@ -104,9 +106,9 @@ describe("duplicating a template draft", () => {
     [firstDraftId, true],
     [firstDraftId, false],
   ] as const)("copies %s independently (delete source first: %s)", async (sourceId, deleteSource) => {
-    const { edits, beforeFile, afterFile, musicFile } = fixture(sourceId);
+    const { edits, beforeFile, afterFile, musicFile } = fixture(sourceId, 12_000_000);
     edits.clips[before.id] = setTemplateClipVolume(edits.clips[before.id]!, 0);
-    edits.music = setTemplateMusicVolume(edits.music, 35);
+    edits.music = setTemplateMusicStart(setTemplateMusicVolume(edits.music, 35), 60, beforeAfter.durationUs);
     for (const file of [beforeFile, afterFile, musicFile]) file.writeSync(file.name);
     saveTemplateDraft(beforeAfter, edits, sourceId);
     renameTemplateDraft(beforeAfter, "Original", sourceId);
@@ -308,12 +310,65 @@ describe("template draft storage", () => {
     });
   });
 
-  it.each([null, "50", -1, 101])("preserves a soundtrack with an invalid saved volume (%s)", (volumePercent) => {
+  it("keeps a legacy export at the default music start, saves a changed start, and removes it on reset", () => {
+    const { edits, musicFile } = fixture(beforeAfter.id, 12_000_000);
+    saveTemplateDraft(beforeAfter, edits);
+    const current = loadTemplateDraft(beforeAfter)!;
+    const music = current.music!;
+    const source = createTemplateSource(beforeAfter, current.clips, current.textOverrides, music);
+    const outputUri = "file:///Exports/rendered.mp4";
+    const session = createTemplateDraftSession(beforeAfter);
+    const same = session.commit(
+      { ...current, music: setTemplateMusicStart(music, 0, beforeAfter.durationUs), source, outputUri },
+      "Music start",
+    );
+    expect(same).toEqual({ source, outputUri });
+    expect(session.undoLabel).toBeNull();
+
+    const shifted = setTemplateMusicStart(music, 60, beforeAfter.durationUs);
+    const changed = session.commit({ ...current, ...same, music: shifted }, "Music start");
+    expect(changed.source).not.toBe(source);
+    expect(changed.outputUri).toBeNull();
+    expect(loadTemplateDraft(beforeAfter)!.music).toEqual(shifted);
+    const reset = session.commit(
+      { ...current, ...changed, music: setTemplateMusicStart(shifted, 0, beforeAfter.durationUs) },
+      "Reset music start",
+    );
+    expect(reset.source).toBe(source);
+    session.close();
+    expect(loadTemplateDraft(beforeAfter)!.music).toEqual(music);
+    expect(JSON.parse(new File(musicFile.parentDirectory, "draft-3.json").textSync()).music).not.toHaveProperty(
+      "startFrame",
+    );
+  });
+
+  it("keeps the nearest playable start if a revised template needs more of the song", () => {
+    const { edits } = fixture(beforeAfter.id, 12_000_000);
+    const music = setTemplateMusicStart(edits.music, 90, beforeAfter.durationUs);
+    saveTemplateDraft(beforeAfter, { ...edits, music });
+    const longer = { ...beforeAfter, durationUs: 11_000_000 };
+    const { maxFrame } = getTemplateMusicStartRange(edits.music, longer.durationUs);
+    expect(maxFrame).toBeLessThan(90);
+    expect(loadTemplateDraft(longer)!.music).toEqual(setTemplateMusicStart(edits.music, maxFrame, longer.durationUs));
+    expect(loadTemplateDraft(beforeAfter)!.music).toEqual(music);
+  });
+
+  it.each([
+    ["volumePercent", null],
+    ["volumePercent", "50"],
+    ["volumePercent", -1],
+    ["volumePercent", 101],
+    ["startFrame", null],
+    ["startFrame", "50"],
+    ["startFrame", -1],
+    ["startFrame", 0.5],
+    ["startFrame", Number.MAX_SAFE_INTEGER + 1],
+  ] as const)("preserves a soundtrack with an invalid saved %s (%s)", (field, value) => {
     const { edits, musicFile } = fixture();
     saveTemplateDraft(beforeAfter, edits);
     const snapshot = new File(musicFile.parentDirectory, "draft-1.json");
     const saved = JSON.parse(snapshot.textSync());
-    saved.music.volumePercent = volumePercent;
+    saved.music[field] = value;
     snapshot.writeSync(JSON.stringify(saved));
     const loaded = loadTemplateDraft(beforeAfter)!;
     expect(loaded).toEqual({ ...edits, name: null, music: null, missingSlots: [], missingMusic: true });
@@ -1178,8 +1233,8 @@ describe("in-session template draft history", () => {
     expect(staged.exists).toBe(false);
   });
 
-  it("round-trips clip swaps, trim, framing, volumes, text, and clearing video or music", () => {
-    const { edits } = fixture();
+  it("round-trips clip swaps, trim, framing, volumes, music start, text, and clearing video or music", () => {
+    const { edits } = fixture(beforeAfter.id, 12_000_000);
     saveTemplateDraft(beforeAfter, edits);
     const session = createTemplateDraftSession(beforeAfter);
     const initial = loadTemplateDraft(beforeAfter)!;
@@ -1205,6 +1260,8 @@ describe("in-session template draft history", () => {
     );
     apply({ clips: { ...draft.clips, [after.id]: setTemplateClipVolume(draft.clips[after.id]!, 25) } }, "Clip volume");
     apply({ music: setTemplateMusicVolume(draft.music!, 0) }, "Music volume");
+    apply({ music: setTemplateMusicStart(draft.music!, 60, beforeAfter.durationUs) }, "Music start");
+    apply({ music: setTemplateMusicStart(draft.music!, 0, beforeAfter.durationUs) }, "Reset music start");
     apply(
       { textOverrides: setTemplateText(getTemplateTextFields(beforeAfter)[0]!, draft.textOverrides, "New cut") },
       "Text",

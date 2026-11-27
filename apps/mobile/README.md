@@ -62,6 +62,11 @@ to clear it. StackReel trims longer music to fit or loops shorter music and appl
 ducking where specified. Preview and export use the same mix. If you change the preview’s music selection, export a
 new MP4 before sharing.
 
+To start on a chorus or beat, tap **Music start** and move through the song. For an eight-second reel, for
+example, selecting 0:12 plays the section from 0:12 to 0:20. Once the video slots are filled, play the
+preview to hear the section with your clips. Apply the start to save it with the draft. Shorter tracks
+loop from the beginning to fill the reel.
+
 If the soundtrack covers up speech, tap **Music volume** under **Background music** and lower the level. At 100%,
 the music plays at the level set by the template. At 0%, the track stays in the draft and plays silently.
 You can set the level before filling every video slot. Once the reel is complete, play it in the volume editor
@@ -330,6 +335,10 @@ offline to verify that all three movies ship with the app.
     names in **Edit text**. Reopen the draft from **Projects**, preview it, and export. Play the saved MP4 and check
     each clip against its rank and name. With background music off, the winner’s last frame should hold silently
     from 22.5 seconds through the end of the 25-second reel.
+33. Open **Edit sample reel** and add a song with a recognizable chorus after the first eight seconds.
+    Open **Music start**, select the chorus, and play the preview. Tap **Apply start** and export an MP4.
+    Check that it opens on the chorus and runs for eight seconds. Move the start again and cancel, then
+    verify the MP4 is still shareable. Reopen the draft from **Projects** and check the saved start.
 
 ### Export display sleep on iPhone
 
