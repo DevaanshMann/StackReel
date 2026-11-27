@@ -30,6 +30,7 @@ import { discardPickerCopy } from "./draft-files";
 import { getNamedDrafts, nextDraftName } from "./draft-names";
 import {
   createSingleClipDraftId,
+  createSingleClipDraftSession,
   createSingleClipSource,
   deleteSingleClipDraft,
   importSingleClipDraft,
@@ -195,10 +196,14 @@ function getEditorDraft(drafts: TemplateDrafts | null, editor: Editor) {
     : emptyTemplateDraft;
 }
 
-function openDraftSession(editor: Editor, drafts: TemplateDrafts | null) {
-  return editor.kind === "template" && !getEditorDraft(drafts, editor).loadError
-    ? createTemplateDraftSession(editor.template, editor.draftId)
-    : null;
+function openDraftSession(editor: Editor, drafts: TemplateDrafts | null, singles: SingleDrafts) {
+  if (editor.kind === "single" && !singles[editor.draftId]?.loadError) {
+    return { kind: editor.kind, history: createSingleClipDraftSession(editor.draftId) } as const;
+  }
+  if (editor.kind === "template" && !getEditorDraft(drafts, editor).loadError) {
+    return { kind: editor.kind, history: createTemplateDraftSession(editor.template, editor.draftId) } as const;
+  }
+  return null;
 }
 
 function getSlotPreviewTemplateGainDb(template: MobileTemplate, slotId: string) {
@@ -217,7 +222,7 @@ export default function App() {
   const activeOperation = useRef<Operation | null>(null);
   const currentEditor = useRef<Editor>(firstScreen);
   const currentTemplateDrafts = useRef<TemplateDrafts | null>(null);
-  const currentDraftSession = useRef<TemplateDraftSession | null>(null);
+  const currentDraftSession = useRef<ReturnType<typeof openDraftSession>>(null);
   const [discoveryErrors, setDiscoveryErrors] = useState<string[]>([]);
   const [editor, setEditor] = useState<Editor>(firstScreen);
   const [activity, setActivity] = useState<Activity | null>(null);
@@ -290,8 +295,7 @@ export default function App() {
   useEffect(() => {
     mounted.current = true;
     setActivity(null);
-    currentDraftSession.current = openDraftSession(currentEditor.current, currentTemplateDrafts.current);
-    setHistoryLabels(emptyHistoryLabels);
+    resetDraftSession(currentEditor.current);
     const subscription = addExportProgressListener(({ exportId, progress }) => {
       const job = activeOperation.current;
       if (job?.kind !== "export" || job.id !== exportId || job.cancelling || !Number.isFinite(progress)) return;
@@ -308,7 +312,7 @@ export default function App() {
       const job = activeOperation.current;
       activeOperation.current = null;
       if (job?.kind === "export" && !job.cancelling) void cancelExport(job.id).catch(() => undefined);
-      currentDraftSession.current?.close();
+      currentDraftSession.current?.history.close();
       currentDraftSession.current = null;
     };
   }, []);
@@ -340,13 +344,17 @@ export default function App() {
     setActivity(null);
   }
 
+  function resetDraftSession(next: Editor) {
+    currentDraftSession.current?.history.close();
+    currentDraftSession.current = openDraftSession(next, currentTemplateDrafts.current, currentSingleDrafts.current);
+    setHistoryLabels(emptyHistoryLabels);
+  }
+
   function navigate(next: Editor) {
     if (!mounted.current || activeOperation.current || currentEditor.current !== editor) return;
-    currentDraftSession.current?.close();
-    currentDraftSession.current = openDraftSession(next, currentTemplateDrafts.current);
+    resetDraftSession(next);
     currentEditor.current = next;
     setFeedback(null);
-    setHistoryLabels(emptyHistoryLabels);
     setEditor(next);
   }
 
@@ -536,23 +544,28 @@ export default function App() {
 
   function commitDraftEdit(editor: TemplateEditor, draft: TemplateDraft, label: string) {
     const session = currentDraftSession.current;
-    if (!session || draft.loadError) throw new Error(draft.loadError ?? "The draft editor is closed.");
+    if (session?.kind !== "template" || draft.loadError)
+      throw new Error(draft.loadError ?? "The draft editor is closed.");
     const edits = { ...draft, name: draft.name ?? editor.template.name };
-    const saved = session.commit(edits, label);
-    publishDraftEdit(editor, { ...edits, ...saved }, draft.outputUri, session);
+    const saved = session.history.commit(edits, label);
+    publishDraftEdit(editor, { ...edits, ...saved }, draft.outputUri, session.history);
   }
 
   function applyDraftHistory(direction: HistoryDirection) {
     const session = currentDraftSession.current;
-    if (editor.kind !== "template" || !session) return;
-    const label = direction === "undo" ? session.undoLabel : session.redoLabel;
+    if (!session) return;
+    const label = direction === "undo" ? session.history.undoLabel : session.history.redoLabel;
     const operation = { kind: direction };
     if (!label || !begin(operation)) return;
 
     try {
-      const restored = session[direction]({ source, outputUri });
-      if (!restored) return;
-      publishDraftEdit(editor, restored, outputUri, session);
+      if (session.kind === "single") {
+        publishSingleEdit(session.history[direction]());
+      } else if (editor.kind === "template") {
+        const restored = session.history[direction]({ source, outputUri });
+        if (!restored) return;
+        publishDraftEdit(editor, restored, outputUri, session.history);
+      }
       AccessibilityInfo.announceForAccessibilityWithOptions(
         direction === "undo" ? "Undo complete." : "Redo complete.",
         {
@@ -751,6 +764,7 @@ export default function App() {
               deleteSingleClipDraft(editor.draftId);
               clearDraftExport(editor);
               storeSingleDraft(editor.draftId, null);
+              resetDraftSession(editor);
               removeCachedFile(singleDraft.outputUri);
               setFeedback({ kind: "status", message: "Single-clip draft deleted." });
             } catch (cause) {
@@ -772,7 +786,14 @@ export default function App() {
 
   function publishSingleEdit(clip: SingleClip) {
     if (clip === singleDraft.clip) return;
-    storeSingleDraft(clip.draftId, { clip, outputUri: null });
+    const session = currentDraftSession.current;
+    if (session?.kind === "single") {
+      setHistoryLabels({ undoLabel: session.history.undoLabel, redoLabel: session.history.redoLabel });
+    }
+    const sameOutput =
+      singleDraft.outputUri && singleDraft.clip && singleExportSource(clip) === singleExportSource(singleDraft.clip);
+    storeSingleDraft(clip.draftId, { clip, outputUri: sameOutput ? singleDraft.outputUri : null });
+    if (sameOutput) return;
     clearDraftExport({ kind: "single", draftId: clip.draftId });
     removeCachedFile(singleDraft.outputUri);
   }
@@ -1094,18 +1115,18 @@ export default function App() {
         {singleProjectLabel && <Text style={textStyles.body}>{singleProjectLabel}</Text>}
         {clip && <Text style={textStyles.muted}>Original audio {clip.volumePercent}%</Text>}
       </View>
-      {editor.kind === "template" && (
+      {(editor.kind === "template" || clip) && (
         <>
           <View role="toolbar" accessibilityLabel="Edit history" style={styles.buttonRow}>
             <Action
               label={undoLabel ? `Undo ${undoLabel}` : "Undo"}
-              testID="template-undo"
+              testID={`${editor.kind}-undo`}
               onPress={() => applyDraftHistory("undo")}
               disabled={busy || !undoLabel}
             />
             <Action
               label={redoLabel ? `Redo ${redoLabel}` : "Redo"}
-              testID="template-redo"
+              testID={`${editor.kind}-redo`}
               onPress={() => applyDraftHistory("redo")}
               disabled={busy || !redoLabel}
             />
@@ -1199,6 +1220,7 @@ export default function App() {
                     editor.draftId,
                     restoreSingleOutput(editor.draftId, readSingleDraft(editor.draftId)),
                   );
+                  resetDraftSession(editor);
                 }}
                 disabled={busy}
               />

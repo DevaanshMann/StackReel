@@ -47,6 +47,11 @@ type ReadableManifest = Omit<Manifest, "fit" | "volumePercent" | "exportResoluti
   volumePercent?: number;
   exportResolution?: unknown;
 };
+type HistoryEntry = { label: string; saved: ReadableManifest };
+type EditHistory = { past: HistoryEntry[]; future: HistoryEntry[]; revision?: number };
+const activeHistories = new Map<string, EditHistory>();
+const maxHistoryEdits = 20;
+
 export const legacySingleClipDraftId = "legacy";
 const draftUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 type StagedImport = { cancelled: boolean };
@@ -140,8 +145,13 @@ function readSnapshot(directory: Directory, draftId: string) {
   const snapshot = draftSnapshots(directory).at(-1);
   if (!snapshot) return null;
   const saved = JSON.parse(snapshot.file.textSync()) as ReadableManifest | null;
+  if (!saved) throw new Error("The saved single-clip draft has an invalid format.");
+  return { snapshot, saved, clip: restoreClip(directory, draftId, saved) };
+}
+
+function restoreClip(directory: Directory, draftId: string, saved: ReadableManifest): SingleClip {
   if (
-    saved?.version !== 1 ||
+    saved.version !== 1 ||
     typeof saved.name !== "string" ||
     !saved.name.trim() ||
     typeof saved.file !== "string" ||
@@ -172,7 +182,7 @@ function readSnapshot(directory: Directory, draftId: string) {
     exportResolution,
     uri: file.uri,
   };
-  return { snapshot, saved, clip: { ...edits, draftId, source: createSingleClipSource(edits) } };
+  return { ...edits, draftId, source: createSingleClipSource(edits) };
 }
 
 function removeEmptyDirectory(directory: Directory) {
@@ -185,9 +195,18 @@ function removeEmptyDirectory(directory: Directory) {
 
 function prune(directory: Directory, manifest?: string, media?: string) {
   const staged = stagedMedia.get(directory.uri);
+  const history = activeHistories.get(directory.uri);
+  const retained = new Set(history && [...history.past, ...history.future].map(({ saved }) => saved.file));
   try {
     for (const file of directory.list()) {
-      if (!(file instanceof File) || staged?.has(file.name) || file.name === manifest || file.name === media) continue;
+      if (
+        !(file instanceof File) ||
+        staged?.has(file.name) ||
+        retained.has(file.name) ||
+        file.name === manifest ||
+        file.name === media
+      )
+        continue;
       if (file.name === pendingName || snapshotName.test(file.name) || mediaName.test(file.name)) discardFile(file);
     }
     if (!manifest) removeEmptyDirectory(directory);
@@ -205,9 +224,83 @@ export function loadSingleClipDraft(draftId = legacySingleClipDraftId): SingleCl
   return current?.clip ?? null;
 }
 
-function publish(directory: Directory, revision: number, saved: Manifest) {
+type DraftSnapshot = NonNullable<ReturnType<typeof readSnapshot>>;
+
+function checkHistoryRevision(history: EditHistory | undefined, revision: number) {
+  if (history?.revision !== undefined && history.revision !== revision) {
+    throw new Error("The saved draft changed. Reopen it before editing.");
+  }
+}
+
+function publishEdit(directory: Directory, current: DraftSnapshot | null, saved: Manifest, label: string) {
+  const history = activeHistories.get(directory.uri);
+  const revision = current?.snapshot.revision ?? 0;
+  checkHistoryRevision(history, revision);
   const snapshot = commitDraftManifest(directory, revision, saved);
+  if (history) {
+    history.revision = revision + 1;
+    if (current) history.past = [...history.past, { label, saved: current.saved }].slice(-maxHistoryEdits);
+    history.future = [];
+  }
   prune(directory, snapshot, saved.file);
+}
+
+function endHistory(directory: Directory) {
+  const history = activeHistories.get(directory.uri);
+  if (!history) return;
+  history.past = [];
+  history.future = [];
+  activeHistories.delete(directory.uri);
+}
+
+export function createSingleClipDraftSession(draftId: string) {
+  const directory = draftDirectory(draftId);
+  if (activeHistories.has(directory.uri)) closeActiveHistory();
+  const history: EditHistory = { past: [], future: [] };
+  activeHistories.set(directory.uri, history);
+
+  function closeActiveHistory() {
+    endHistory(directory);
+    try {
+      loadSingleClipDraft(draftId);
+    } catch {
+      // Preserve recovery files when the current snapshot cannot be read.
+    }
+  }
+
+  function step(direction: "undo" | "redo"): SingleClip {
+    if (activeHistories.get(directory.uri) !== history) throw new Error("The draft session has ended.");
+    const undoing = direction === "undo";
+    const from = undoing ? history.past : history.future;
+    const to = undoing ? history.future : history.past;
+    const entry = from.at(-1);
+    if (!entry) throw new Error(`There is no edit to ${direction}.`);
+    const current = readSnapshot(directory, draftId);
+    if (!current) throw new Error("The saved draft is unavailable.");
+    checkHistoryRevision(history, current.snapshot.revision);
+    const restored = restoreClip(directory, draftId, entry.saved);
+    const snapshot = commitDraftManifest(directory, current.snapshot.revision, entry.saved);
+    // Advance history and release unreachable media only after the atomic rename succeeds.
+    from.pop();
+    to.push({ label: entry.label, saved: current.saved });
+    history.revision = current.snapshot.revision + 1;
+    prune(directory, snapshot, entry.saved.file);
+    return restored;
+  }
+
+  return {
+    get undoLabel() {
+      return history.past.at(-1)?.label ?? null;
+    },
+    get redoLabel() {
+      return history.future.at(-1)?.label ?? null;
+    },
+    undo: () => step("undo"),
+    redo: () => step("redo"),
+    close() {
+      if (activeHistories.get(directory.uri) === history) closeActiveHistory();
+    },
+  };
 }
 
 export async function importSingleClipDraft(
@@ -219,6 +312,7 @@ export async function importSingleClipDraft(
   const directory = draftDirectory(draftId);
   if (!isCurrent()) return null;
   if (!asset.name.trim()) throw new Error("The selected video is missing its name.");
+  const history = activeHistories.get(directory.uri);
   const selection = getClipFrameRange(media);
   const imports = stagedMedia.get(directory.uri) ?? new Map<string, StagedImport>();
   let target: File;
@@ -230,18 +324,22 @@ export async function importSingleClipDraft(
   stagedMedia.set(directory.uri, imports);
   let committed = false;
   try {
+    const startRevision = draftSnapshots(directory).at(-1)?.revision ?? 0;
     const file = new File(asset.uri);
     const bytes = file.size;
     if (isPickerCacheFile(file)) await file.move(target);
     else await file.copy(target);
-    if (staged.cancelled || !isCurrent()) return null;
+    if (staged.cancelled || !isCurrent() || activeHistories.get(directory.uri) !== history) return null;
     if (readableSize(target) !== bytes) throw new Error("The imported video is incomplete.");
     const current = readSnapshot(directory, draftId);
+    if ((current?.snapshot.revision ?? 0) !== startRevision) {
+      throw new Error("The saved draft changed. Reopen it before editing.");
+    }
     const exportResolution = current?.clip.exportResolution ?? 720;
     const edits = { name: asset.name, media, selection, fit: "contain", volumePercent: 100, exportResolution } as const;
     const imported = { ...edits, uri: target.uri };
     const clip = { ...imported, draftId, source: createSingleClipSource(imported) };
-    publish(directory, current?.snapshot.revision ?? 0, { version: 1, file: target.name, bytes, ...edits });
+    publishEdit(directory, current, { version: 1, file: target.name, bytes, ...edits }, "replace video");
     committed = true;
     return clip;
   } finally {
@@ -255,37 +353,37 @@ export async function importSingleClipDraft(
 }
 
 export function trimSingleClipDraft(clip: SingleClip, selection: ClipFrameRange): SingleClip {
-  return saveSingleClipEdits(clip, { selection });
+  return saveSingleClipEdits(clip, { selection }, "trim");
 }
 
 export function setSingleClipFit(clip: SingleClip, fit: SingleClipFit): SingleClip {
   if (!isSingleClipFit(fit)) throw new RangeError("Invalid single-clip fit.");
-  return saveSingleClipEdits(clip, { fit });
+  return saveSingleClipEdits(clip, { fit }, "framing");
 }
 
 export function setSingleClipReframe(clip: SingleClip, reframe: ClipReframe): SingleClip {
   const normalized = normalizeClipReframe(clip.media, canvas, reframe);
-  return saveSingleClipEdits(clip, { reframe: normalized });
+  return saveSingleClipEdits(clip, { reframe: normalized }, "reframe");
 }
 
 export function setSingleClipVolume(clip: SingleClip, volumePercent: number): SingleClip {
-  return saveSingleClipEdits(clip, { volumePercent });
+  return saveSingleClipEdits(clip, { volumePercent }, "volume");
 }
 
 export function setSingleClipCaption(clip: SingleClip, value: string): SingleClip {
-  return saveSingleClipEdits(clip, { caption: readSingleClipCaption(value) });
+  return saveSingleClipEdits(clip, { caption: readSingleClipCaption(value) }, "caption");
 }
 
 export function setSingleClipExportResolution(clip: SingleClip, exportResolution: SingleClipResolution): SingleClip {
   if (!isSingleClipResolution(exportResolution)) throw new RangeError("Choose 720p or 1080p.");
-  return saveSingleClipEdits(clip, { exportResolution });
+  return saveSingleClipEdits(clip, { exportResolution }, "export resolution");
 }
 
 function sameReframe(a: ClipReframe | undefined, b: ClipReframe | undefined) {
   return a?.zoom === b?.zoom && a?.x === b?.x && a?.y === b?.y;
 }
 
-function saveSingleClipEdits(clip: SingleClip, changes: Partial<SingleClipEdits>): SingleClip {
+function saveSingleClipEdits(clip: SingleClip, changes: Partial<SingleClipEdits>, label: string): SingleClip {
   const directory = existingEntry(draftDirectory(clip.draftId));
   if (!(directory instanceof Directory)) throw new Error("The saved draft changed. Reopen it before editing.");
   const current = readSnapshot(directory, clip.draftId);
@@ -319,7 +417,7 @@ function saveSingleClipEdits(clip: SingleClip, changes: Partial<SingleClipEdits>
   };
   const { reframe: _oldReframe, caption: _oldCaption, ...previous } = current.clip;
   const { reframe: _savedReframe, caption: _savedCaption, ...saved } = current.saved;
-  publish(directory, current.snapshot.revision, { ...saved, ...edits });
+  publishEdit(directory, current, { ...saved, ...edits }, label);
   return { ...previous, ...edits, source };
 }
 
@@ -333,6 +431,7 @@ export function deleteSingleClipDraft(draftId = legacySingleClipDraftId): void {
     // Removing snapshots oldest first prevents an interrupted deletion from reviving an older edit.
     for (const { file } of draftSnapshots(entry)) file.delete();
   }
+  endHistory(directory);
   // Keep staged paths reserved until their asynchronous copies settle.
   for (const staged of stagedMedia.get(directory.uri)?.values() ?? []) staged.cancelled = true;
   // Once the last manifest is gone the UI can discard the draft. Retry orphan cleanup on the next load.
