@@ -37,7 +37,7 @@ import {
 import type { TemplateClip } from "../src/template-editor";
 import * as templateEditor from "../src/template-editor";
 import { importTemplateVideos } from "../src/template-video-import";
-import { pickOrderedVideos } from "../src/video-picker";
+import { pickOrderedVideos, pickVideo } from "../src/video-picker";
 
 vi.mock("@stackreel/engine", () => ({ probeVideo: vi.fn() }));
 vi.mock("../src/video-picker", () => ({ pickOrderedVideos: vi.fn(), pickVideo: vi.fn() }));
@@ -1521,15 +1521,17 @@ describe("ordered template video import", () => {
   const textOverrides = { "text/0": "Watch closely" };
   const draft = { name: "Series intro", clips: {}, music: null, textOverrides };
   const commit = vi.fn((clips: Record<string, TemplateClip>) => saveTemplateDraft(hook, { ...draft, clips }));
-  const run = (isCurrent = () => true) =>
-    importTemplateVideos({ template: hook, slots, source: "Photos", isCurrent, commit });
+  const run = (overrides: Partial<Parameters<typeof importTemplateVideos>[0]> = {}) =>
+    importTemplateVideos({ template: hook, slots, source: "Photos", isCurrent: () => true, commit, ...overrides });
+
+  function cachedVideo(name: string) {
+    const uri = `file:///Caches/ImagePicker/${name}`;
+    storage.files.set(uri, name);
+    return { uri, name, draftFileName: name };
+  }
 
   function pick(names: string[]) {
-    const videos = names.map((name) => {
-      const uri = `file:///Caches/ImagePicker/${name}`;
-      storage.files.set(uri, name);
-      return { uri, name, draftFileName: name };
-    });
+    const videos = names.map(cachedVideo);
     vi.mocked(pickOrderedVideos).mockResolvedValueOnce(videos);
     return videos;
   }
@@ -1581,6 +1583,145 @@ describe("ordered template video import", () => {
     );
     expect(rankedFiles).toEqual(files);
     expect(createTemplateSource(countdown, saved.clips, saved.textOverrides, saved.music)).not.toBeNull();
+  });
+
+  it("replaces only the rejected rank and saves all five picks in one edit", async () => {
+    const countdown = mobileTemplates.find(({ id }) => id === "top-5-countdown")!;
+    const ranks = getVideoSlots(countdown);
+    const originals = pick(["Fifth.mov", "Fourth.mov", "Short.mov", "Second.mov", "First.mov"]);
+    const unreadable = cachedVideo("Unreadable.mov");
+    const replacement = cachedVideo("Third.mov");
+    vi.mocked(pickVideo).mockResolvedValueOnce(unreadable).mockResolvedValueOnce(replacement);
+    vi.mocked(probeVideo).mockImplementation(async (uri) => {
+      if (uri === unreadable.uri) throw new Error("Unreadable video");
+      return uri === originals[2]!.uri ? { ...metadata, durationUs: 1_000_000 } : metadata;
+    });
+    const save = vi.fn((clips: Record<string, TemplateClip>) =>
+      saveTemplateDraft(countdown, { clips, textOverrides: {}, music: null }, firstDraftId),
+    );
+    const rejectedCopies = [originals[2]!, unreadable];
+    const onInvalidVideo = vi.fn(async () => {
+      expect(save).not.toHaveBeenCalled();
+      expect(storage.files.has(rejectedCopies.shift()!.uri)).toBe(false);
+      return true;
+    });
+
+    await run({ template: countdown, draftId: firstDraftId, slots: ranks, commit: save, onInvalidVideo });
+
+    expect(pickOrderedVideos).toHaveBeenCalledExactlyOnceWith(5);
+    expect(vi.mocked(pickVideo).mock.calls).toEqual([["Photos"], ["Photos"]]);
+    expect(onInvalidVideo).toHaveBeenCalledTimes(2);
+    expect(onInvalidVideo).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        slot: ranks[2],
+        message: expect.stringContaining("4.00 seconds"),
+      }),
+    );
+    expect(onInvalidVideo).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        slot: ranks[2],
+        message: expect.stringContaining("Unreadable video"),
+      }),
+    );
+    expect(save).toHaveBeenCalledTimes(1);
+    const restored = loadTemplateDraft(countdown, firstDraftId)!;
+    expect(ranks.map(({ id }) => new File(restored.clips[id]!.uri).textSync())).toEqual([
+      "Fifth.mov",
+      "Fourth.mov",
+      "Third.mov",
+      "Second.mov",
+      "First.mov",
+    ]);
+    expect(createTemplateSource(countdown, restored.clips, restored.textOverrides, restored.music)).not.toBeNull();
+    for (const { uri } of [...originals, unreadable, replacement]) expect(storage.files.has(uri)).toBe(false);
+  });
+
+  it("offers another replacement for the same slot when Photos fails to deliver a replacement video", async () => {
+    pick(["First.mp4", "Short.mp4", "Third.mp4"]);
+    vi.mocked(probeVideo)
+      .mockResolvedValueOnce(metadata)
+      .mockResolvedValueOnce({ ...metadata, durationUs: 1 });
+    vi.mocked(pickVideo)
+      .mockRejectedValueOnce(new Error("Photos could not load the selection"))
+      .mockResolvedValueOnce(cachedVideo("Second.mp4"));
+    const onInvalidVideo = vi.fn(async () => true);
+
+    await run({ onInvalidVideo });
+
+    expect(onInvalidVideo).toHaveBeenCalledTimes(2);
+    expect(onInvalidVideo).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        slot: slots[1],
+        message: expect.stringContaining("Photos could not load the selection"),
+      }),
+    );
+    expect(vi.mocked(pickVideo).mock.calls).toEqual([["Photos"], ["Photos"]]);
+    expect(commit).toHaveBeenCalledTimes(1);
+    const { clips } = loadTemplateDraft(hook)!;
+    expect(slots.map(({ id }) => new File(clips[id]!.uri).textSync())).toEqual([
+      "First.mp4",
+      "Second.mp4",
+      "Third.mp4",
+    ]);
+  });
+
+  it("reports an initial ordered picker failure without prompting for an individual slot", async () => {
+    const failure = new Error("Photos could not deliver the batch");
+    vi.mocked(pickOrderedVideos).mockRejectedValueOnce(failure);
+    const onInvalidVideo = vi.fn(async () => true);
+    await expect(run({ onInvalidVideo })).rejects.toBe(failure);
+    expect(onInvalidVideo).not.toHaveBeenCalled();
+    expect(pickVideo).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("keeps a rejected pick and a replacement available when later slots use the same URIs", async () => {
+    const short = cachedVideo("Two-seconds.mov");
+    const long = cachedVideo("Full-length.mov");
+    vi.mocked(pickOrderedVideos).mockResolvedValueOnce([short, short, long]);
+    vi.mocked(pickVideo).mockResolvedValueOnce(long);
+    vi.mocked(probeVideo).mockImplementation(async (uri) =>
+      uri === short.uri ? { ...metadata, durationUs: 2_000_000 } : metadata,
+    );
+    const onInvalidVideo = vi.fn(async () => {
+      expect(new File(short.uri).textSync()).toBe(short.name);
+      return true;
+    });
+
+    await run({ onInvalidVideo });
+
+    expect(onInvalidVideo).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ slot: slots[0] }));
+    expect(commit).toHaveBeenCalledTimes(1);
+    const { clips } = loadTemplateDraft(hook)!;
+    expect(slots.map(({ id }) => new File(clips[id]!.uri).textSync())).toEqual([long.name, short.name, long.name]);
+    expect(storage.files.has(short.uri)).toBe(false);
+    expect(storage.files.has(long.uri)).toBe(false);
+  });
+
+  it("preserves both staged and rejected inputs from a different cache folder when the user declines a retry", async () => {
+    const originals = ["First.mp4", "Short.mp4"].map((name) => {
+      const uri = `file:///Caches/ImagePickerBackup/${name}`;
+      storage.files.set(uri, name);
+      return { uri, name, draftFileName: name };
+    });
+    const before = new Map(storage.files);
+    vi.mocked(pickOrderedVideos).mockResolvedValueOnce(originals);
+    vi.mocked(probeVideo)
+      .mockResolvedValueOnce(metadata)
+      .mockResolvedValueOnce({ ...metadata, durationUs: 1 });
+    const onInvalidVideo = vi.fn(async () => {
+      for (const { uri, name } of originals) expect(new File(uri).textSync()).toBe(name);
+      return false;
+    });
+
+    await run({ onInvalidVideo });
+
+    expect(onInvalidVideo).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ slot: slots[1] }));
+    expect(commit).not.toHaveBeenCalled();
+    expect(storage.files).toEqual(before);
   });
 
   it("stages ordered videos in the selected draft and preserves its sibling's import", async () => {
@@ -1700,6 +1841,46 @@ describe("ordered template video import", () => {
     expect(storage.files).toEqual(before);
   });
 
+  it.each(["decline", "cancel picker", "stale decision", "stale replacement"])(
+    "discards the entire uncommitted selection on %s",
+    async (outcome) => {
+      const before = new Map(storage.files);
+      pick(["First.mp4", "Short.mp4", "Third.mp4"]);
+      vi.mocked(probeVideo)
+        .mockResolvedValueOnce(metadata)
+        .mockResolvedValueOnce({ ...metadata, durationUs: 1 });
+      let current = true;
+      const onInvalidVideo = vi.fn(async () => {
+        if (outcome === "stale decision") current = false;
+        return outcome !== "decline";
+      });
+      vi.mocked(pickVideo).mockImplementationOnce(async () => {
+        if (outcome === "cancel picker") return null;
+        current = false;
+        return cachedVideo("Replacement.mp4");
+      });
+
+      await run({ isCurrent: () => current, onInvalidVideo });
+
+      expect(onInvalidVideo).toHaveBeenCalledTimes(1);
+      expect(pickVideo).toHaveBeenCalledTimes(outcome === "cancel picker" || outcome === "stale replacement" ? 1 : 0);
+      expect(commit).not.toHaveBeenCalled();
+      expect(storage.files).toEqual(before);
+    },
+  );
+
+  it.each(["Photos", "Files"] as const)("reports a single-slot %s error without starting a retry", async (source) => {
+    const before = new Map(storage.files);
+    vi.mocked(pickVideo).mockResolvedValueOnce(cachedVideo("Short.mp4"));
+    vi.mocked(probeVideo).mockResolvedValueOnce({ ...metadata, durationUs: 1 });
+    const onInvalidVideo = vi.fn(async () => true);
+    await expect(run({ slots: [slots[0]!], source, onInvalidVideo })).rejects.toMatchObject({ slot: slots[0] });
+    expect(pickVideo).toHaveBeenCalledExactlyOnceWith(source);
+    expect(onInvalidVideo).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+    expect(storage.files).toEqual(before);
+  });
+
   it.each(["short video", "probe failure", "partial move"])(
     "identifies the second slot and removes all three picker files and staged media after a %s",
     async (failure) => {
@@ -1721,7 +1902,12 @@ describe("ordered template video import", () => {
         });
       }
 
-      await expect(run()).rejects.toMatchObject({ slot: slots[1], message: expect.stringContaining("B-roll") });
+      const onInvalidVideo = vi.fn(async () => true);
+      await expect(run(failure === "partial move" ? { onInvalidVideo } : {})).rejects.toMatchObject({
+        slot: slots[1],
+        message: expect.stringContaining("B-roll"),
+      });
+      expect(onInvalidVideo).not.toHaveBeenCalled();
       expect(commit).not.toHaveBeenCalled();
       expect(storage.files).toEqual(before);
     },
@@ -1744,7 +1930,7 @@ describe("ordered template video import", () => {
         current = false;
       });
     }
-    await run(() => current);
+    await run({ isCurrent: () => current });
     expect(commit).not.toHaveBeenCalled();
     expect(storage.files).toEqual(before);
   });
@@ -1755,7 +1941,9 @@ describe("ordered template video import", () => {
     const before = new Map(storage.files);
     vi.mocked(pickOrderedVideos).mockResolvedValueOnce([original]);
     storage.interruptMove = true;
-    await expect(run()).rejects.toThrow("Interrupted write");
+    const onInvalidVideo = vi.fn(async () => true);
+    await expect(run({ onInvalidVideo })).rejects.toThrow("Interrupted write");
+    expect(onInvalidVideo).not.toHaveBeenCalled();
     expect(commit).toHaveBeenCalledTimes(1);
     expect(storage.files).toEqual(before);
     expect(loadTemplateDraft(hook)).toMatchObject(draft);

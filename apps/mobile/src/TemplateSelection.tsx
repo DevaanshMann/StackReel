@@ -8,6 +8,7 @@ import { VideoImportActions } from "./VideoImportActions";
 import { getEmptyVideoSlots, getVideoSlots, mobileTemplates } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
 import { templatePreviews } from "./template-previews";
+import type { SlotImportError } from "./template-video-import";
 import type { VideoPickerSource } from "./video-picker";
 
 const choices = mobileTemplates.map((template) => ({ template, slots: getVideoSlots(template) }));
@@ -280,6 +281,8 @@ function GalleryCard({
   );
 }
 
+export type ImportRecovery = { error: SlotImportError; answer: (replace: boolean) => void };
+
 export function TemplateVideoSlots({
   slots,
   clips,
@@ -287,6 +290,7 @@ export function TemplateVideoSlots({
   busy,
   importingSlotId,
   importingFrom,
+  recovery,
   slotError,
   swapError,
   onSelect,
@@ -305,6 +309,7 @@ export function TemplateVideoSlots({
   busy: boolean;
   importingSlotId: string | undefined;
   importingFrom: VideoPickerSource | undefined;
+  recovery: ImportRecovery | undefined;
   slotError: { slotId?: string; message: string } | null;
   swapError: string | undefined;
   onSelect: (slot: TemplateVideoSlot, source: VideoPickerSource) => void;
@@ -353,16 +358,31 @@ export function TemplateVideoSlots({
           <Text style={textStyles.body}>
             Pick in slot order · {emptySlots.map(({ label }, index) => `${index + 1}. ${label}`).join(" · ")}
           </Text>
-          <Action
-            label={
-              importingFrom === "Photos" && importingSlotId === undefined
-                ? "Importing from Photos…"
-                : "Choose videos from Photos"
-            }
-            onPress={() => onSelectOrdered(emptySlots)}
-            disabled={busy}
-            primary
-          />
+          {recovery ? (
+            <>
+              <Text accessibilityRole="alert" style={textStyles.error}>
+                {recovery.error.message}
+              </Text>
+              <Text style={textStyles.body}>Choose a replacement to keep your other picks in order.</Text>
+              <Action
+                label={`Replace ${recovery.error.slot.label} from Photos`}
+                onPress={() => recovery.answer(true)}
+                primary
+              />
+              <Action label="Cancel import" onPress={() => recovery.answer(false)} />
+            </>
+          ) : (
+            <Action
+              label={
+                importingFrom === "Photos" && importingSlotId === undefined
+                  ? "Importing from Photos…"
+                  : "Choose videos from Photos"
+              }
+              onPress={() => onSelectOrdered(emptySlots)}
+              disabled={busy}
+              primary
+            />
+          )}
         </View>
       )}
       {slots.map((slot) => {

@@ -468,7 +468,8 @@ _Runs in parallel with Phase 3._
    - [ ] Categories and filters: _Trending style_, _Travel_, _Food_, _Fitness_, _Talking head_, _Product_
    - [ ] Template detail: preview, slot count, duration, "Use template"
 3. **Fill slots**
-   - [ ] Media picker (`expo-image-picker` / native picker) with multi-select. Auto-assign clips to slots in order.
+   - [x] Select iOS videos from Photos in slot order and replace an invalid pick within the same import
+   - [ ] Select Android videos in order and assign them to template slots
    - [ ] Slot strip: tap a slot to replace its clip, long-press to reorder
    - [x] iOS trim sheet with a source filmstrip and a draggable window for longer clips. Clips that meet the template minimum can hold their last frame through the rest of the slot.
    - [x] Trim either end of a single video on iOS before preview and export
