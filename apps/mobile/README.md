@@ -177,7 +177,9 @@ Tap **Delete** beside a draft and confirm to remove its edits and imported media
 original files stay in place. [See two Before / After reels in Projects](../../docs/ios-multiple-template-drafts.png).
 When drafts share a name, the delete confirmation also shows the selected draft’s template.
 [See the confirmation for a Before / After draft](../../docs/ios-same-name-delete-confirmation.png).
-If an imported video is missing, choose a replacement from Photos or Files or clear its slot.
+If a template slot’s saved video is missing, tap **Relink from Photos** or **Relink from Files** and choose the
+original video. When its dimensions and playable frame range match, the slot gets its saved trim, framing, and
+volume back. To use different footage with a fresh cut, choose **Replace** instead. You can also clear the slot.
 If StackReel can’t reopen a draft, the recovery screen preserves its saved edits and media copies. You can
 start a new reel from **Templates** or delete the unreadable draft from **Projects**.
 
@@ -371,6 +373,11 @@ offline to verify that all three movies ship with the app.
     and remove only the imported copy of the test clip from the draft’s directory. Reopen the draft from **Projects**.
     Cancel a relink, then try a clip of a different duration. Check that you can still relink the original video.
     Make one edit and undo it. Relaunch, reopen the draft, and export again to verify the saved cut and caption at 1080p.
+
+37. In **Before / After**, trim and reframe the first clip, lower its volume, and export. Quit the app and move the
+    imported copy of that clip out of the test simulator’s draft folder. Reopen from **Projects**, cancel a relink,
+    then try a video of a different duration. Select the original video, reopen the draft, and export again. Compare
+    the cut, framing, and sound of the first slot with the earlier MP4 and check that the second slot still plays.
 
 ### Export display sleep on iPhone
 
