@@ -4,6 +4,7 @@ import type { DraftExportKey } from "../src/draft-export";
 import { Directory, File, storage } from "./draft-filesystem-fixture";
 
 vi.mock("expo-file-system", () => import("./draft-filesystem-fixture"));
+vi.mock("expo-crypto", () => ({ randomUUID: vi.fn() }));
 
 const key: DraftExportKey = { kind: "single", draftId: "legacy" };
 const nativeUri = "file:///Caches/StackReelExports/job.mp4";
@@ -47,7 +48,7 @@ it("keeps the last successful export and native fallback on a failed replacement
   const first = retainDraftExport(key, source(), nativeUri);
   storage.files.set(nativeUri, "second");
   storage.interruptMove = true;
-  expect(retainDraftExport(key, source(1080), nativeUri)).toBe(nativeUri);
+  expect(retainDraftExport(key, source(1080), nativeUri, first)).toBe(nativeUri);
   expect(storage.files.get(nativeUri)).toBe("second");
   expect(restoreDraftExport(key, source())).toBe(first);
   storage.interruptMove = false;
@@ -55,6 +56,16 @@ it("keeps the last successful export and native fallback on a failed replacement
   expect(storage.files.has(first)).toBe(false);
   expect(restoreDraftExport(key, source(1080))).toBe(second);
   expect(restoreDraftExport(key, source())).toBeNull();
+});
+
+it("retires the previous temporary MP4 when successive exports fall back to native storage", () => {
+  storage.interruptMove = true;
+  const previous = retainDraftExport(key, source(), nativeUri);
+  const latest = new File(new File(nativeUri).parentDirectory, "next.mp4");
+  latest.writeSync("latest render");
+  expect(retainDraftExport(key, source(), latest.uri, previous)).toBe(latest.uri);
+  expect(storage.files.has(previous)).toBe(false);
+  expect(latest.textSync()).toBe("latest render");
 });
 
 it("recovers the previous pair after interruption and skips occupied names", () => {

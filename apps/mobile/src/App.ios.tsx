@@ -902,14 +902,12 @@ export default function App() {
       const exportSource = clip ? singleExportSource(clip) : source;
       const { uri } = await exportMP4(exportSource, job.id);
       if (isCurrentOperation(job)) {
-        const retainedUri = retainDraftExport(editor, exportSource, uri);
+        const retainedUri = retainDraftExport(editor, exportSource, uri, outputUri);
         if (editor.kind === "template") {
           storeTemplateDraft(editor, { ...templateDraft, outputUri: retainedUri });
         } else {
           storeSingleDraft(editor.draftId, { ...singleDraft, outputUri: retainedUri });
         }
-        // When promotion fails, the previous retained export can still be used after relaunch.
-        if (retainedUri !== uri && retainedUri !== outputUri) removeCachedFile(outputUri);
       } else {
         removeCachedFile(uri);
       }

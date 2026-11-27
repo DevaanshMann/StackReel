@@ -1,4 +1,5 @@
 import { Directory, File, Paths } from "expo-file-system";
+import { discardFile } from "./draft-files";
 
 export type DraftExportKey =
   { kind: "single"; draftId: string } | { kind: "template"; template: { id: string }; draftId: string };
@@ -79,11 +80,22 @@ export function restoreDraftExport(key: DraftExportKey, exportSource: string | n
   }
 }
 
-export function retainDraftExport(key: DraftExportKey, exportSource: string, nativeUri: string): string {
+export function retainDraftExport(
+  key: DraftExportKey,
+  exportSource: string,
+  nativeUri: string,
+  previousUri: string | null = null,
+): string {
   try {
-    const identity = sourceIdentity(exportSource);
     const native = new File(nativeUri);
     const bytes = positiveSize(native);
+    // A previous fallback lives beside the new native output and can be retired immediately.
+    // Retained copies live in the draft cache and survive until replacement succeeds.
+    if (previousUri && previousUri !== nativeUri) {
+      const previous = new File(previousUri);
+      if (previous.parentDirectory.uri === native.parentDirectory.uri) discardFile(previous);
+    }
+    const identity = sourceIdentity(exportSource);
     const directory = directoryFor(key);
     directory.create({ intermediates: true, idempotent: true });
     const entries = directory.list();
