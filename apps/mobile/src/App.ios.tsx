@@ -37,6 +37,8 @@ import {
   legacySingleClipDraftId,
   listSingleClipDraftIds,
   loadSingleClipDraft,
+  MissingSingleClipVideoError,
+  relinkSingleClipDraft,
   setSingleClipCaption,
   setSingleClipExportResolution,
   setSingleClipFit,
@@ -44,7 +46,7 @@ import {
   setSingleClipVolume,
   trimSingleClipDraft,
 } from "./single-clip-draft";
-import type { SingleClip } from "./single-clip-draft";
+import type { SingleClip, SingleClipRecovery } from "./single-clip-draft";
 import {
   clearTemplateMusic,
   clearTemplateVideoSlot,
@@ -85,7 +87,12 @@ import { pickVideo } from "./video-picker";
 import type { VideoPickerSource } from "./video-picker";
 import { getVolumeGainDb } from "./volume";
 
-type SingleDraft = { clip: SingleClip | null; outputUri: string | null; loadError?: string };
+type SingleDraft = {
+  clip: SingleClip | null;
+  outputUri: string | null;
+  loadError?: string;
+  recovery?: SingleClipRecovery;
+};
 type SingleDrafts = Readonly<Record<string, SingleDraft>>;
 type TemplateDraft = TemplateDraftEdits & {
   source: string | null;
@@ -142,7 +149,7 @@ type Feedback = {
   kind: "error" | "status";
   message: string;
   slotId?: string;
-  scope?: "music" | "swap" | "history" | "framing";
+  scope?: "music" | "swap" | "history" | "framing" | "relink";
 };
 
 const homeTabs = [
@@ -178,7 +185,10 @@ function readSingleDraft(draftId: string): SingleDraft | null {
   try {
     const clip = loadSingleClipDraft(draftId);
     return clip ? { clip, outputUri: null } : null;
-  } catch {
+  } catch (cause) {
+    if (cause instanceof MissingSingleClipVideoError) {
+      return { ...emptySingleDraft, loadError: "Saved video unavailable. Relink to resume.", recovery: cause.recovery };
+    }
     return { ...emptySingleDraft, loadError: "Couldn’t reopen the saved single-clip draft." };
   }
 }
@@ -241,7 +251,7 @@ export default function App() {
   const templateDraft = getEditorDraft(templateDrafts, editor);
   const singleDraft = editor.kind === "single" ? (singleDrafts[editor.draftId] ?? emptySingleDraft) : emptySingleDraft;
   const singleProjects = useMemo(
-    () => getNamedDrafts(singleDrafts, (draft) => draft.clip?.name ?? "Single-clip draft"),
+    () => getNamedDrafts(singleDrafts, (draft) => draft.clip?.name ?? draft.recovery?.name ?? "Single-clip draft"),
     [singleDrafts],
   );
   const singleProjectLabel =
@@ -753,8 +763,21 @@ export default function App() {
   function openSingleDraft(draftId: string) {
     const draft = singleDrafts[draftId];
     if (editor.kind !== "home" || activeOperation.current || !isCurrentScreen() || !draft) return;
-    const restored = restoreSingleOutput(draftId, draft);
-    if (restored !== draft) storeSingleDraft(draftId, restored);
+    const saved = readSingleDraft(draftId);
+    if (!saved) {
+      storeSingleDraft(draftId, null);
+      Alert.alert("Draft unavailable", "This draft is no longer in Projects.");
+      return;
+    }
+    // Keep a live export (including a cache fallback) only while the source and export settings still match.
+    if (
+      saved.clip &&
+      draft.clip?.source === saved.clip.source &&
+      draft.clip.exportResolution === saved.clip.exportResolution
+    ) {
+      saved.outputUri = draft.outputUri;
+    }
+    storeSingleDraft(draftId, restoreSingleOutput(draftId, saved));
     navigate({ kind: "single", draftId, home: editor });
   }
 
@@ -841,7 +864,8 @@ export default function App() {
 
   async function selectSingleVideo(source: VideoPickerSource) {
     const operation: ImportOperation = { kind: "import", source };
-    if (editor.kind !== "single" || singleDraft.loadError || !begin(operation)) return;
+    const recovery = singleDraft.recovery;
+    if (editor.kind !== "single" || (singleDraft.loadError && !recovery) || !begin(operation)) return;
     let pickedUri: string | undefined;
     try {
       const asset = await pickVideo(source);
@@ -850,12 +874,23 @@ export default function App() {
       if (!isCurrentOperation(operation)) return;
       const metadata = await probeVideo(pickedUri);
       if (!isCurrentOperation(operation)) return;
-      const clip = await importSingleClipDraft(asset, metadata, () => isCurrentOperation(operation), editor.draftId);
+      const isCurrent = () => isCurrentOperation(operation);
+      const clip = recovery
+        ? await relinkSingleClipDraft(recovery, asset, metadata, isCurrent)
+        : await importSingleClipDraft(asset, metadata, isCurrent, editor.draftId);
       if (!clip || !isCurrentOperation(operation)) return;
       publishSingleEdit(clip);
+      if (recovery) {
+        resetDraftSession(editor);
+        setFeedback({ kind: "status", scope: "relink", message: "Video relinked. Your saved edits are ready." });
+      }
     } catch (cause) {
       if (isCurrentOperation(operation)) {
-        setFeedback({ kind: "error", message: errorMessage("Couldn’t import the video.", cause) });
+        setFeedback(
+          recovery
+            ? { kind: "error", scope: "relink", message: errorMessage("Couldn’t relink the video.", cause) }
+            : { kind: "error", message: errorMessage("Couldn’t import the video.", cause) },
+        );
       }
     } finally {
       discardPickerCopy(pickedUri);
@@ -1180,9 +1215,20 @@ export default function App() {
           onCancelSwap={swapping ? () => finish(activity) : undefined}
         />
       )}
-      {editor.kind === "single" && !singleDraft.loadError && (
+      {singleDraft.recovery && (
+        <Text accessibilityRole="alert" style={textStyles.body}>
+          StackReel can’t read its saved copy of this video. Choose the original from Photos or Files to restore it with
+          your edits.
+        </Text>
+      )}
+      {feedback?.scope === "relink" && (
+        <Text accessibilityRole="alert" style={feedback.kind === "error" ? textStyles.error : textStyles.muted}>
+          {feedback.message}
+        </Text>
+      )}
+      {editor.kind === "single" && (!singleDraft.loadError || singleDraft.recovery) && (
         <VideoImportActions
-          replace={clip !== null}
+          action={singleDraft.recovery ? "Relink" : clip ? "Replace" : "Choose"}
           importingFrom={importing ? activity.source : undefined}
           busy={busy}
           primary={clip === null}
@@ -1191,12 +1237,12 @@ export default function App() {
       )}
       {editor.kind === "single" && (clip || singleDraft.loadError) && (
         <>
-          {singleDraft.loadError && (
+          {singleDraft.loadError && !singleDraft.recovery && (
             <Text accessibilityRole="alert" style={textStyles.error}>
               {singleDraft.loadError} Try again, or choose New draft in Templates to start another reel.
             </Text>
           )}
-          <View style={styles.navigation}>
+          <View style={[styles.navigation, styles.actions]}>
             {clip ? (
               <View style={styles.buttonRow}>
                 <Action

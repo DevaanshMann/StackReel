@@ -145,6 +145,12 @@ Use **Replace from Photos** or **Replace from Files** inside a draft to replace 
 **Fit** at full volume with an empty caption. To remove one reel, open it, tap **Delete draft**, and confirm.
 [See two single-clip reels in Projects on iPhone](../../docs/ios-single-clip-projects.png).
 
+If **Projects** says a single-clip draft’s saved video is unavailable, open it and tap **Relink from Photos** or
+**Relink from Files**. Pick the original video. StackReel checks its dimensions and frame range so it can restore
+your trim, framing, volume, caption, and export resolution. You can cancel or try another file without losing the
+saved edit. After relinking, tap **Export MP4** to make a fresh copy.
+[See the relink controls on iPhone](../../docs/ios-single-clip-relink.png).
+
 Use **Undo** and **Redo** to step through the last 20 changes in an open single-clip draft, including trim,
 framing, volume, caption, export resolution, and video replacement. Undoing a replacement brings back the
 previous video with its edits. Making a different edit after undoing clears Redo. When you leave the editor
@@ -360,6 +366,11 @@ offline to verify that all three movies ship with the app.
 35. Open **Edit sample reel** from **Before / After**, add **Daybreak** under **Background music**, and listen
     across the cut. Change **Music volume**, apply, and export. Play the MP4 and check that the music continues
     through the transition. Reopen the sample from **Projects** and verify the track and volume are saved.
+
+36. On a test simulator, import a single clip, trim it, add a caption, select **1080p**, and export. Quit the app
+    and remove only the imported copy of the test clip from the draft’s directory. Reopen the draft from **Projects**.
+    Cancel a relink, then try a clip of a different duration. Check that you can still relink the original video.
+    Make one edit and undo it. Relaunch, reopen the draft, and export again to verify the saved cut and caption at 1080p.
 
 ### Export display sleep on iPhone
 
