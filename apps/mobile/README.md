@@ -56,7 +56,7 @@ Each clip keeps its framing and as much of its original trim position as the new
 for its destination, the error names that slot and the draft and prior export stay as they were. A successful swap
 saves to the draft. If all required slots are filled, export a new MP4 before sharing.
 
-Under **Background music**, choose **Daybreak** for an instrumental track included with the app, or tap
+Under **Background music**, tap **Use Daybreak** for an instrumental track included with the app, or tap
 **Choose music from Files** to use your own audio. You can add either before choosing videos. To hear Daybreak
 with the bundled footage, open **Edit sample reel**, add the track, then play the preview or tap **Export MP4**.
 The selection stays with the draft. Use **Replace music** to choose another file or **Remove music**

@@ -29,6 +29,7 @@ export type TemplateClip = {
   volumePercent?: number;
 };
 export type TemplateMusic = {
+  starterId?: "daybreak";
   uri: string;
   name: string;
   readonly sourceStartUs: number;

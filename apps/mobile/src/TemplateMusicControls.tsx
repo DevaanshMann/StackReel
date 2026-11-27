@@ -2,6 +2,7 @@ import { darkColors, fontSize, space } from "@stackreel/ui";
 import { StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
 import type { TemplateMusic } from "./template-editor";
+import type { MusicSource } from "./template-music-import";
 
 export function TemplateMusicControls({
   music,
@@ -17,14 +18,16 @@ export function TemplateMusicControls({
   music: TemplateMusic | null;
   missingMusic: boolean;
   busy: boolean;
-  importing: boolean;
+  importing: MusicSource | null;
   error: string | undefined;
-  onSelect: () => void;
+  onSelect: (source: MusicSource) => void;
   onRemove: () => void;
   onStart: () => void;
   onVolume: () => void;
 }) {
   const selectLabel = music ? "Replace music" : "Choose music from Files";
+
+  const usingDaybreak = music?.starterId === "daybreak";
 
   return (
     <View testID="template-music" style={styles.section}>
@@ -46,10 +49,16 @@ export function TemplateMusicControls({
       )}
       <View style={styles.actions}>
         <Action
-          label={importing ? "Importing music…" : selectLabel}
+          label={importing === "files" ? "Importing music…" : selectLabel}
           testID={music ? "replace-template-music" : "choose-template-music"}
-          onPress={onSelect}
+          onPress={() => onSelect("files")}
           disabled={busy}
+        />
+        <Action
+          label={importing === "daybreak" ? "Adding Daybreak…" : usingDaybreak ? "Daybreak selected" : "Use Daybreak"}
+          testID="use-daybreak-music"
+          onPress={() => onSelect("daybreak")}
+          disabled={busy || usingDaybreak}
         />
         {music && !missingMusic && (
           <>

@@ -592,6 +592,7 @@ function restoreDraftEdits(
     try {
       const { uri, name, sourceStartUs, sourceEndUs, volumePercent } = readAsset(saved.music, directory);
       const track = createTemplateMusic(uri, name, { startUs: sourceStartUs, durationUs: sourceEndUs - sourceStartUs });
+      if (record(saved.music) && saved.music.starterId === "daybreak") track.starterId = saved.music.starterId;
       let restored = setTemplateMusicVolume(track, volumePercent);
       if (record(saved.music) && saved.music.startFrame !== undefined) {
         const { startFrame } = saved.music;

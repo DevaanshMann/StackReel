@@ -1,8 +1,7 @@
 import { frameToUs } from "@stackreel/core";
-import { addExportProgressListener, cancelExport, exportMP4, probeAudio, probeVideo } from "@stackreel/engine";
+import { addExportProgressListener, cancelExport, exportMP4, probeVideo } from "@stackreel/engine";
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
 import { randomUUID } from "expo-crypto";
-import { getDocumentAsync } from "expo-document-picker";
 import { File } from "expo-file-system";
 import { useKeepAwake } from "expo-keep-awake";
 import { Asset, requestPermissionsAsync } from "expo-media-library";
@@ -49,18 +48,15 @@ import {
   clearTemplateMusic,
   clearTemplateVideoSlot,
   commitTemplateDraftUpdate,
-  createDraftMediaFile,
   createTemplateDraftSession,
   deleteTemplateDraft,
   duplicateTemplateDraft,
   listTemplateDraftIds,
   loadTemplateDraft,
-  removeDraftFile,
   renameTemplateDraft,
 } from "./template-drafts";
 import type { TemplateDraftEdits, TemplateDraftSession } from "./template-drafts";
 import {
-  createTemplateMusic,
   createTemplateSource,
   getTemplateGainDb,
   getTemplateTextFields,
@@ -79,6 +75,8 @@ import type {
   TemplateTextOverrides,
   TemplateVideoSlot,
 } from "./template-editor";
+import { importTemplateMusic } from "./template-music-import";
+import type { MusicSource } from "./template-music-import";
 import { getTemplateSafeZoneGuide } from "./template-safe-zones";
 import { createBeforeAfterSample } from "./template-sample";
 import { importTemplateVideos, removeCachedFile, SlotImportError } from "./template-video-import";
@@ -132,7 +130,8 @@ type Operation =
   | TextEdit
   | { kind: HistoryDirection }
   | { kind: "duplicate"; templateId: string; draftId: string }
-  | { kind: "clear-video" | "import-music" | "remove-music" | "share" | "save-photos" | "rename" | "delete" }
+  | { kind: "import-music"; source: MusicSource }
+  | { kind: "clear-video" | "remove-music" | "share" | "save-photos" | "rename" | "delete" }
   | ExportJob;
 type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
 type Feedback = {
@@ -844,40 +843,29 @@ export default function App() {
     }
   }
 
-  async function selectMusic() {
-    if (editor.kind !== "template") return;
-    const operation = { kind: "import-music" } as const;
+  async function selectMusic(source: MusicSource) {
+    if (editor.kind !== "template" || !editor.template.audio?.music) return;
+    const operation = { kind: "import-music", source } as const;
     if (!begin(operation)) return;
-    let pickedUri: string | undefined;
-    let draftMedia: File | undefined;
     try {
-      const result = await getDocumentAsync({ type: "audio/*", copyToCacheDirectory: true });
-      if (result.canceled) return;
-      const [asset] = result.assets;
-      if (!asset) throw new Error("Files did not return an audio file.");
-      pickedUri = asset.uri;
-      if (!isCurrentOperation(operation)) return;
-
-      const metadata = await probeAudio(pickedUri);
-      if (!isCurrentOperation(operation)) return;
-
-      const music = createTemplateMusic(pickedUri, asset.name, metadata);
-      draftMedia = createDraftMediaFile(editor.template, asset.name, editor.draftId);
-      await new File(pickedUri).move(draftMedia);
-      if (!isCurrentOperation(operation)) return;
-      commitDraftEdit(
-        editor,
-        { ...templateDraft, music: { ...music, uri: draftMedia.uri }, missingMusic: false },
-        templateDraft.music || templateDraft.missingMusic ? "replace music" : "add music",
-      );
-      draftMedia = undefined;
+      await importTemplateMusic({
+        template: editor.template,
+        draftId: editor.draftId,
+        source,
+        currentMusic: templateDraft.music,
+        isCurrent: () => isCurrentOperation(operation),
+        commit: (music) =>
+          commitDraftEdit(
+            editor,
+            { ...templateDraft, music, missingMusic: false },
+            templateDraft.music || templateDraft.missingMusic ? "replace music" : "add music",
+          ),
+      });
     } catch (cause) {
       if (isCurrentOperation(operation)) {
         setFeedback({ kind: "error", scope: "music", message: errorMessage("Couldn’t import the music.", cause) });
       }
     } finally {
-      if (draftMedia) removeDraftFile(draftMedia);
-      removeCachedFile(pickedUri);
       finish(operation);
     }
   }
@@ -1283,7 +1271,7 @@ export default function App() {
           music={templateDraft.music}
           missingMusic={templateDraft.missingMusic}
           busy={busy}
-          importing={activity?.kind === "import-music"}
+          importing={activity?.kind === "import-music" ? activity.source : null}
           error={feedback?.scope === "music" ? feedback.message : undefined}
           onVolume={() => openMusicEdit("music-volume")}
           onStart={() => openMusicEdit("music-start")}
