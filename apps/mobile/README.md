@@ -49,6 +49,7 @@ or a missing-media warning are skipped until you clear them. If a video is too s
 names its slot. Tap its **Replace … from Photos** button and pick one replacement. Your other picks keep their
 positions. To discard the selection, tap **Cancel import** or cancel the replacement picker. StackReel saves the
 videos together when every pick is ready, so one **Undo** removes the whole import.
+[See how to replace a short B-roll clip on iPhone](../../docs/ios-ordered-import-recovery.png).
 
 Under **Required videos**, tap **Swap Before and After** to exchange those two clips. In **Hook & Reveal**, the swap
 button names the two filled slots. If all three are filled, tap **Swap clips**, then choose a named pair or tap **Cancel**.
