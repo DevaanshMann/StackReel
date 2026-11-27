@@ -9,6 +9,7 @@ import { discardPickerCopy } from "../src/draft-files";
 import { captionLimit } from "../src/single-clip-caption";
 import {
   createSingleClipDraftId,
+  createSingleClipDraftSession,
   createSingleClipSource,
   deleteSingleClipDraft,
   importSingleClipDraft,
@@ -794,5 +795,184 @@ describe("multiple single-clip projects", () => {
     expect(loadSingleClipDraft(deletedId)).toBeNull();
     expect(new File(deleted.uri).parentDirectory.exists).toBe(false);
     expect(listSingleClipDraftIds()).toEqual([siblingId]);
+  });
+});
+
+describe("single-clip edit history", () => {
+  it("starts at the first import and persists undo and redo for every kind of edit", async () => {
+    const id = createSingleClipDraftId();
+    const session = createSingleClipDraftSession(id);
+    expect(listSingleClipDraftIds()).toEqual([]);
+    const original = (await importVideo(external, () => true, id))!;
+    expect(session.undoLabel).toBeNull();
+    expect(session.redoLabel).toBeNull();
+    const cut = trimSingleClipDraft(original, trimmed);
+    const filled = setSingleClipFit(cut, "cover");
+    const crop = setSingleClipReframe(filled, { zoom: 2, x: 1, y: 0 });
+    const muted = setSingleClipVolume(crop, 0);
+    const captioned = setSingleClipCaption(muted, "Doors open");
+    const hd = setSingleClipExportResolution(captioned, 1080);
+    const replaced = (await importVideo(external, () => true, id))!;
+    const edits = [
+      ["trim", original, cut],
+      ["framing", cut, filled],
+      ["reframe", filled, crop],
+      ["volume", crop, muted],
+      ["caption", muted, captioned],
+      ["export resolution", captioned, hd],
+      ["replace video", hd, replaced],
+    ] as const;
+    for (const [label, before] of [...edits].reverse()) {
+      expect(session.undoLabel).toBe(label);
+      expect(session.undo()).toEqual(before);
+      expect(loadSingleClipDraft(id)).toEqual(before);
+    }
+    expect(session.undoLabel).toBeNull();
+    for (const [label, , after] of edits) {
+      expect(session.redoLabel).toBe(label);
+      expect(session.redo()).toEqual(after);
+      expect(loadSingleClipDraft(id)).toEqual(after);
+    }
+    expect(session.redoLabel).toBeNull();
+    expect(new File(original.uri).exists).toBe(true);
+    session.close();
+    expect(new File(original.uri).exists).toBe(false);
+    const reopened = createSingleClipDraftSession(id);
+    expect(reopened.undoLabel).toBeNull();
+    expect(reopened.redoLabel).toBeNull();
+    expect(loadSingleClipDraft(id)).toEqual(replaced);
+    reopened.close();
+  });
+
+  it("preserves redo through no-ops, cancellation and failed writes, then removes discarded replacement media", async () => {
+    const original = (await importVideo())!;
+    const session = createSingleClipDraftSession(original.draftId);
+    const cut = trimSingleClipDraft(original, trimmed);
+    const replacement = (await importVideo())!;
+    expect(session.undo()).toEqual(cut);
+    const before = new Map(storage.files);
+    expect(trimSingleClipDraft(cut, { ...trimmed })).toBe(cut);
+    await expect(importVideo(external, () => false)).resolves.toBeNull();
+    expect(() => setSingleClipVolume(original, 50)).toThrow(/changed/);
+    storage.interruptMove = true;
+    expect(() => setSingleClipCaption(cut, "Draft")).toThrow("Interrupted write");
+    await expect(importVideo()).rejects.toThrow("Interrupted write");
+    expect(() => session.undo()).toThrow("Interrupted write");
+    expect(() => session.redo()).toThrow("Interrupted write");
+    expect(storage.files).toEqual(before);
+    expect(session.undoLabel).toBe("trim");
+    expect(session.redoLabel).toBe("replace video");
+    storage.interruptMove = false;
+    const captioned = setSingleClipCaption(cut, "Draft");
+    expect(session.redoLabel).toBeNull();
+    expect(new File(replacement.uri).exists).toBe(false);
+    expect(loadSingleClipDraft()).toEqual(captioned);
+    session.close();
+  });
+
+  it("keeps twenty edits and releases replaced media when its last history entry expires", async () => {
+    const original = (await importVideo())!;
+    const session = createSingleClipDraftSession(original.draftId);
+    const replacement = (await importVideo())!;
+    let clip = replacement;
+    for (let index = 1; index <= 19; index++) clip = setSingleClipCaption(clip, String(index));
+    expect(new File(original.uri).exists).toBe(true);
+    setSingleClipVolume(clip, 0);
+    expect(new File(original.uri).exists).toBe(false);
+    for (let index = 0; index < 20; index++) clip = session.undo();
+    expect(clip).toEqual(replacement);
+    expect(session.undoLabel).toBeNull();
+    session.close();
+  });
+
+  it("keeps the last applied legacy cut and reclaims redo media after a cold relaunch", async () => {
+    const original = (await importVideo())!;
+    const legacySnapshot = manifest(original);
+    const saved = JSON.parse(legacySnapshot.textSync());
+    delete saved.fit;
+    delete saved.volumePercent;
+    delete saved.exportResolution;
+    legacySnapshot.writeSync(JSON.stringify(saved));
+    const session = createSingleClipDraftSession(legacySingleClipDraftId);
+    const cut = trimSingleClipDraft(original, trimmed);
+    const replacement = (await importVideo())!;
+    expect(session.undo()).toEqual(cut);
+    expect(session.undo()).toEqual(original);
+    expect(session.redo()).toEqual(cut);
+    expect(new File(replacement.uri).exists).toBe(true);
+
+    vi.resetModules();
+    const cold = await import("../src/single-clip-draft");
+    expect(cold.loadSingleClipDraft()).toEqual(cut);
+    expect(new File(replacement.uri).exists).toBe(false);
+    const reopened = cold.createSingleClipDraftSession(legacySingleClipDraftId);
+    expect(reopened.undoLabel).toBeNull();
+    expect(reopened.redoLabel).toBeNull();
+    reopened.close();
+    session.close();
+  });
+
+  it("preserves the current revision if a replacement's historical media becomes unreadable", async () => {
+    const original = (await importVideo())!;
+    const session = createSingleClipDraftSession(original.draftId);
+    const replacement = (await importVideo())!;
+    storage.blockedRead = original.uri;
+    const before = new Map(storage.files);
+    expect(() => session.undo()).toThrow(/cannot open/i);
+    expect(storage.files).toEqual(before);
+    expect(loadSingleClipDraft()).toEqual(replacement);
+    expect(session.undoLabel).toBe("replace video");
+    storage.blockedRead = "";
+    expect(session.undo()).toEqual(original);
+    session.close();
+    expect(new File(replacement.uri).exists).toBe(false);
+  });
+
+  it("rejects stale history after an external revision and cancels imports when the session ends", async () => {
+    const original = (await importVideo())!;
+    const session = createSingleClipDraftSession(original.draftId);
+    const cut = trimSingleClipDraft(original, trimmed);
+    const snapshot = manifest(cut);
+    new File(snapshot.parentDirectory, "draft-9.json").writeSync(snapshot.textSync());
+    const before = new Map(storage.files);
+    expect(() => session.undo()).toThrow(/changed/);
+    expect(() => setSingleClipCaption(cut, "Late")).toThrow(/changed/);
+    expect(storage.files).toEqual(before);
+
+    const next = createSingleClipDraftSession(original.draftId);
+    expect(() => session.undo()).toThrow(/ended/);
+    const importing = importVideo();
+    session.close();
+    const fitted = setSingleClipFit(cut, "cover");
+    await expect(importing).rejects.toThrow(/changed/);
+    const cancelled = importVideo();
+    next.close();
+    expect(await cancelled).toBeNull();
+    expect(loadSingleClipDraft()).toEqual(fitted);
+  });
+
+  it("isolates active histories by project and clears only the deleted project's history", async () => {
+    const firstId = createSingleClipDraftId();
+    const secondId = createSingleClipDraftId();
+    const first = createSingleClipDraftSession(firstId);
+    const second = createSingleClipDraftSession(secondId);
+    const firstClip = (await importVideo(external, () => true, firstId))!;
+    const secondClip = (await importVideo(external, () => true, secondId))!;
+    const firstReplacement = (await importVideo(external, () => true, firstId))!;
+    const secondReplacement = (await importVideo(external, () => true, secondId))!;
+    storage.blockedDeletion = manifest(firstReplacement).uri;
+    expect(() => deleteSingleClipDraft(firstId)).toThrow(/delete/);
+    expect(first.undoLabel).toBe("replace video");
+    storage.blockedDeletion = "";
+    deleteSingleClipDraft(firstId);
+    expect(first.undoLabel).toBeNull();
+    expect(() => first.undo()).toThrow(/ended/);
+    expect(new File(firstClip.uri).exists).toBe(false);
+    expect(new File(firstReplacement.uri).exists).toBe(false);
+    expect(listSingleClipDraftIds()).toEqual([secondId]);
+    expect(second.undo()).toEqual(secondClip);
+    second.close();
+    expect(new File(secondReplacement.uri).exists).toBe(false);
+    expect(new File(external).exists).toBe(true);
   });
 });

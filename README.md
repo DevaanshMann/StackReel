@@ -484,7 +484,7 @@ _Runs in parallel with Phase 3._
    - [x] Import background music from Files on iOS, choose where the song starts, and adjust its volume
    - [ ] Bundled royalty-free starter tracks (CC0) and Android music controls
    - [x] Original-audio volume and mute for iOS template clips and single-clip reels
-   - [x] Undo and redo applied edits in an open iOS template draft
+   - [x] Undo and redo applied edits in open iOS template and single-clip drafts
    - [ ] Android clip volume, mute, and undo/redo controls
 5. **Projects**
    - [x] Keep multiple iOS single-clip drafts and reopen each reel with its saved trim, framing, and volume

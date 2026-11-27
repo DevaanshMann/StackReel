@@ -141,6 +141,11 @@ Use **Replace from Photos** or **Replace from Files** inside a draft to replace 
 **Fit** at full volume with an empty caption. To remove one reel, open it, tap **Delete draft**, and confirm.
 [See two single-clip reels in Projects on iPhone](../../docs/ios-single-clip-projects.png).
 
+Use **Undo** and **Redo** to step through the last 20 changes in an open single-clip draft, including trim,
+framing, volume, caption, export resolution, and video replacement. Undoing a replacement brings back the
+previous video with its edits. Making a different edit after undoing clears Redo. When you leave the editor
+or quit StackReel, the draft keeps the version on screen and the next editing session starts with empty history.
+
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
 You can close StackReel and come back to share later. Reopen the draft from **Projects** to save or share its last
@@ -341,6 +346,10 @@ offline to verify that all three movies ship with the app.
     Open **Music start**, select the chorus, and play the preview. Tap **Apply start** and export an MP4.
     Check that it opens on the chorus and runs for eight seconds. Move the start again and cancel, then
     verify the MP4 is still shareable. Reopen the draft from **Projects** and check the saved start.
+34. In a single-clip draft, add a caption to a video, choose **1080p**, and export it. Replace the video with
+    different footage. Undo the replacement and check the original filename, picture, and caption. Cancel a second
+    replacement, then redo the first and check that the new footage returns. Undo again, export, and relaunch.
+    Reopen from **Projects** and verify the original edit is shareable at 1080p and both history buttons are disabled.
 
 ### Export display sleep on iPhone
 
