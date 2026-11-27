@@ -417,7 +417,7 @@ export function TemplateVideoSlots({
               )}
             </View>
             <VideoImportActions
-              replace={!!clip || missing}
+              action={clip || missing ? "Replace" : "Choose"}
               importingFrom={importingSlotId === slot.id ? importingFrom : undefined}
               busy={busy}
               primary={emptySlots.length < 2 && slot === nextSlot}

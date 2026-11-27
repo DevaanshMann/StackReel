@@ -492,7 +492,8 @@ _Runs in parallel with Phase 3._
    - [x] Keep multiple iOS single-clip drafts and reopen each reel with its saved trim, framing, and volume
    - [ ] Auto-save every edit (debounced) to SQLite and the app sandbox
    - [ ] Project list with thumbnails. Duplicate, rename, delete.
-   - [ ] Handle missing media (the user deleted a clip from Photos): show a relink prompt
+   - [x] Relink unavailable footage from Photos or Files in an iOS single-clip draft and keep its saved edits
+   - [ ] Relink missing project media on Android
 6. **Export & share**
    - [x] Choose 720p or 1080p for iOS single-clip exports
    - [ ] Resolution choices for templates and Android, frame rate (30/60 fps), and quality (standard/high)

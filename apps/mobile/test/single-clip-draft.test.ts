@@ -16,6 +16,8 @@ import {
   legacySingleClipDraftId,
   listSingleClipDraftIds,
   loadSingleClipDraft,
+  MissingSingleClipVideoError,
+  relinkSingleClipDraft,
   setSingleClipCaption,
   setSingleClipExportResolution,
   setSingleClipFit,
@@ -545,7 +547,13 @@ describe("single-clip draft storage", () => {
         break;
     }
     const before = new Map(storage.files);
-    expect(() => loadSingleClipDraft()).toThrow();
+    const load = () => loadSingleClipDraft();
+    if (["missing video", "empty video", "truncated video", "unreadable video"].includes(damage)) {
+      expect(load).toThrow(MissingSingleClipVideoError);
+    } else {
+      expect(load).toThrow();
+      expect(load).not.toThrow(MissingSingleClipVideoError);
+    }
     await expect(importVideo()).rejects.toThrow();
     expect(storage.files).toEqual(before);
     storage.blockedListing = "";
@@ -795,6 +803,216 @@ describe("multiple single-clip projects", () => {
     expect(loadSingleClipDraft(deletedId)).toBeNull();
     expect(new File(deleted.uri).parentDirectory.exists).toBe(false);
     expect(listSingleClipDraftIds()).toEqual([siblingId]);
+  });
+});
+
+describe("single-clip video relinking", () => {
+  const replacement = { name: "another encoding.mp4", uri: external, draftFileName: "reencoded.mov" };
+
+  function recoveryFor(clip: SingleClip) {
+    try {
+      loadSingleClipDraft(clip.draftId);
+    } catch (error) {
+      if (!(error instanceof MissingSingleClipVideoError)) throw error;
+      expect(error.recovery).toMatchObject({ name: clip.name, draftId: clip.draftId });
+      return error.recovery;
+    }
+    throw new Error("Expected a recoverable draft");
+  }
+
+  it("restores all edits and resets broken history after relinking an equivalent representation", async () => {
+    const id = createSingleClipDraftId();
+    const session = createSingleClipDraftSession(id);
+    const original = (await importVideo(external, () => true, id))!;
+    const cut = trimSingleClipDraft(original, trimmed);
+    const cropped = setSingleClipReframe(setSingleClipFit(cut, "cover"), { zoom: 2, x: 0, y: 1 });
+    const captioned = setSingleClipCaption(setSingleClipVolume(cropped, 35), "Hometown show");
+    const edited = setSingleClipExportResolution(captioned, 1080);
+    setSingleClipCaption(edited, "Other caption");
+    session.undo();
+    const damaged = new File(edited.uri);
+    damaged.writeSync("damaged");
+    const recovery = recoveryFor(edited);
+    const otherId = createSingleClipDraftId();
+    const other = await importVideo(external, () => true, otherId);
+
+    const reencoded = { ...media, startUs: media.startUs - 1, durationUs: media.durationUs + 10 };
+    new File(external).writeSync("a different representation of the original video");
+    const relinked = (await relinkSingleClipDraft(recovery, replacement, reencoded, () => true))!;
+    expect(relinked.uri).not.toBe(edited.uri);
+    expect(relinked.uri).toMatch(/\.mov$/);
+    expect(relinked).toEqual({
+      ...edited,
+      media: reencoded,
+      uri: relinked.uri,
+      source: createSingleClipSource({ ...edited, uri: relinked.uri, media: reencoded }),
+    });
+    expect(JSON.parse(relinked.source).plan).toEqual(JSON.parse(edited.source).plan);
+    expect(loadSingleClipDraft(id)).toEqual(relinked);
+    expect(loadSingleClipDraft(otherId)).toEqual(other);
+    expect(damaged.exists).toBe(false);
+    expect(new File(relinked.uri).textSync()).toEqual(new File(external).textSync());
+    expect(session.undoLabel).toBeNull();
+    expect(session.redoLabel).toBeNull();
+    setSingleClipCaption(relinked, "New cut");
+    expect(session.undo()).toEqual(relinked);
+    session.close();
+  });
+
+  it("reopens a relinked legacy snapshot with the historical defaults after a cold launch", async () => {
+    const clip = (await importVideo())!;
+    const snapshot = manifest(clip);
+    const saved = JSON.parse(snapshot.textSync());
+    delete saved.fit;
+    delete saved.volumePercent;
+    delete saved.exportResolution;
+    snapshot.writeSync(JSON.stringify(saved));
+    storage.blockedRead = clip.uri;
+    const picked = new File(Paths.cache, "ImagePicker", "recovered.mov");
+    picked.writeSync("new encoding");
+    const result = (await relinkSingleClipDraft(
+      recoveryFor(clip),
+      { ...replacement, uri: picked.uri },
+      media,
+      () => true,
+    ))!;
+    expect(result).toMatchObject({
+      draftId: legacySingleClipDraftId,
+      name: clip.name,
+      selection: clip.selection,
+      fit: "contain",
+      volumePercent: 100,
+      exportResolution: 720,
+    });
+    expect(picked.exists).toBe(false);
+    vi.resetModules();
+    const cold = await import("../src/single-clip-draft");
+    expect(cold.loadSingleClipDraft()).toEqual(result);
+  });
+
+  it.each([
+    { selection: { startFrame: 0, endFrame: 4 } },
+    { media: { ...media, durationUs: 0 } },
+    { volumePercent: -1 },
+    { caption: 42 },
+    { reframe: { zoom: 2, x: 4, y: 0 } },
+    { exportResolution: null },
+    { fit: null },
+    { bytes: 0 },
+    { file: "../foreign.mov" },
+  ])("rejects a malformed manifest with missing media (%j) as ordinary corruption", async (fields) => {
+    const clip = (await importVideo())!;
+    const snapshot = manifest(clip);
+    snapshot.writeSync(JSON.stringify({ ...JSON.parse(snapshot.textSync()), ...fields }));
+    new File(clip.uri).delete();
+    const load = () => loadSingleClipDraft(clip.draftId);
+    expect(load).toThrow();
+    expect(load).not.toThrow(MissingSingleClipVideoError);
+  });
+
+  it.each([
+    [{ ...media, width: media.height, height: media.width }, /select the original.*1920 × 1080/i],
+    [{ ...media, startUs: 0 }, /select the original.*frame range/i],
+    [{ ...media, durationUs: media.durationUs + 50_000 }, /select the original.*frame range/i],
+  ] as const)(
+    "requires matching dimensions and both source frame bounds before copying",
+    async (candidate, message) => {
+      const clip = trimSingleClipDraft((await importVideo())!, trimmed);
+      new File(clip.uri).delete();
+      const recovery = recoveryFor(clip);
+      const before = new Map(storage.files);
+      const copy = vi.spyOn(File.prototype, "copy");
+      await expect(relinkSingleClipDraft(recovery, replacement, candidate, () => true)).rejects.toThrow(message);
+      expect(copy).not.toHaveBeenCalled();
+      expect(storage.files).toEqual(before);
+    },
+  );
+
+  it("cleans staged files on partial copies, short copies, failed commits and cancellation", async () => {
+    const clip = (await importVideo())!;
+    const session = createSingleClipDraftSession(clip.draftId);
+    const cut = trimSingleClipDraft(clip, trimmed);
+    new File(cut.uri).delete();
+    const recovery = recoveryFor(cut);
+    const before = new Map(storage.files);
+    const relink = (isCurrent = () => true) => relinkSingleClipDraft(recovery, replacement, media, isCurrent);
+    const copy = vi.spyOn(File.prototype, "copy");
+    await expect(relink(() => false)).resolves.toBeNull();
+    expect(copy).not.toHaveBeenCalled();
+    copy.mockImplementationOnce(async (destination) => {
+      (destination as File).writeSync("partial");
+      throw new Error("Copy interrupted");
+    });
+    await expect(relink()).rejects.toThrow("Copy interrupted");
+    expect(storage.files).toEqual(before);
+    copy.mockImplementationOnce(async (destination) => {
+      (destination as File).writeSync("short");
+    });
+    await expect(relink()).rejects.toThrow(/incomplete/);
+    expect(storage.files).toEqual(before);
+    storage.interruptMove = true;
+    await expect(relink()).rejects.toThrow("Interrupted write");
+    storage.interruptMove = false;
+    expect(storage.files).toEqual(before);
+    let current = true;
+    const pending = relink(() => current);
+    current = false;
+    await expect(pending).resolves.toBeNull();
+    expect(storage.files).toEqual(before);
+    expect(recoveryFor(cut)).toEqual(recovery);
+    expect(session.undoLabel).toBe("trim");
+    session.close();
+  });
+
+  it("keeps the first committed relink when two selections race", async () => {
+    const clip = (await importVideo())!;
+    new File(clip.uri).delete();
+    const recovery = recoveryFor(clip);
+    const first = relinkSingleClipDraft(recovery, replacement, media, () => true);
+    const second = relinkSingleClipDraft(recovery, replacement, media, () => true);
+    const result = (await first)!;
+    await expect(second).rejects.toThrow(/changed/);
+    await expect(relinkSingleClipDraft(recovery, replacement, media, () => true)).rejects.toThrow(/changed/);
+    expect(loadSingleClipDraft()).toEqual(result);
+    expect([...storage.files.keys()].sort()).toEqual([external, manifest(result).uri, result.uri].sort());
+  });
+
+  it("rejects a superseded revision even while the original media is still missing", async () => {
+    const clip = (await importVideo())!;
+    new File(clip.uri).delete();
+    const recovery = recoveryFor(clip);
+    const snapshot = manifest(clip);
+    const later = new File(snapshot.parentDirectory, "draft-2.json");
+    const updated = JSON.stringify({ ...JSON.parse(snapshot.textSync()), caption: "Newer edit" });
+    const before = new Map(storage.files).set(later.uri, updated);
+    const pending = relinkSingleClipDraft(recovery, replacement, media, () => true);
+    later.writeSync(updated);
+    await expect(pending).rejects.toThrow(/changed/);
+    expect(storage.files).toEqual(before);
+    expect(recoveryFor(clip).revision).not.toBe(recovery.revision);
+  });
+
+  it("keeps an externally restored video and rejects a recreated draft at the same revision", async () => {
+    const clip = (await importVideo())!;
+    const damaged = new File(clip.uri);
+    damaged.delete();
+    const recovery = recoveryFor(clip);
+    const pending = relinkSingleClipDraft(recovery, replacement, media, () => true);
+    damaged.writeSync(new File(external).textSync());
+    await expect(pending).rejects.toThrow(/changed/);
+    expect(loadSingleClipDraft()).toEqual(clip);
+
+    damaged.delete();
+    const deleted = relinkSingleClipDraft(recovery, replacement, media, () => true);
+    deleteSingleClipDraft();
+    await expect(deleted).resolves.toBeNull();
+    expect(loadSingleClipDraft()).toBeNull();
+    const recreated = (await importVideo())!;
+    new File(recreated.uri).delete();
+    const before = new Map(storage.files);
+    await expect(relinkSingleClipDraft(recovery, replacement, media, () => true)).rejects.toThrow(/changed/);
+    expect(storage.files).toEqual(before);
+    expect(recoveryFor(recreated).revision).not.toBe(recovery.revision);
   });
 });
 

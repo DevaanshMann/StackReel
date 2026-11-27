@@ -6,14 +6,14 @@ import type { VideoPickerSource } from "./video-picker";
 const sources = ["Photos", "Files"] as const;
 
 export function VideoImportActions({
-  replace,
+  action,
   importingFrom,
   busy,
   primary,
   slotLabel,
   onSelect,
 }: {
-  replace: boolean;
+  action: "Choose" | "Replace" | "Relink";
   importingFrom: VideoPickerSource | undefined;
   busy: boolean;
   primary: boolean;
@@ -23,8 +23,7 @@ export function VideoImportActions({
   return (
     <View style={styles.actions}>
       {sources.map((source) => {
-        const label =
-          importingFrom === source ? `Importing from ${source}…` : `${replace ? "Replace" : "Choose"} from ${source}`;
+        const label = importingFrom === source ? `Importing from ${source}…` : `${action} from ${source}`;
         return (
           <Action
             key={source}
