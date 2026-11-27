@@ -7,7 +7,7 @@
 A free, open-source, on-device editor for vertical video (Reels, TikTok, YouTube Shorts).
 Pick a template, drop in your clips, and export. StackReel edits and renders your reel on your device.
 
-**Available on iOS as a development build.** Choose **Before / After**, **Hook & Reveal**, or **Top 5 Countdown**. Add videos from Photos or Files,
+**Available on iOS as a development build.** Watch an example of **Before / After**, **Hook & Reveal**, or **Top 5 Countdown** in the gallery. Choose a template, add videos from Photos or Files,
 trim and reframe clips, and edit the template text. You can resume a saved draft, preview the reel, and export an H.264 MP4
 to share or save to Photos. Android, web, and desktop editors are planned.
 
@@ -461,6 +461,7 @@ _Runs in parallel with Phase 3._
    - [ ] Navigation: tabs _Templates_ / _Projects_ / _Settings_
    - [ ] Theme from `packages/ui` tokens. Dark mode by default.
 2. **Template gallery**
+   - [x] Watch a bundled example of each iOS gallery template before importing footage
    - [ ] Grid of templates with auto-playing muted previews (lazy, at most 2 playing at once)
    - [ ] Categories and filters: _Trending style_, _Travel_, _Food_, _Fitness_, _Talking head_, _Product_
    - [ ] Template detail: preview, slot count, duration, "Use template"
