@@ -482,7 +482,8 @@ _Runs in parallel with Phase 3._
    - [ ] Android template preview safe-zone toggle
    - [ ] Edit text: tap text on the preview to edit it inline. Pick a style preset, color, and font.
    - [x] Import background music from Files on iOS, choose where the song starts, and adjust its volume
-   - [ ] Bundled royalty-free starter tracks (CC0) and Android music controls
+   - [x] Add the bundled CC0 instrumental **Daybreak** to an iOS template and export it offline
+   - [ ] Android music controls and additional starter tracks
    - [x] Original-audio volume and mute for iOS template clips and single-clip reels
    - [x] Undo and redo applied edits in open iOS template and single-clip drafts
    - [ ] Android clip volume, mute, and undo/redo controls
