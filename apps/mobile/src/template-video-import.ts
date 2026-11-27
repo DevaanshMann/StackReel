@@ -1,5 +1,6 @@
 import { probeVideo } from "@stackreel/engine";
 import { File, Paths } from "expo-file-system";
+import { discardPickerCopy, isPickerCacheFile } from "./draft-files";
 import { createDraftMediaFile, removeDraftFile } from "./template-drafts";
 import { createTemplateClip } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
@@ -34,6 +35,7 @@ export async function importTemplateVideos({
   slots,
   source,
   isCurrent,
+  onInvalidVideo,
   commit,
 }: {
   template: MobileTemplate;
@@ -41,6 +43,7 @@ export async function importTemplateVideos({
   slots: readonly TemplateVideoSlot[];
   source: VideoPickerSource;
   isCurrent: () => boolean;
+  onInvalidVideo?: (error: SlotImportError) => Promise<boolean>;
   commit: (clips: Record<string, TemplateClip>) => void;
 }) {
   let videos: PickedVideo[] | null;
@@ -53,23 +56,48 @@ export async function importTemplateVideos({
   if (!videos) return;
 
   const staged: File[] = [];
+  const pickedUris = new Set(videos.map(({ uri }) => uri));
+  const retry = slots.length > 1 && source === "Photos" ? onInvalidVideo : undefined;
   try {
     if (!isCurrent()) return;
     if (!videos.length || videos.length > slots.length) {
       throw new Error(`${source} returned an unexpected number of videos.`);
     }
     const clips: Record<string, TemplateClip> = {};
-    for (const [index, asset] of videos.entries()) {
+    for (const [index, selected] of videos.entries()) {
       const slot = slots[index]!;
+      // A replacement can refer to the same picker file as a later selection.
+      const laterUris = new Set(videos.slice(index + 1).map(({ uri }) => uri));
+      let asset: PickedVideo | null = selected;
+      let clip: TemplateClip;
+      while (true) {
+        try {
+          if (!asset) {
+            asset = await pickVideo("Photos");
+            if (!asset) return;
+            pickedUris.add(asset.uri);
+            if (!isCurrent()) return;
+          }
+          if (!asset.uri) throw new Error(`${source} did not return a video file.`);
+          const metadata = await probeVideo(asset.uri);
+          if (!isCurrent()) return;
+          clip = createTemplateClip(slot, asset.uri, asset.name, metadata);
+          break;
+        } catch (cause) {
+          if (!isCurrent()) return;
+          const error = new SlotImportError(slot, cause);
+          if (!retry) throw error;
+          if (asset && !laterUris.has(asset.uri)) discardPickerCopy(asset.uri);
+          asset = null;
+          if (!(await retry(error)) || !isCurrent()) return;
+        }
+      }
+
       try {
-        if (!asset.uri) throw new Error(`${source} did not return a video file.`);
-        const metadata = await probeVideo(asset.uri);
-        if (!isCurrent()) return;
-        const clip = createTemplateClip(slot, asset.uri, asset.name, metadata);
         const target = createDraftMediaFile(template, asset.draftFileName, draftId);
         staged.push(target);
         const file = new File(asset.uri);
-        if (isCachedFile(asset.uri)) await file.move(target);
+        if (isPickerCacheFile(file) && !laterUris.has(asset.uri)) await file.move(target);
         else await file.copy(target);
         if (!isCurrent()) return;
         clips[slot.id] = { ...clip, uri: target.uri };
@@ -81,6 +109,6 @@ export async function importTemplateVideos({
     staged.length = 0;
   } finally {
     for (const file of staged) removeDraftFile(file);
-    for (const { uri } of videos) removeCachedFile(uri);
+    for (const uri of pickedUris) discardPickerCopy(uri);
   }
 }

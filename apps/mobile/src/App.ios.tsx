@@ -18,6 +18,7 @@ import { TemplateExample } from "./TemplateExample";
 import { TemplateMusicControls } from "./TemplateMusicControls";
 import { TemplateMusicStart } from "./TemplateMusicStart";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
+import type { ImportRecovery } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
 import { TemplateVolume, VolumeSheet } from "./TemplateVolume";
@@ -133,7 +134,10 @@ type Operation =
   | { kind: "import-music"; source: MusicSource }
   | { kind: "clear-video" | "remove-music" | "share" | "save-photos" | "rename" | "delete" }
   | ExportJob;
-type Activity = Exclude<Operation, ExportJob> | (ExportJob & { progress: number });
+type Activity =
+  | Exclude<Operation, ExportJob | ImportOperation>
+  | (ImportOperation & { recovery?: ImportRecovery })
+  | (ExportJob & { progress: number });
 type Feedback = {
   kind: "error" | "status";
   message: string;
@@ -219,6 +223,7 @@ export default function App() {
   const mounted = useRef(false);
   const editorScreenRef = useRef<ScreenRef>(null);
   const activeOperation = useRef<Operation | null>(null);
+  const pendingImportChoice = useRef<ImportRecovery["answer"] | null>(null);
   const currentEditor = useRef<Editor>(firstScreen);
   const currentTemplateDrafts = useRef<TemplateDrafts | null>(null);
   const currentDraftSession = useRef<ReturnType<typeof openDraftSession>>(null);
@@ -307,6 +312,7 @@ export default function App() {
     });
     return () => {
       mounted.current = false;
+      pendingImportChoice.current?.(false);
       subscription.remove();
       const job = activeOperation.current;
       activeOperation.current = null;
@@ -684,6 +690,20 @@ export default function App() {
         slots,
         source,
         isCurrent: () => isCurrentOperation(operation),
+        onInvalidVideo: (error) =>
+          new Promise<boolean>((resolve) => {
+            if (!isCurrentOperation(operation)) return resolve(false);
+            const answer = (replace: boolean) => {
+              if (pendingImportChoice.current !== answer) return;
+              pendingImportChoice.current = null;
+              const current = isCurrentOperation(operation);
+              if (current) setActivity(operation);
+              resolve(current && replace);
+            };
+            pendingImportChoice.current = answer;
+            setActivity({ ...operation, recovery: { error, answer } });
+            AccessibilityInfo.announceForAccessibility(error.message);
+          }),
         commit: (imported) => {
           const clips = { ...templateDraft.clips, ...imported };
           const missingSlots = templateDraft.missingSlots.filter((id) => !Object.hasOwn(imported, id));
@@ -1144,6 +1164,7 @@ export default function App() {
           busy={busy}
           importingSlotId={importing ? activity.slotId : undefined}
           importingFrom={importing ? activity.source : undefined}
+          recovery={importing ? activity.recovery : undefined}
           slotError={feedback?.kind === "error" && feedback.slotId !== undefined ? feedback : null}
           swapError={feedback?.scope === "swap" ? feedback.message : undefined}
           onSelectOrdered={(slots) => selectTemplateVideos(slots, "Photos")}

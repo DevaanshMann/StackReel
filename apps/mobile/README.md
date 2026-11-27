@@ -45,10 +45,10 @@ restore preview and export, then export a new MP4 before sharing.
 
 When at least two video slots are empty, tap **Choose videos from Photos**. Pick videos in the numbered slot order
 shown above the button. You can choose fewer videos and fill the remaining slots later. Slots with a saved video
-or a missing-media warning are skipped until you clear them. Once Photos returns the videos, StackReel checks each
-one against its slot. If a video is too short or fails to import, the error names that slot. If Photos can’t return
-the selection, you’ll see an error for the group. StackReel saves the videos together only after every selected
-video is ready.
+or a missing-media warning are skipped until you clear them. If a video is too short or unreadable, the editor
+names its slot. Tap its **Replace … from Photos** button and pick one replacement. Your other picks keep their
+positions. To discard the selection, tap **Cancel import** or cancel the replacement picker. StackReel saves the
+videos together when every pick is ready, so one **Undo** removes the whole import.
 
 Under **Required videos**, tap **Swap Before and After** to exchange those two clips. In **Hook & Reveal**, the swap
 button names the two filled slots. If all three are filled, tap **Swap clips**, then choose a named pair or tap **Cancel**.
@@ -227,11 +227,12 @@ offline to verify that all three movies ship with the app.
    an MP4 exported from silent clips. Edit a field and cancel, then reopen and apply the current wording. Check that
    **Share MP4** is still available both times. Tap **Back to templates**, reopen **Before / After**, and verify that
    the edits are still there. Reset and apply, then verify that the original text returns and sharing requires a new export.
-7. Open an empty **Hook & Reveal** draft and edit **Hook text**. Tap **Choose videos from Photos** and select a
-   recognizable video for **Your hook shot**, then a short video for **B-roll**. Confirm the error names **B-roll**
-   and both slots are still empty. Retry and cancel. Then pick just the hook video and check the next order is
-   **B-roll**, **The reveal**. Pick two distinguishable videos in that order and verify their positions in preview.
-   Relaunch, reopen the draft from **Projects**, and check the same sequence and edited text. Export and share.
+7. Open an empty **Hook & Reveal** draft and edit **Hook text**. Tap **Choose videos from Photos**, then choose a
+   recognizable hook, a too-short video for **B-roll**, and a recognizable reveal. Tap **Cancel import** and check
+   that all three slots are empty and the edited text is still there. Repeat the selection, tap **Replace B-roll
+   from Photos**, and pick a valid video. Play the preview and verify all three positions. Tap **Undo import videos**
+   to empty all three slots, then **Redo import videos** to restore them. Relaunch, reopen the draft from
+   **Projects**, and check the sequence and edited text. Export and share.
 8. Open **Before / After** or **Hook & Reveal** with no videos selected and choose a short audio file under
    **Background music**. Fill the video slots, check that the track loops in the preview, then listen to the exported
    MP4. Cancel **Replace music** in Files, then try a damaged audio file and check that the previous filename and
