@@ -146,6 +146,7 @@ iOS asks for permission to add videos to Photos. You can still use **Share MP4**
 You can close StackReel and come back to share later. Reopen the draft from **Projects** to save or share its last
 completed MP4. If you change the reel or its export resolution, or iOS clears the cached video to free space, tap
 **Export MP4** again. To keep a permanent copy, use **Save to Photos** or **Share MP4** → **Save to Files**.
+[See the save and share controls in a reopened sample reel](../../docs/ios-reopened-export.jpg).
 
 You can make several reels from the same template. Open a template and make an edit to save your first draft.
 To start another, go back to **Templates** and tap **New draft** on that template’s card. When a template has
