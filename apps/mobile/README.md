@@ -18,7 +18,8 @@ Reopen it from **Projects** to continue editing. Tapping **Edit sample reel** ag
 Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
 video. Use **Replace from Photos** or **Replace from Files** to choose a different video. The iOS Photos picker gives StackReel access
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
-MP4. Each template supplies its own canvas, timing, and captions.
+MP4. If a clip meets the minimum and ends before its slot does, the reel holds the last frame. The clip’s
+own audio ends with the footage. For example, five four-second clips fill the 25-second **Top 5 Countdown**.
 
 Use **Undo** and **Redo** in an open template draft to compare cuts or recover a previous edit. You can step back
 through the last 20 edits, including trims, framing, captions, volume changes, swaps, and adding, replacing, or
@@ -79,7 +80,8 @@ clips. Applied changes update preview and require a new export before sharing.
 Each filled slot shows its current start and end times within the source video. Tap **Trim** to see frames from the
 source in order. Drag the highlighted window onto the scene you want, or tap a scene outside the window to center
 the selection there. Use **−1f** or **+1f** to move the cut by one frame, then play the selection to check the cut
-and its audio. The window keeps the duration required by the template. You can trim as soon as a slot has a video.
+and its audio. The window covers the source footage used by the slot. If the whole clip fits inside the slot,
+the window covers the whole clip. You can trim as soon as a slot has a video.
 Tap **Apply trim** to save the window, or **Cancel** to keep the current selection. If you change the window, export
 the template again before sharing. [See the trim filmstrip on iPhone](../../docs/ios-template-trim-filmstrip.png).
 
@@ -322,10 +324,11 @@ offline to verify that all three movies ship with the app.
     and check that **Share MP4** is still available. Choose **1080p**, export again, and save the second MP4.
     In Photos, swipe up on each video to check its dimensions. Compare the framing, caption, duration, and audio.
     Relaunch StackReel, reopen the draft from **Projects**, and check that **1080p** is selected.
-32. Open **Top 5 Countdown** and use **Choose videos from Photos** to pick five different videos of at least seven
-    seconds each, starting with fifth place. Change the list title and all five names in **Edit text**. Reopen the
-    draft from **Projects**, preview it, and export. Play the saved MP4 and check the title, each clip against its
-    rank and name, and the winner at the end of the 25-second reel.
+32. Open **Top 5 Countdown** and use **Choose videos from Photos** to pick five different four-second videos,
+    starting with fifth place. Use a winner with motion and sound near the end. Change the list title and all five
+    names in **Edit text**. Reopen the draft from **Projects**, preview it, and export. Play the saved MP4 and check
+    each clip against its rank and name. With background music off, the winner’s last frame should hold silently
+    from 22.5 seconds through the end of the 25-second reel.
 
 ### Export display sleep on iPhone
 
