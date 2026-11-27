@@ -131,7 +131,7 @@ final class VideoCompositionBuilderTests: XCTestCase {
     XCTAssertEqual(hold.holdTimeRange, range(1_400_000, 2_000_000))
     let media = try segments(result, trackID: loop.trackID)
     XCTAssertEqual(
-      media.map(\.source),
+      media.dropLast().map(\.source),
       [
         range(200_000, 600_000), range(200_000, 600_000), range(200_000, 400_000),
         range(0, 400_000),
@@ -140,7 +140,7 @@ final class VideoCompositionBuilderTests: XCTestCase {
       media.map(\.target),
       [
         range(0, 400_000), range(400_000, 800_000), range(800_000, 1_000_000),
-        range(1_000_000, 1_400_000),
+        range(1_000_000, 1_400_000), range(1_400_000, 2_000_000),
       ])
 
     let instructions = try result.makeVideoInstructions()
@@ -152,10 +152,7 @@ final class VideoCompositionBuilderTests: XCTestCase {
     XCTAssertTrue(held.usesHeldFrame)
     XCTAssertEqual(held.clip.trackID, hold.trackID)
     XCTAssertEqual(held.clip.playableTimeRange, range(1_000_000, 1_400_000))
-    XCTAssertEqual(instructions[2].requiredSourceTrackIDs, [])
-    XCTAssertThrowsError(try result.makeRenderComposition()) {
-      XCTAssertEqual($0 as? VideoComposition.RenderError, .unsupportedHold(layerID: "video/1"))
-    }
+    XCTAssertEqual(instructions[2].requiredSourceTrackIDs, [NSNumber(value: hold.trackID)])
   }
 
   @MainActor
@@ -274,7 +271,9 @@ final class VideoCompositionBuilderTests: XCTestCase {
     let plan = try decodePlan(
       duration: 3_000_000,
       layers: [
-        clip(0, start: 200_000, end: 2_000_000, sourceStart: 200_000, sourceEnd: 2_000_000),
+        clip(
+          0, start: 200_000, end: 2_000_000, sourceStart: 200_000, sourceEnd: 900_000,
+          fitMode: "freeze"),
         incoming,
       ],
       transitions: [
@@ -549,21 +548,29 @@ final class VideoCompositionBuilderTests: XCTestCase {
   @MainActor
   func testRendersPortraitCropAndCanvasTransformThroughAVFoundation() async throws {
     let rotation = CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: 48, ty: 0)
-    let url = try await makeMovie(transform: rotation) { x, y in
-      if y < 24 { return (0, 255, 0) }
+    let url = try await makeMovie(transform: rotation, framePixel: { frame, x, y in
+      // Only the final selected frame has this pattern. Frames on both sides are green.
+      guard frame == 20, y >= 24 else { return (0, 255, 0) }
       return x < 16 ? (255, 0, 0) : (0, 0, 255)
-    }
-    var layer = clip(0, start: 0, end: 1_000_000, sourceStart: 0, sourceEnd: 1_000_000)
+    })
+    var layer = clip(
+      0, start: 0, end: 1_000_000, sourceStart: 200_000, sourceEnd: 700_000, fitMode: "freeze")
     layer["sourceSize"] = ["width": 48, "height": 32]
     layer["cropPx"] = ["x": 4, "y": 0, "width": 20, "height": 32]
     layer["transform"] = [1, 0, 2, 0, 1, 8, 0, 0, 1]
     let plan = try decodePlan(duration: 1_000_000, layers: [layer])
     let result = try await VideoCompositionBuilder.build(plan) { _ in url }
-    let frames = try readFrames(result.makeRenderComposition(), at: [15])
-    assertPixel(try pixel(frames[15], x: 14, y: 13), near: [245, 0, 0])
-    assertPixel(try pixel(frames[15], x: 14, y: 29), near: [0, 0, 245])
-    XCTAssertEqual(try pixel(frames[15], x: 28, y: 19), [0, 0, 0])
-    XCTAssertEqual(try pixel(frames[15], x: 14, y: 4), [0, 0, 0])
+    let render = try result.makeRenderComposition()
+    let frames = try readFrames(render, at: [13, 14, 15, 29])
+    XCTAssertGreaterThan(try pixel(frames[13], x: 14, y: 13)[1], 230)
+    // A new reader that starts in the hold has never decoded a prior compositor frame.
+    let sought = try readFrames(render, at: [23], startingAt: CMTime(value: 23, timescale: 30))
+    for frame in [frames[14], frames[15], frames[29], sought[23]] {
+      assertPixel(try pixel(frame, x: 14, y: 13), near: [245, 0, 0])
+      assertPixel(try pixel(frame, x: 14, y: 29), near: [0, 0, 245])
+      XCTAssertEqual(try pixel(frame, x: 28, y: 19), [0, 0, 0])
+      XCTAssertEqual(try pixel(frame, x: 14, y: 4), [0, 0, 0])
+    }
   }
 
   @MainActor
@@ -936,9 +943,10 @@ final class VideoCompositionBuilderTests: XCTestCase {
 
   private func readFrames(
     _ render: (asset: AVComposition, videoComposition: AVVideoComposition),
-    at frameNumbers: Set<Int>? = nil
+    at frameNumbers: Set<Int>? = nil, startingAt start: CMTime = .zero
   ) throws -> [Int: CVPixelBuffer] {
     let reader = try AVAssetReader(asset: render.asset)
+    if start > .zero { reader.timeRange = CMTimeRange(start: start, end: render.asset.duration) }
     let output = AVAssetReaderVideoCompositionOutput(
       videoTracks: render.asset.tracks(withMediaType: .video),
       videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
@@ -999,7 +1007,8 @@ extension XCTestCase {
   @MainActor
   func makeMovie(
     transform: CGAffineTransform = .identity,
-    pixel: (Int, Int) -> (red: UInt8, green: UInt8, blue: UInt8) = { _, _ in (128, 128, 128) }
+    pixel: (Int, Int) -> (red: UInt8, green: UInt8, blue: UInt8) = { _, _ in (128, 128, 128) },
+    framePixel: ((Int, Int, Int) -> (red: UInt8, green: UInt8, blue: UInt8))? = nil
   ) async throws -> URL {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
@@ -1024,6 +1033,7 @@ extension XCTestCase {
         ],
       ])
     input.transform = transform
+    if framePixel != nil { input.mediaTimeScale = 30_000_000 }
     let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input)
     guard writer.canAdd(input) else { throw MovieFixtureError.cannotWriteMovie }
     writer.add(input)
@@ -1033,27 +1043,31 @@ extension XCTestCase {
       if writer.status == .writing { writer.cancelWriting() }
     }
 
-    var buffer: CVPixelBuffer?
-    let status = CVPixelBufferCreate(nil, 32, 48, kCVPixelFormatType_32BGRA, nil, &buffer)
-    guard status == kCVReturnSuccess, let buffer else {
-      throw MovieFixtureError.cannotAllocateFrame(status)
-    }
-    CVPixelBufferLockBaseAddress(buffer, [])
-    if let address = CVPixelBufferGetBaseAddress(buffer) {
-      let base = address.assumingMemoryBound(to: UInt8.self)
-      for y in 0..<CVPixelBufferGetHeight(buffer) {
-        let row = base + y * CVPixelBufferGetBytesPerRow(buffer)
-        for x in 0..<CVPixelBufferGetWidth(buffer) {
-          let color = pixel(x, y)
-          row[4 * x] = color.blue
-          row[4 * x + 1] = color.green
-          row[4 * x + 2] = color.red
-          row[4 * x + 3] = 255
+    func makeFrame(_ index: Int) throws -> CVPixelBuffer {
+      var buffer: CVPixelBuffer?
+      let status = CVPixelBufferCreate(nil, 32, 48, kCVPixelFormatType_32BGRA, nil, &buffer)
+      guard status == kCVReturnSuccess, let buffer else {
+        throw MovieFixtureError.cannotAllocateFrame(status)
+      }
+      CVPixelBufferLockBaseAddress(buffer, [])
+      if let address = CVPixelBufferGetBaseAddress(buffer) {
+        let base = address.assumingMemoryBound(to: UInt8.self)
+        for y in 0..<CVPixelBufferGetHeight(buffer) {
+          let row = base + y * CVPixelBufferGetBytesPerRow(buffer)
+          for x in 0..<CVPixelBufferGetWidth(buffer) {
+            let color = framePixel?(index, x, y) ?? pixel(x, y)
+            row[4 * x] = color.blue
+            row[4 * x + 1] = color.green
+            row[4 * x + 2] = color.red
+            row[4 * x + 3] = 255
+          }
         }
       }
+      CVPixelBufferUnlockBaseAddress(buffer, [])
+      return buffer
     }
-    CVPixelBufferUnlockBaseAddress(buffer, [])
 
+    let firstFrame = try makeFrame(0)
     for frame in 0..<90 {
       let deadline = DispatchTime.now() + .seconds(5)
       while !input.isReadyForMoreMediaData {
@@ -1063,6 +1077,7 @@ extension XCTestCase {
         guard DispatchTime.now() < deadline else { throw MovieFixtureError.writerTimedOut }
         try await Task.sleep(nanoseconds: 1_000_000)
       }
+      let buffer = framePixel == nil || frame == 0 ? firstFrame : try makeFrame(frame)
       guard adaptor.append(buffer, withPresentationTime: CMTime(value: Int64(frame), timescale: 30))
       else {
         throw writer.error ?? MovieFixtureError.cannotWriteMovie

@@ -24,8 +24,12 @@
         "rampUs": 200000,
         "regions": [
           {
-            "endUs": 25000000,
+            "endUs": 5400000,
             "startUs": 0
+          },
+          {
+            "endUs": 18900000,
+            "startUs": 9500000
           }
         ]
       },

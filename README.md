@@ -470,7 +470,7 @@ _Runs in parallel with Phase 3._
 3. **Fill slots**
    - [ ] Media picker (`expo-image-picker` / native picker) with multi-select. Auto-assign clips to slots in order.
    - [ ] Slot strip: tap a slot to replace its clip, long-press to reorder
-   - [x] iOS trim sheet with a source filmstrip and a draggable window locked to the slot’s duration
+   - [x] iOS trim sheet with a source filmstrip and a draggable window for longer clips. Clips that meet the template minimum can hold their last frame through the rest of the slot.
    - [x] Trim either end of a single video on iOS before preview and export
    - [x] Fit a single clip inside the iOS reel or fill the vertical frame and adjust the crop with drag and zoom
    - [ ] Android trim sheet with a source filmstrip and a fixed-duration window

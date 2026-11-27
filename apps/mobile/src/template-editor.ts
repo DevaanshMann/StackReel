@@ -12,7 +12,7 @@ import { getVolumeGainDb as getTemplateGainDb, validateVolumePercent } from "./v
 export { getTemplateGainDb };
 export { maxClipReframeZoom as maxTemplateReframeZoom } from "./clip-reframe";
 export type MobileTemplate = Project["template"];
-export type TemplateVideoSlot = { id: string; label: string; minDurationUs: number };
+export type TemplateVideoSlot = { id: string; label: string; minDurationUs: number; trimDurationUs: number };
 export type TemplateTextField = { id: string; label: string; defaultText: string; maxChars?: number };
 export type TemplateTextOverrides = Readonly<Record<string, string>>;
 export type TemplateReframe = ClipReframe;
@@ -206,8 +206,15 @@ export function getVideoSlots(template: MobileTemplate): TemplateVideoSlot[] {
   return template.slots
     .filter((slot) => slot.kind === "video")
     .map(({ id, label, minDurationUs }) => {
-      const frames = Math.max(usToFrame(minDurationUs ?? 0, fps, "ceil"), requiredFramesBySlot.get(id) ?? 0);
-      return { id, label, minDurationUs: frameToUs(frames, fps) };
+      const timelineFrames = requiredFramesBySlot.get(id) ?? 1;
+      const minimumFrames =
+        minDurationUs === undefined ? timelineFrames : Math.max(1, usToFrame(minDurationUs, fps, "ceil"));
+      return {
+        id,
+        label,
+        minDurationUs: frameToUs(minimumFrames, fps),
+        trimDurationUs: frameToUs(Math.max(timelineFrames, minimumFrames), fps),
+      };
     });
 }
 
@@ -235,9 +242,10 @@ function getTrimBounds(slot: TemplateVideoSlot, clip: Omit<TemplateClip, "trimIn
 
   const firstFrame = usToFrame(playableStartUs, fps, "ceil");
   const sourceEndFrame = usToFrame(sourceEndUs, fps, "floor");
-  const durationFrames = Math.max(1, usToFrame(slot.minDurationUs, fps, "ceil"));
+  const availableFrames = sourceEndFrame - firstFrame;
+  if (availableFrames < usToFrame(slot.minDurationUs, fps, "ceil")) throw shortClipError(slot);
+  const durationFrames = Math.min(availableFrames, usToFrame(slot.trimDurationUs, fps));
   const lastStartFrame = sourceEndFrame - durationFrames;
-  if (lastStartFrame < firstFrame) throw shortClipError(slot);
   return { firstFrame, lastStartFrame, sourceEndFrame, durationFrames };
 }
 
@@ -254,7 +262,7 @@ export function getTemplateTrimWindow(
 
   const startFrame = usToFrame(trimInUs, fps, "ceil");
   const endFrame = usToFrame(trimOutUs, fps, "floor");
-  if (endFrame - startFrame < bounds.durationFrames) throw shortClipError(slot);
+  if (endFrame - startFrame < usToFrame(slot.minDurationUs, fps, "ceil")) throw shortClipError(slot);
   if (
     endFrame - startFrame !== bounds.durationFrames ||
     trimInUs !== frameToUs(startFrame, fps) ||
@@ -413,19 +421,26 @@ export function createTemplateSource(
     assetInfo[assetUri] = { durationUs: music.sourceEndUs };
   }
 
-  // Clip validation rejects short media in frames. Check the resolver for genuine frame shortfalls
-  // too, since its microsecond calculation can differ slightly with frame position and speed.
   const plan = resolve(project, { assets: assetInfo });
-  const issue = plan.warnings.find((warning) => {
-    if (warning.type !== "clip-too-short") return true;
-    if (warning.layerId === "music" && warning.slotId === musicSlotId && warning.policy === "loop") return false;
-    return usToFrame(warning.neededUs, fps, "round") !== usToFrame(warning.availableUs, fps, "round");
-  });
-  if (issue) throw new Error(issue.message);
+  const heldLayers = new Set<string>();
+  for (const warning of plan.warnings) {
+    if (warning.type !== "clip-too-short") throw new Error(warning.message);
+    if (warning.layerId === "music" && warning.slotId === musicSlotId && warning.policy === "loop") continue;
+    // Equal frame counts can differ by microseconds. Align those edits as before.
+    if (usToFrame(warning.neededUs, fps, "round") === usToFrame(warning.availableUs, fps, "round")) continue;
+    if (
+      warning.policy !== "freeze" ||
+      !plan.layers.some((layer) => layer.id === warning.layerId && layer.kind === "video")
+    )
+      throw new Error(warning.message);
+    heldLayers.add(warning.layerId);
+  }
   plan.warnings = [];
-  plan.layers = plan.layers.map((layer) => (layer.kind === "video" ? alignSourceRate(layer) : layer));
+  plan.layers = plan.layers.map((layer) =>
+    layer.kind === "video" && !heldLayers.has(layer.id) ? alignSourceRate(layer) : layer,
+  );
   plan.audio = plan.audio.map((entry) => {
-    if (entry.kind !== "music") return alignSourceRate(entry);
+    if (entry.kind !== "music") return heldLayers.has(entry.id) ? entry : alignSourceRate(entry);
     return { ...entry, gainDb: getTemplateGainDb(music?.volumePercent, entry.gainDb) };
   });
   return JSON.stringify({ plan, assets });

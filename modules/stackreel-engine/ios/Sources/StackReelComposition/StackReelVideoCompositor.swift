@@ -31,8 +31,6 @@ extension VideoComposition {
     for layer in renderPlan.layers {
       let id = layer.timing.id
       switch layer.content {
-      case .video where clipsByLayerID[id]?.holdTimeRange != nil:
-        throw RenderError.unsupportedHold(layerID: id)
       case .sticker(let sticker):
         let placement = sticker.placement
         guard sticker.widthPx.isFinite, sticker.widthPx > 0, placement.xPx.isFinite,
@@ -242,7 +240,7 @@ final class StackReelVideoCompositor: NSObject, AVVideoCompositing {
     let preferredTransform: CGAffineTransform
     switch layer.content {
     case .video(let geometry, _):
-      guard let input = instruction.videoInputsByLayerID[id], !input.usesHeldFrame
+      guard let input = instruction.videoInputsByLayerID[id]
       else { throw FrameError.invalidInstruction }
       guard let buffer = request.sourceFrame(byTrackID: input.clip.trackID)
       else { throw FrameError.missingFrame(layerID: id) }

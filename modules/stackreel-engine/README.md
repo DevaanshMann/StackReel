@@ -124,7 +124,9 @@ background stay fixed throughout. See [sampled typewriter frames](../../docs/ios
 In video-backed plans, the asset resolver loads local still images and sticker assets with alpha and
 orientation preserved. Stills use the plan's crop, transform, and fades. Stickers use their resolved
 width, anchor, rotation, and overlay animations. Rendering requires a video track. Multi-image files,
-sticker typewriter animation, held frames, whip-pans, zoom punches, and spins are unsupported.
+sticker typewriter animation, whip-pans, zoom punches, and spins are unsupported.
+When the source ends before its layer does, a freeze holds the final selected video frame through the
+rest of that layer, including fades and transitions.
 See the [sampled still-image and sticker frames](../../docs/ios-image-overlays.png).
 
 `result.audioMix` applies the plan's gain, fades, and music ducking to embedded clip sound, standalone audio,

@@ -374,7 +374,11 @@ export function TemplateVideoSlots({
               <Text accessibilityRole="header" style={styles.slotTitle}>
                 {slot.label}
               </Text>
-              <Text style={textStyles.muted}>At least {secondsLabel(slot.minDurationUs)}</Text>
+              <Text style={textStyles.muted}>
+                At least {secondsLabel(slot.minDurationUs)}
+                {slot.minDurationUs < slot.trimDurationUs &&
+                  `. Clips under ${secondsLabel(slot.trimDurationUs)} hold their final frame.`}
+              </Text>
               {clip && (
                 <>
                   <Text numberOfLines={1} style={textStyles.body}>
