@@ -36,7 +36,8 @@ final class MP4ExportTests: XCTestCase {
     var music = audioEntry(
       "music", start: 0, end: 875_000, sourceEnd: 875_000, kind: "music")
     music["gainDb"] = -6
-    var voice = audioEntry("voice", start: 250_000, end: 750_000, sourceEnd: 500_000)
+    // The clip's picture can hold after the source ends, but its sound must stop at 750 ms.
+    var voice = audioEntry("voice", start: 250_000, end: 875_000, sourceEnd: 500_000, kind: "video")
     voice["gainDb"] = 6
     let result = try await makeComposition(
       in: directory, audio: [music, voice], sources: ["music": musicURL, "voice": voiceURL])
@@ -150,10 +151,10 @@ final class MP4ExportTests: XCTestCase {
     try await writeWhiteMovie(to: source)
     let layer: [String: Any] = [
       "id": "video/0", "trackId": "video", "itemIndex": 0, "z": 0, "opacity": 1,
-      "startUs": 0, "endUs": 500_000, "kind": "video", "slotId": "clip",
+      "startUs": 0, "endUs": 750_000, "kind": "video", "slotId": "clip",
       "source": [
         "assetUri": "clip", "sourceStartUs": 0, "sourceEndUs": 500_000,
-        "rate": 1, "afterEnd": "hold", "fitMode": "trim",
+        "rate": 1, "afterEnd": "hold", "fitMode": "freeze",
       ],
       "fit": "cover", "sourceSize": ["width": 64, "height": 64],
       "cropPx": ["x": 0, "y": 0, "width": 64, "height": 64],
@@ -244,10 +245,10 @@ final class MP4ExportTests: XCTestCase {
     guard reader.startReading() else { throw try XCTUnwrap(reader.error) }
     var frames = 0
     while let sample = output.copyNextSampleBuffer() {
-      if frames == 0 || frames == 23 {
+      if frames == 0 || frames == 17 || frames == 23 {
         let frame = try XCTUnwrap(sample.imageBuffer)
         try assertPixel(in: frame, x: 16, near: [0, 255, 0])
-        try assertPixel(in: frame, x: 48, near: frames == 0 ? [255, 255, 255] : [0, 255, 0])
+        try assertPixel(in: frame, x: 48, near: frames < 18 ? [255, 255, 255] : [0, 255, 0])
       }
       frames += 1
     }

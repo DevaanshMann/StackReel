@@ -54,6 +54,7 @@ public enum VideoCompositionBuilder {
     let track: AVAssetTrack
     let timeRange: CMTimeRange
     let preferredTransform: CGAffineTransform
+    let timescale: CMTimeScale
   }
 
   private struct Lane {
@@ -98,9 +99,11 @@ public enum VideoCompositionBuilder {
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
           throw BuildError.missingVideoTrack(assetURI: source.assetUri)
         }
-        let (timeRange, preferredTransform) = try await track.load(.timeRange, .preferredTransform)
+        let (timeRange, preferredTransform, timescale) = try await track.load(
+          .timeRange, .preferredTransform, .naturalTimeScale)
         media = SourceVideo(
-          track: track, timeRange: timeRange, preferredTransform: preferredTransform)
+          track: track, timeRange: timeRange, preferredTransform: preferredTransform,
+          timescale: timescale)
         sources[source.assetUri] = media
       }
 
@@ -175,11 +178,23 @@ public enum VideoCompositionBuilder {
       try insert(range, of: media.track, into: lane, at: edit.target)
     }
 
+    let hold = cursorUs < timing.endUs
+      ? CMTimeRange(start: time(cursorUs), end: time(timing.endUs)) : nil
+    if let hold {
+      // A single source-track tick contains at most one sample presentation. Stretch that
+      // sample across the hold so a fresh reader or a direct seek sees the same final image.
+      // Subtract a microsecond before rounding to account for the plan's rounded trim boundary.
+      let sampleTick = CMTime(value: 1, timescale: media.timescale)
+      let lastTick = (insertEnd - time(1)).convertScale(
+        media.timescale, method: .roundTowardNegativeInfinity)
+      let sample = CMTimeRange(start: lastTick, duration: sampleTick).intersection(media.timeRange)
+      try insert(sample, of: media.track, into: lane, at: hold)
+    }
+
     return VideoComposition.Clip(
       trackID: lane.trackID, preferredTransform: media.preferredTransform,
       playableTimeRange: CMTimeRange(start: time(timing.startUs), end: time(cursorUs)),
-      holdTimeRange: cursorUs < timing.endUs
-        ? CMTimeRange(start: time(cursorUs), end: time(timing.endUs)) : nil)
+      holdTimeRange: hold)
   }
 
   static func localAsset(
