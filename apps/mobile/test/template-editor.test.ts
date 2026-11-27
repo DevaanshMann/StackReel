@@ -10,6 +10,7 @@ import {
   defaultTemplateReframe,
   getTemplateCrop,
   getTemplateGainDb,
+  getTemplateMusicStartRange,
   getTemplateTextFields,
   getTemplateTrimWindow,
   getVideoSlots,
@@ -18,6 +19,7 @@ import {
   setTemplateClipReframe,
   setTemplateClipTrim,
   setTemplateClipVolume,
+  setTemplateMusicStart,
   setTemplateMusicVolume,
   setTemplateText,
   swapTemplateClips,
@@ -617,6 +619,76 @@ describe("template music", () => {
   const uri = "file:///Music/Backing%20Track.m4a";
   const name = "Backing Track.m4a";
 
+  it("starts the music on the selected source frame and keeps the reel timing and mix", () => {
+    const template = hookAndReveal;
+    const clips = fillSlots(template);
+    const music = setTemplateMusicVolume(
+      createTemplateMusic(uri, name, { startUs: 50_000, durationUs: 10_050_000 }),
+      50,
+    );
+    const render = (track: typeof music) => createTemplateSource(template, clips, {}, track);
+    const legacySource = render(music);
+    expect(getTemplateMusicStartRange(music, template.durationUs)).toEqual({ startFrame: 0, maxFrame: 31 });
+    expect(setTemplateMusicStart(music, 0, template.durationUs)).toBe(music);
+    expect(render({ ...music, startFrame: 0 })).toBe(legacySource);
+
+    // The first playable frame is frame 2. Adding two frames selects frame 4 at 133333 µs.
+    for (const [startFrame, sourceStartUs] of [
+      [2, 133_333],
+      [31, 1_100_000],
+    ] as const) {
+      const selected = setTemplateMusicStart(music, startFrame, template.durationUs);
+      expect(selected).toEqual({ ...music, startFrame });
+      expect(getTemplateMusicStartRange(selected, template.durationUs)).toEqual({ startFrame, maxFrame: 31 });
+      expect(setTemplateMusicStart(selected, startFrame, template.durationUs)).toBe(selected);
+      expect(createTemplateSource(template, {}, {}, selected)).toBeNull();
+      const expected = parseSource(legacySource);
+      const entry = expected.plan.audio.find((audio) => audio.kind === "music")!;
+      entry.source = { ...entry.source, sourceStartUs, sourceEndUs: sourceStartUs + template.durationUs };
+      expect(parseSource(render(selected))).toEqual(expected);
+      expect(render(setTemplateMusicStart(selected, 0, template.durationUs))).toBe(legacySource);
+    }
+  });
+
+  it("counts only complete frames at the last soundtrack start", () => {
+    const rangeForEnd = (sourceEndUs: number) => {
+      const music = createTemplateMusic(uri, name, { startUs: 50_000, durationUs: sourceEndUs - 50_000 });
+      return getTemplateMusicStartRange(music, beforeAfter.durationUs);
+    };
+    expect(rangeForEnd(8_099_999)).toEqual({ startFrame: 0, maxFrame: 0 });
+    expect(rangeForEnd(8_100_000)).toEqual({ startFrame: 0, maxFrame: 1 });
+  });
+
+  it("uses the full reel at the last start when equal frame counts differ by a microsecond", () => {
+    const template = { ...beforeAfter, durationUs: 8_066_667 }; // 242 frames
+    const music = createTemplateMusic(uri, name, { startUs: 1, durationUs: 8_133_332 });
+    expect(getTemplateMusicStartRange(music, template.durationUs)).toEqual({ startFrame: 0, maxFrame: 1 });
+    const selected = setTemplateMusicStart(music, 1, template.durationUs);
+    const { plan } = parseSource(createTemplateSource(template, fillSlots(template), {}, selected));
+    expect(plan.durationUs).toBe(template.durationUs);
+    expect(plan.audio.find((audio) => audio.kind === "music")).toMatchObject({
+      startUs: 0,
+      endUs: 8_066_667,
+      source: {
+        sourceStartUs: 66_667,
+        sourceEndUs: 8_133_333,
+        rate: 8_066_666 / 8_066_667,
+        fitMode: "trim",
+        afterEnd: "hold",
+      },
+    });
+    expect(checkPlanInvariants(plan)).toEqual([]);
+  });
+
+  it.each([-1, 1.5, 31, NaN, Infinity])(
+    "rejects invalid music start frame %s before any videos are added",
+    (startFrame) => {
+      const music = createTemplateMusic(uri, name, { startUs: 0, durationUs: beforeAfter.durationUs + 1_000_000 });
+      expect(() => setTemplateMusicStart(music, startFrame, beforeAfter.durationUs)).toThrow();
+      expect(() => createTemplateSource(beforeAfter, {}, {}, { ...music, startFrame })).toThrow();
+    },
+  );
+
   it("changes only the music gain while keeping clip levels, looping, fades and ducking", () => {
     const music = createTemplateMusic(uri, name, { startUs: 50_000, durationUs: 2_000_000 });
     const clips = fillSlots(hookAndReveal);
@@ -696,6 +768,9 @@ describe("template music", () => {
   it.each(mobileTemplates)("loops only the whole frames of a short, offset track in $name", (template) => {
     const music = createTemplateMusic(uri, name, { startUs: 50_000, durationUs: 1_991_000 });
     expect(music).toEqual({ uri, name, sourceStartUs: 50_000, sourceEndUs: 2_041_000 });
+    expect(getTemplateMusicStartRange(music, template.durationUs)).toEqual({ startFrame: 0, maxFrame: 0 });
+    expect(setTemplateMusicStart(music, 0, template.durationUs)).toBe(music);
+    expect(() => setTemplateMusicStart(music, 1, template.durationUs)).toThrow();
     const { plan } = parseSource(createTemplateSource(template, fillSlots(template), undefined, music));
     expect(plan.audio.find((entry) => entry.kind === "music")).toMatchObject({
       startUs: 0,
@@ -742,6 +817,14 @@ describe("template music", () => {
     expect(original.plan.audio[0]?.source.rate).toBe(3_266_666 / 3_266_667);
     expect({ ...plan, audio: plan.audio.filter((entry) => entry.kind !== "music") }).toEqual(original.plan);
     expect(checkPlanInvariants(plan)).toEqual([]);
+
+    // Reserve a full reel of audio even when the template starts its soundtrack after the first picture.
+    expect(getTemplateMusicStartRange(music, template.durationUs)).toEqual({ startFrame: 0, maxFrame: 179 });
+    const selected = setTemplateMusicStart(music, 179, template.durationUs);
+    const { plan: shifted } = parseSource(createTemplateSource(template, clips, overrides, selected));
+    const entry = plan.audio.find((audio) => audio.kind === "music")!;
+    entry.source = { ...entry.source, sourceStartUs: 6_033_333, sourceEndUs: 14_500_000 };
+    expect(shifted).toEqual(plan);
   });
 
   it("clips a negative track start at zero while keeping the original end", () => {

@@ -17,6 +17,7 @@ import { SingleClipCaptionEditor } from "./SingleClipCaptionEditor";
 import { SingleClipTrim } from "./SingleClipTrim";
 import { TemplateExample } from "./TemplateExample";
 import { TemplateMusicControls } from "./TemplateMusicControls";
+import { TemplateMusicStart } from "./TemplateMusicStart";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
 import { TemplateTrim } from "./TemplateTrim";
@@ -65,6 +66,7 @@ import {
   setTemplateClipReframe,
   setTemplateClipTrim,
   setTemplateClipVolume,
+  setTemplateMusicStart,
   setTemplateMusicVolume,
   swapTemplateClips,
 } from "./template-editor";
@@ -111,7 +113,7 @@ type SlotEdit = {
   clip: TemplateClip;
 };
 type SingleTrimEdit = { kind: "single-trim"; clip: SingleClip };
-type MusicVolumeEdit = { kind: "music-volume"; editor: TemplateEditor; music: TemplateMusic };
+type MusicEdit = { kind: "music-volume" | "music-start"; editor: TemplateEditor; music: TemplateMusic };
 type SlotSwap = { kind: "swap"; editor: TemplateEditor; draft: TemplateDraft };
 type TextEdit = { kind: "text"; editor: TemplateEditor; textOverrides: TemplateTextOverrides };
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
@@ -123,7 +125,7 @@ type Operation =
   | SlotEdit
   | SingleTrimEdit
   | { kind: "single-reframe" | "single-volume" | "single-caption"; clip: SingleClip }
-  | MusicVolumeEdit
+  | MusicEdit
   | SlotSwap
   | TextEdit
   | { kind: HistoryDirection }
@@ -834,20 +836,22 @@ export default function App() {
     }
   }
 
-  function openMusicVolume() {
+  function openMusicEdit(kind: MusicEdit["kind"]) {
     const { music, missingMusic } = templateDraft;
-    if (editor.kind === "template" && music && !missingMusic) begin({ kind: "music-volume", editor, music });
+    if (editor.kind === "template" && music && !missingMusic) begin({ kind, editor, music });
   }
 
-  function applyMusicVolume(operation: MusicVolumeEdit, percent: number) {
+  function applyMusicEdit(operation: MusicEdit, updated: TemplateMusic) {
     if (!isCurrentOperation(operation)) return;
     const { editor, music } = operation;
     const draft = getEditorDraft(currentTemplateDrafts.current, editor);
     if (draft.music !== music || draft.missingMusic) {
       throw new Error("The soundtrack changed. Close the editor and open it again.");
     }
-    const updated = setTemplateMusicVolume(music, percent);
-    if (updated !== music) commitDraftEdit(editor, { ...draft, music: updated }, "music volume");
+    if (updated !== music) {
+      const label = operation.kind === "music-start" ? "music start" : "music volume";
+      commitDraftEdit(editor, { ...draft, music: updated }, label);
+    }
     finish(operation);
   }
 
@@ -1220,7 +1224,8 @@ export default function App() {
           busy={busy}
           importing={activity?.kind === "import-music"}
           error={feedback?.scope === "music" ? feedback.message : undefined}
-          onVolume={openMusicVolume}
+          onVolume={() => openMusicEdit("music-volume")}
+          onStart={() => openMusicEdit("music-start")}
           onSelect={selectMusic}
           onRemove={removeMusic}
         />
@@ -1391,7 +1396,29 @@ export default function App() {
               setTemplateMusicVolume(activity.music, percent),
             )
           }
-          onApply={(percent) => applyMusicVolume(activity, percent)}
+          onApply={(percent) => applyMusicEdit(activity, setTemplateMusicVolume(activity.music, percent))}
+          onCancel={() => finish(activity)}
+        />
+      )}
+      {activity?.kind === "music-start" && (
+        <TemplateMusicStart
+          music={activity.music}
+          reelDurationUs={activity.editor.template.durationUs}
+          canvas={activity.editor.template.canvas}
+          createPreview={(startFrame) =>
+            createTemplateSource(
+              activity.editor.template,
+              templateDraft.clips,
+              templateDraft.textOverrides,
+              setTemplateMusicStart(activity.music, startFrame, activity.editor.template.durationUs),
+            )
+          }
+          onApply={(startFrame) =>
+            applyMusicEdit(
+              activity,
+              setTemplateMusicStart(activity.music, startFrame, activity.editor.template.durationUs),
+            )
+          }
           onCancel={() => finish(activity)}
         />
       )}

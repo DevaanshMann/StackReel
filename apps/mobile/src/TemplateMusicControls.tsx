@@ -11,6 +11,7 @@ export function TemplateMusicControls({
   error,
   onSelect,
   onRemove,
+  onStart,
   onVolume,
 }: {
   music: TemplateMusic | null;
@@ -20,6 +21,7 @@ export function TemplateMusicControls({
   error: string | undefined;
   onSelect: () => void;
   onRemove: () => void;
+  onStart: () => void;
   onVolume: () => void;
 }) {
   const selectLabel = music ? "Replace music" : "Choose music from Files";
@@ -50,7 +52,10 @@ export function TemplateMusicControls({
           disabled={busy}
         />
         {music && !missingMusic && (
-          <Action label="Music volume" testID="edit-music-volume" onPress={onVolume} disabled={busy} />
+          <>
+            <Action label="Music start" testID="edit-music-start" onPress={onStart} disabled={busy} />
+            <Action label="Music volume" testID="edit-music-volume" onPress={onVolume} disabled={busy} />
+          </>
         )}
         {(music || missingMusic) && (
           <Action

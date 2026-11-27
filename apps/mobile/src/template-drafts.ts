@@ -13,11 +13,13 @@ import {
   createTemplateMusic,
   createTemplateSource,
   getTemplateCrop,
+  getTemplateMusicStartRange,
   getTemplateTextFields,
   getTemplateTrimWindow,
   getVideoSlots,
   normalizeTemplateText,
   setTemplateClipVolume,
+  setTemplateMusicStart,
   setTemplateMusicVolume,
 } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateMusic, TemplateTextOverrides } from "./template-editor";
@@ -232,7 +234,9 @@ function buildDraftManifest(
     slot,
     storeAsset(clip, previous?.clips[slot]),
   ]);
-  let storedMusic: unknown = music ? storeAsset(music, previous?.saved.music) : null;
+  let storedMusic: unknown = music
+    ? { ...storeAsset(music, previous?.saved.music), startFrame: music.startFrame }
+    : null;
   if (previous) {
     for (const slot of missingSlots) {
       if (!Object.hasOwn(clips, slot) && Object.hasOwn(previous.clips, slot)) {
@@ -588,7 +592,17 @@ function restoreDraftEdits(
     try {
       const { uri, name, sourceStartUs, sourceEndUs, volumePercent } = readAsset(saved.music, directory);
       const track = createTemplateMusic(uri, name, { startUs: sourceStartUs, durationUs: sourceEndUs - sourceStartUs });
-      music = setTemplateMusicVolume(track, volumePercent);
+      let restored = setTemplateMusicVolume(track, volumePercent);
+      if (record(saved.music) && saved.music.startFrame !== undefined) {
+        const { startFrame } = saved.music;
+        if (typeof startFrame !== "number" || !Number.isSafeInteger(startFrame) || startFrame < 0) {
+          throw new Error("Invalid saved music start.");
+        }
+        // A longer revision of the template can leave less room to move the soundtrack.
+        const { maxFrame } = getTemplateMusicStartRange(restored, template.durationUs);
+        restored = setTemplateMusicStart(restored, Math.min(startFrame, maxFrame), template.durationUs);
+      }
+      music = restored;
     } catch {
       missingMusic = true;
     }

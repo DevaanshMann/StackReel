@@ -33,6 +33,8 @@ export type TemplateMusic = {
   name: string;
   readonly sourceStartUs: number;
   readonly sourceEndUs: number;
+  /** Offset in whole frames from the first playable source frame. */
+  startFrame?: number;
   volumePercent?: number;
 };
 
@@ -326,12 +328,12 @@ export function createTemplateClip(
   return { ...source, trimInUs: frameToUs(firstFrame, fps), trimOutUs: frameToUs(firstFrame + durationFrames, fps) };
 }
 
-function validateTemplateMusic({ uri, sourceStartUs, sourceEndUs, volumePercent = 100 }: TemplateMusic): void {
+function getMusicFrameCount({ uri, sourceStartUs, sourceEndUs, volumePercent = 100 }: TemplateMusic): number {
   validateVolumePercent(volumePercent);
   if (!uri || checkTrim(sourceStartUs, sourceEndUs)) throw new Error(invalidMusic);
-  if (usToFrame(sourceStartUs, fps, "ceil") >= usToFrame(sourceEndUs, fps, "floor")) {
-    throw new Error(invalidMusic);
-  }
+  const count = usToFrame(sourceEndUs, fps, "floor") - usToFrame(sourceStartUs, fps, "ceil");
+  if (count < 1) throw new Error(invalidMusic);
+  return count;
 }
 
 /** Absolute playable track bounds, with an exclusive end. The resolver fits whole frames within this range. */
@@ -344,8 +346,35 @@ export function createTemplateMusic(
     throw new Error(invalidMusic);
   }
   const music = { uri, name, sourceStartUs: Math.max(0, startUs), sourceEndUs: startUs + durationUs };
-  validateTemplateMusic(music);
+  getMusicFrameCount(music);
   return music;
+}
+
+function validateMusicStartFrame(startFrame: number, maxFrame: number): void {
+  if (!Number.isSafeInteger(startFrame) || startFrame < 0 || startFrame > maxFrame) {
+    throw new RangeError(`Music start must be a whole frame from 0 to ${maxFrame}.`);
+  }
+}
+
+/** Relative start positions for a reel-length window. Short tracks loop from the beginning. */
+export function getTemplateMusicStartRange(music: TemplateMusic, reelDurationUs: number) {
+  if (!Number.isSafeInteger(reelDurationUs) || reelDurationUs <= 0) {
+    throw new RangeError("Reel duration must be a positive integer number of microseconds.");
+  }
+  const reelFrames = Math.max(1, usToFrame(reelDurationUs, fps, "round"));
+  const maxFrame = Math.max(0, getMusicFrameCount(music) - reelFrames);
+  const { startFrame = 0 } = music;
+  validateMusicStartFrame(startFrame, maxFrame);
+  return { startFrame, maxFrame };
+}
+
+export function setTemplateMusicStart(music: TemplateMusic, startFrame: number, reelDurationUs: number): TemplateMusic {
+  const { maxFrame } = getTemplateMusicStartRange(music, reelDurationUs);
+  validateMusicStartFrame(startFrame, maxFrame);
+  if (startFrame === (music.startFrame ?? 0)) return music;
+  if (startFrame !== 0) return { ...music, startFrame };
+  const { startFrame: _startFrame, ...reset } = music;
+  return reset;
 }
 
 function alignSourceRate<T extends VideoLayer | AudioEntry>(entry: T): T {
@@ -372,7 +401,7 @@ export function createTemplateSource(
       text[id] = normalizeTemplateText(field, value);
     }
   }
-  if (music) validateTemplateMusic(music);
+  const musicStartFrame = music ? getTemplateMusicStartRange(music, template.durationUs).startFrame : 0;
 
   const clipFor = (id: string) => (Object.hasOwn(clips, id) ? clips[id] : undefined);
   if (template.slots.some((slot) => slot.kind === "video" && slot.optional !== true && !clipFor(slot.id))) return null;
@@ -441,7 +470,19 @@ export function createTemplateSource(
   );
   plan.audio = plan.audio.map((entry) => {
     if (entry.kind !== "music") return heldLayers.has(entry.id) ? entry : alignSourceRate(entry);
-    return { ...entry, gainDb: getTemplateGainDb(music?.volumePercent, entry.gainDb) };
+    const mixed = { ...entry, gainDb: getTemplateGainDb(music?.volumePercent, entry.gainDb) };
+    if (musicStartFrame === 0) return mixed;
+    // Move only the soundtrack source. The template can place it after the reel starts.
+    const selectedFrame = usToFrame(entry.source.sourceStartUs, fps) + musicStartFrame;
+    const durationFrames = usToFrame(entry.endUs, fps) - usToFrame(entry.startUs, fps);
+    return alignSourceRate({
+      ...mixed,
+      source: {
+        ...entry.source,
+        sourceStartUs: frameToUs(selectedFrame, fps),
+        sourceEndUs: frameToUs(selectedFrame + durationFrames, fps),
+      },
+    });
   });
   return JSON.stringify({ plan, assets });
 }
