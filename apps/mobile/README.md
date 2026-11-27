@@ -13,6 +13,7 @@ To try an edit with footage already in place, tap **Edit sample reel** on the **
 **Balcony in bloom**, an eight-second project with two balcony shots. Change “Three pots, one summer” in **Edit text**,
 replace either video, or tap **Export MP4** to render the reel. The sample works offline without Photos access.
 Reopen it from **Projects** to continue editing. Tapping **Edit sample reel** again creates a separate copy.
+[See the sample reel action in the iPhone gallery](../../docs/ios-edit-sample-reel.png).
 
 Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
 video. Use **Replace from Photos** or **Replace from Files** to choose a different video. The iOS Photos picker gives StackReel access
