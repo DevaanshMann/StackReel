@@ -15,6 +15,7 @@ import { Action, Screen, textStyles } from "./Screen";
 import type { ScreenRef } from "./Screen";
 import { SingleClipCaptionEditor } from "./SingleClipCaptionEditor";
 import { SingleClipTrim } from "./SingleClipTrim";
+import { TemplateExample } from "./TemplateExample";
 import { TemplateMusicControls } from "./TemplateMusicControls";
 import { TemplateGallery, TemplateProjects, TemplateVideoSlots } from "./TemplateSelection";
 import { TemplateTextEditor } from "./TemplateTextEditor";
@@ -75,6 +76,7 @@ import type {
   TemplateVideoSlot,
 } from "./template-editor";
 import { getTemplateSafeZoneGuide } from "./template-safe-zones";
+import { createBeforeAfterSample } from "./template-sample";
 import { importTemplateVideos, removeCachedFile, SlotImportError } from "./template-video-import";
 import { pickVideo } from "./video-picker";
 import type { VideoPickerSource } from "./video-picker";
@@ -115,6 +117,8 @@ type TextEdit = { kind: "text"; editor: TemplateEditor; textOverrides: TemplateT
 type ExportJob = { kind: "export"; id: string; cancelling: boolean };
 type Operation =
   | ImportOperation
+  | { kind: "sample" }
+  | { kind: "example"; template: MobileTemplate; source: number }
   | { kind: "fullscreen" }
   | SlotEdit
   | SingleTrimEdit
@@ -374,6 +378,35 @@ export default function App() {
       AccessibilityInfo.announceForAccessibilityWithOptions(`Created ${name}.`, { queue: true });
     } catch {
       Alert.alert("Couldn’t create the draft", "Try again from Templates.");
+    }
+  }
+
+  async function editSampleReel(template: MobileTemplate, slots: TemplateVideoSlot[]) {
+    const operation = { kind: "sample" } as const;
+    if (editor.kind !== "home" || editor.tab !== "templates" || !begin(operation)) return;
+    try {
+      const base = "Balcony in bloom";
+      const siblings = templateDrafts?.[template.id] ?? {};
+      const name = Object.values(siblings).some((draft) => draft.name?.toLowerCase() === base.toLowerCase())
+        ? nextDraftName(base, siblings)
+        : base;
+      const draftId = randomUUID();
+      AccessibilityInfo.announceForAccessibility("Preparing sample reel.");
+      const sample = await createBeforeAfterSample(template, draftId, name, () => isCurrentOperation(operation));
+      if (!isCurrentOperation(operation)) return;
+      if (!sample) throw new Error("The sample is unavailable.");
+      storeTemplateDraft({ template, draftId }, { ...sample.draft, source: sample.source, outputUri: null });
+      finish(operation);
+      navigate({ kind: "template", template, slots, draftId, home: editor });
+      AccessibilityInfo.announceForAccessibilityWithOptions(`Opened ${name}.`, { queue: true });
+    } catch {
+      if (isCurrentOperation(operation)) {
+        const message = "Couldn’t prepare the sample reel. Tap Edit sample reel to try again.";
+        setFeedback({ kind: "error", message });
+        AccessibilityInfo.announceForAccessibility(message);
+      }
+    } finally {
+      finish(operation);
     }
   }
 
@@ -953,12 +986,20 @@ export default function App() {
         ) : (
           <TemplateGallery
             drafts={templateDrafts}
+            busy={busy}
+            preparingSample={activity?.kind === "sample"}
+            sampleError={feedback?.kind === "error" ? feedback.message : undefined}
+            onEditSample={editSampleReel}
+            onWatchExample={(template, source) => begin({ kind: "example", template, source })}
             onSelectTemplate={openTemplate}
             onNewDraft={createDraft}
             singleDraftCount={singleProjects.length}
             onNewSingleClip={newSingleDraft}
             onSelectSingleClip={openSingleEditor}
           />
+        )}
+        {activity?.kind === "example" && (
+          <TemplateExample template={activity.template} source={activity.source} onClose={() => finish(activity)} />
         )}
       </Screen>
     );
@@ -1427,7 +1468,11 @@ function HomeTabBar({
               accessibilityState={{ selected, disabled }}
               disabled={disabled}
               onPress={() => onSelect(id)}
-              style={({ pressed }) => [styles.tab, (selected || pressed) && styles.activeTab]}
+              style={({ pressed }) => [
+                styles.tab,
+                (selected || pressed) && styles.activeTab,
+                disabled && styles.disabled,
+              ]}
             >
               <Text style={[styles.tabLabel, selected && styles.activeTabLabel]}>{label}</Text>
             </Pressable>
@@ -1475,6 +1520,7 @@ const styles = StyleSheet.create({
     padding: space[2],
   },
   activeTab: { backgroundColor: darkColors.elevated },
+  disabled: { opacity: 0.55 },
   tabLabel: { color: darkColors.textMuted, fontSize: fontSize.md, fontWeight: "600", textAlign: "center" },
   activeTabLabel: { color: darkColors.accent },
   navigation: { alignSelf: "flex-start" },

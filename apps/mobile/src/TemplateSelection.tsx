@@ -1,9 +1,8 @@
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getDraftProjects } from "./draft-names";
 import { Action, textStyles } from "./Screen";
-import { TemplateExample } from "./TemplateExample";
 import { trimTimeLabel } from "./TemplateTrim";
 import { VideoImportActions } from "./VideoImportActions";
 import { getEmptyVideoSlots, getVideoSlots, mobileTemplates } from "./template-editor";
@@ -25,6 +24,11 @@ type ProjectDrafts = Readonly<Record<string, Readonly<Record<string, ProjectDraf
 
 export function TemplateGallery({
   drafts,
+  busy,
+  preparingSample,
+  sampleError,
+  onEditSample,
+  onWatchExample,
   onNewDraft,
   singleDraftCount,
   onNewSingleClip,
@@ -32,13 +36,17 @@ export function TemplateGallery({
   onSelectSingleClip,
 }: {
   drafts: ProjectDrafts;
+  busy: boolean;
+  preparingSample: boolean;
+  sampleError: string | undefined;
+  onEditSample: SelectTemplate;
+  onWatchExample: (template: MobileTemplate, source: number) => void;
   onNewDraft: SelectTemplate;
   singleDraftCount: number;
   onNewSingleClip: () => void;
   onSelectTemplate: SelectTemplate;
   onSelectSingleClip: () => void;
 }) {
-  const [example, setExample] = useState<{ template: MobileTemplate; source: number } | null>(null);
   return (
     <>
       <Text accessibilityRole="header" style={textStyles.heading}>
@@ -55,6 +63,7 @@ export function TemplateGallery({
               label={template.name}
               details={count > 1 ? `${details} · Choose from ${count} drafts` : details}
               description={template.description}
+              disabled={busy}
               onPress={() => onSelectTemplate(template, slots)}
               actions={
                 <>
@@ -63,7 +72,16 @@ export function TemplateGallery({
                       label="Watch example"
                       accessibilityLabel={`Watch ${template.name} example`}
                       testID={`watch-example-${template.id}`}
-                      onPress={() => setExample({ template, source })}
+                      onPress={() => onWatchExample(template, source)}
+                      disabled={busy}
+                    />
+                  )}
+                  {template.id === "before-after" && (
+                    <Action
+                      label={preparingSample ? "Preparing sample reel…" : "Edit sample reel"}
+                      testID="edit-sample-before-after"
+                      onPress={() => onEditSample(template, slots)}
+                      disabled={busy}
                     />
                   )}
                   {count > 0 && (
@@ -71,7 +89,13 @@ export function TemplateGallery({
                       label="New draft"
                       accessibilityLabel={`New draft for ${template.name}`}
                       onPress={() => onNewDraft(template, slots)}
+                      disabled={busy}
                     />
+                  )}
+                  {template.id === "before-after" && sampleError && (
+                    <Text accessibilityRole="alert" style={textStyles.error}>
+                      {sampleError}
+                    </Text>
                   )}
                 </>
               }
@@ -81,17 +105,22 @@ export function TemplateGallery({
       </View>
       <GalleryCard
         label="Single-clip editor"
+        disabled={busy}
         details={
           singleDraftCount > 1 ? `Choose from ${singleDraftCount} drafts` : "Trim, preview, and export one video"
         }
         onPress={onSelectSingleClip}
         actions={
           singleDraftCount > 0 && (
-            <Action label="New draft" accessibilityLabel="New single-clip draft" onPress={onNewSingleClip} />
+            <Action
+              label="New draft"
+              accessibilityLabel="New single-clip draft"
+              onPress={onNewSingleClip}
+              disabled={busy}
+            />
           )
         }
       />
-      {example && <TemplateExample {...example} onClose={() => setExample(null)} />}
     </>
   );
 }
@@ -235,7 +264,7 @@ function GalleryCard({
         disabled={disabled}
         accessibilityHint={`${details}.${description ? ` ${description}` : ""}`}
         onPress={onPress}
-        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.card, pressed && styles.pressed, disabled && styles.disabled]}
       >
         <View style={styles.cardCopy}>
           <Text style={styles.cardTitle}>{label}</Text>
@@ -454,6 +483,7 @@ const styles = StyleSheet.create({
   cardDetails: { color: darkColors.accent, fontSize: fontSize.sm, fontWeight: "600" },
   chevron: { color: darkColors.textMuted, fontSize: fontSize.xl },
   pressed: { backgroundColor: darkColors.elevated },
+  disabled: { opacity: 0.55 },
   slot: { padding: space[3], gap: space[2] },
   slotCopy: { gap: space[1] },
   slotAction: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
