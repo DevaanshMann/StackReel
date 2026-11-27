@@ -97,7 +97,7 @@
       "projectSchemaVersion": 1,
       "renderPlan": {
         "path": "render-plans/hook-and-reveal.renderplan.json",
-        "sha256": "3600d0a95c0743607137738a1336e4c3454438a1c06077a2971b081b306ff35e"
+        "sha256": "d78e942435a19319fb27dd01d60e49a1f47d743aee69c8036e1089dc8b715fd6"
       },
       "renderPlanVersion": 1,
       "resolveOptions": {
@@ -181,7 +181,7 @@
       "projectSchemaVersion": 1,
       "renderPlan": {
         "path": "render-plans/top-5-countdown.renderplan.json",
-        "sha256": "d0916267fe6490f764025483426bbc7722a5fc329af595631383a4a56beac624"
+        "sha256": "320388222e19fb492fa3f853474101991328998b316a47d9e8148f04578645e4"
       },
       "renderPlanVersion": 1,
       "resolveOptions": {
