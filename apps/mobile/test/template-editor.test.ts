@@ -36,7 +36,7 @@ function fillSlots(template: MobileTemplate): Record<string, TemplateClip> {
       createTemplateClip(slot, "file:///" + slot.id + "/sample%20clip.mov", "sample clip.mov", {
         ...videoSize,
         startUs: 0,
-        durationUs: slot.minDurationUs,
+        durationUs: slot.trimDurationUs,
       }),
     ]),
   );
@@ -48,7 +48,7 @@ function parseSource(source: string | null): { plan: RenderPlan; assets: Record<
 }
 
 describe("mobile template catalog", () => {
-  it("exposes the validated templates and includes transition tails in the video minimums", () => {
+  it("exposes the validated templates and includes transition tails in the full trim windows", () => {
     expect(mobileTemplates.map(({ id, name, durationUs }) => ({ id, name, durationUs }))).toEqual([
       { id: "before-after", name: "Before / After", durationUs: 8_000_000 },
       { id: "hook-and-reveal", name: "Hook & Reveal", durationUs: 9_000_000 },
@@ -56,20 +56,20 @@ describe("mobile template catalog", () => {
     ]);
     expect(mobileTemplates.every((template) => validate(template).ok)).toBe(true);
     expect(getVideoSlots(beforeAfter)).toEqual([
-      { id: "before", label: "Before", minDurationUs: 3_800_000 },
-      { id: "after", label: "After", minDurationUs: 4_500_000 },
+      { id: "before", label: "Before", minDurationUs: 3_500_000, trimDurationUs: 3_800_000 },
+      { id: "after", label: "After", minDurationUs: 4_500_000, trimDurationUs: 4_500_000 },
     ]);
     expect(getVideoSlots(hookAndReveal)).toEqual([
-      { id: "clip1", label: "Your hook shot", minDurationUs: 3_266_667 },
-      { id: "clip2", label: "B-roll", minDurationUs: 2_200_000 },
-      { id: "clip3", label: "The reveal", minDurationUs: 4_000_000 },
+      { id: "clip1", label: "Your hook shot", minDurationUs: 3_000_000, trimDurationUs: 3_266_667 },
+      { id: "clip2", label: "B-roll", minDurationUs: 2_000_000, trimDurationUs: 2_200_000 },
+      { id: "clip3", label: "The reveal", minDurationUs: 4_000_000, trimDurationUs: 4_000_000 },
     ]);
     expect(getVideoSlots(countdown)).toEqual([
-      { id: "item5", label: "Number 5", minDurationUs: 5_300_000 },
-      { id: "item4", label: "Number 4", minDurationUs: 4_800_000 },
-      { id: "item3", label: "Number 3", minDurationUs: 4_800_000 },
-      { id: "item2", label: "Number 2", minDurationUs: 4_766_667 },
-      { id: "item1", label: "Number 1", minDurationUs: 6_500_000 },
+      { id: "item5", label: "Number 5", minDurationUs: 4_000_000, trimDurationUs: 5_300_000 },
+      { id: "item4", label: "Number 4", minDurationUs: 4_000_000, trimDurationUs: 4_800_000 },
+      { id: "item3", label: "Number 3", minDurationUs: 4_000_000, trimDurationUs: 4_800_000 },
+      { id: "item2", label: "Number 2", minDurationUs: 4_000_000, trimDurationUs: 4_766_667 },
+      { id: "item1", label: "Number 1", minDurationUs: 4_000_000, trimDurationUs: 6_500_000 },
     ]);
   });
 });
@@ -498,11 +498,43 @@ describe("createTemplateSource", () => {
     }
   });
 
-  it.each(mobileTemplates)("uses the full video and audio edit at the minimum lengths for $name", (template) => {
+  it.each(mobileTemplates)(
+    "accepts each authored minimum and keeps picture and sound at normal speed in $name",
+    (template) => {
+      const slots = getVideoSlots(template);
+      const clips = Object.fromEntries(
+        slots.map((slot) => {
+          const clip = createTemplateClip(slot, "file:///" + slot.id + ".mov", slot.label, {
+            ...videoSize,
+            startUs: 0,
+            durationUs: slot.minDurationUs,
+          });
+          expect(getTemplateTrimWindow(slot, clip)).toMatchObject({ firstFrame: 0, lastStartFrame: 0 });
+          return [slot.id, clip];
+        }),
+      );
+      const { plan } = parseSource(createTemplateSource(template, clips));
+      expect(checkPlanInvariants(plan)).toEqual([]);
+      for (const slot of slots) {
+        const video = plan.layers.find((layer) => layer.kind === "video" && layer.slotId === slot.id)!;
+        const source = {
+          sourceStartUs: 0,
+          sourceEndUs: slot.minDurationUs,
+          rate: 1,
+          fitMode: slot.minDurationUs < slot.trimDurationUs ? "freeze" : "trim",
+          afterEnd: "hold",
+        };
+        expect(video).toMatchObject({ source });
+        expect(plan.audio.find((entry) => entry.id === video.id)).toMatchObject({ source });
+      }
+    },
+  );
+
+  it.each(mobileTemplates)("uses the full video and audio edit at the full trim lengths for $name", (template) => {
     const { plan } = parseSource(createTemplateSource(template, fillSlots(template)));
     const video = plan.layers.filter((layer) => layer.kind === "video");
     const slots = getVideoSlots(template);
-    expect(video.map(({ source: { sourceEndUs } }) => sourceEndUs)).toEqual(slots.map((slot) => slot.minDurationUs));
+    expect(video.map(({ source: { sourceEndUs } }) => sourceEndUs)).toEqual(slots.map((slot) => slot.trimDurationUs));
     expect(plan.audio).toHaveLength(slots.length);
     for (const layer of video) {
       expect(layer.source).toMatchObject({ sourceStartUs: 0, rate: 1, fitMode: "trim" });
@@ -842,12 +874,20 @@ describe("template clip boundaries", () => {
   const uri = "file:///hook.mov";
   const longVideo = { ...videoSize, startUs: 50_000, durationUs: 5_994_000 };
 
-  it("requires all 143 playable frames of Number 2 through the slide into Number 1", () => {
+  it("keeps a full 143-frame trim or holds the last available frame through the slide into Number 1", () => {
     const slot = getVideoSlots(countdown).find(({ id }) => id === "item2")!;
     const importClip = (durationUs: number) =>
       createTemplateClip(slot, uri, "runner-up.mov", { ...videoSize, startUs: 50_000, durationUs });
     // The leading half frame is unplayable. The last required frame ends at 4,833,333 µs.
-    expect(() => importClip(4_783_332)).toThrow("Number 2");
+    const short = importClip(4_783_332);
+    const shortPlan = parseSource(createTemplateSource(countdown, { ...fillSlots(countdown), item2: short })).plan;
+    const held = {
+      startUs: 14_000_000,
+      endUs: 18_766_667,
+      source: { sourceStartUs: 66_667, sourceEndUs: 4_800_000, rate: 1, fitMode: "freeze", afterEnd: "hold" },
+    };
+    expect(shortPlan.layers.find((layer) => layer.id === "main/3")).toMatchObject(held);
+    expect(shortPlan.audio.find((entry) => entry.id === "main/3")).toMatchObject(held);
     const item2 = importClip(4_783_333);
     const { plan } = parseSource(createTemplateSource(countdown, { ...fillSlots(countdown), item2 }));
     const edit = {
@@ -916,8 +956,8 @@ describe("template clip boundaries", () => {
   });
 
   it.each([
-    { startUs: 0, durationUs: 3_266_666 },
-    { startUs: 50_000, durationUs: 3_266_667 },
+    { startUs: 0, durationUs: 2_999_999 },
+    { startUs: 50_000, durationUs: 3_000_000 },
   ])("rejects footage without enough whole frames at track start $startUs", (timing) => {
     expect(() => createTemplateClip(hookSlot, uri, "hook.mov", { ...videoSize, ...timing })).toThrow("Your hook shot");
   });
@@ -998,7 +1038,7 @@ describe("template clip boundaries", () => {
       createTemplateClip(hookSlot, uri, "hook.mov", { height: 0, width: 1080, startUs: 0, durationUs: 5_000_000 }),
     ).toThrow("invalid dimensions or timing");
     const clips = fillSlots(hookAndReveal);
-    const clip1 = { ...clips["clip1"]!, trimOutUs: 3_000_000 };
+    const clip1 = { ...clips["clip1"]!, trimOutUs: 2_966_667 };
     expect(() => createTemplateSource(hookAndReveal, { ...clips, clip1 })).toThrow("Your hook shot");
   });
 

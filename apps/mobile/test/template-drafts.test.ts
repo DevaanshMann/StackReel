@@ -257,6 +257,33 @@ describe("duplicating a template draft", () => {
 });
 
 describe("template draft storage", () => {
+  it("reopens a short clip swapped into a longer countdown slot with its sound and held frame intact", () => {
+    const template = mobileTemplates.find(({ id }) => id === "top-5-countdown")!;
+    const slots = getVideoSlots(template);
+    const clips = Object.fromEntries(
+      slots.map((slot) => {
+        const file = createDraftMediaFile(template, slot.id + ".mov");
+        file.writeSync("video");
+        return [slot.id, createTemplateClip(slot, file.uri, file.name, { ...metadata, durationUs: 4_000_000 })];
+      }),
+    );
+    const first = slots[0]!;
+    const last = slots.at(-1)!;
+    const swapped = swapTemplateClips(clips, first, last);
+    saveTemplateDraft(template, { clips: swapped, textOverrides: {}, music: null });
+    const reopened = loadTemplateDraft(template)!;
+    expect(reopened.missingSlots).toEqual([]);
+    expect(reopened.clips[last.id]).toEqual(clips[first.id]);
+    const { plan } = JSON.parse(createTemplateSource(template, reopened.clips)!);
+    const source = { sourceEndUs: 4_000_000, rate: 1, fitMode: "freeze", afterEnd: "hold" };
+    expect(plan.layers).toContainEqual(
+      expect.objectContaining({ slotId: last.id, source: expect.objectContaining(source) }),
+    );
+    expect(plan.audio).toContainEqual(
+      expect.objectContaining({ slotId: last.id, source: expect.objectContaining(source) }),
+    );
+  });
+
   it("retains a legacy export at the template music level and requires a new export after muting", () => {
     const { edits } = fixture();
     saveTemplateDraft(beforeAfter, edits);
@@ -599,7 +626,7 @@ describe("template draft storage", () => {
     expect(reopened).toEqual({
       ...edits,
       clips: {
-        [hookShot!.id]: { ...clips[reveal!.id], trimOutUs: hookShot!.minDurationUs },
+        [hookShot!.id]: { ...clips[reveal!.id], trimOutUs: hookShot!.trimDurationUs },
         [bRoll!.id]: clips[bRoll!.id],
         [reveal!.id]: { ...framedHook, trimOutUs: 5_000_000 },
       },
