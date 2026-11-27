@@ -66,6 +66,7 @@ To start on a chorus or beat, tap **Music start** and move through the song. For
 example, selecting 0:12 plays the section from 0:12 to 0:20. Once the video slots are filled, play the
 preview to hear the section with your clips. Apply the start to save it with the draft. Shorter tracks
 loop from the beginning to fill the reel.
+[See the music start control on iPhone](../../docs/ios-template-music-start.jpg).
 
 If the soundtrack covers up speech, tap **Music volume** under **Background music** and lower the level. At 100%,
 the music plays at the level set by the template. At 0%, the track stays in the draft and plays silently.
