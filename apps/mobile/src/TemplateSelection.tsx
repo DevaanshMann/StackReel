@@ -1,12 +1,14 @@
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getDraftProjects } from "./draft-names";
 import { Action, textStyles } from "./Screen";
+import { TemplateExample } from "./TemplateExample";
 import { trimTimeLabel } from "./TemplateTrim";
 import { VideoImportActions } from "./VideoImportActions";
 import { getEmptyVideoSlots, getVideoSlots, mobileTemplates } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
+import { templatePreviews } from "./template-previews";
 import type { VideoPickerSource } from "./video-picker";
 
 const choices = mobileTemplates.map((template) => ({ template, slots: getVideoSlots(template) }));
@@ -36,6 +38,7 @@ export function TemplateGallery({
   onSelectTemplate: SelectTemplate;
   onSelectSingleClip: () => void;
 }) {
+  const [example, setExample] = useState<{ template: MobileTemplate; source: number } | null>(null);
   return (
     <>
       <Text accessibilityRole="header" style={textStyles.heading}>
@@ -44,6 +47,7 @@ export function TemplateGallery({
       <View style={styles.list}>
         {choices.map(({ template, slots }) => {
           const count = Object.keys(drafts[template.id] ?? {}).length;
+          const source = templatePreviews[template.id];
           const details = `${slots.length} videos · ${secondsLabel(template.durationUs)}`;
           return (
             <GalleryCard
@@ -53,13 +57,23 @@ export function TemplateGallery({
               description={template.description}
               onPress={() => onSelectTemplate(template, slots)}
               actions={
-                count > 0 && (
-                  <Action
-                    label="New draft"
-                    accessibilityLabel={`New draft for ${template.name}`}
-                    onPress={() => onNewDraft(template, slots)}
-                  />
-                )
+                <>
+                  {source !== undefined && (
+                    <Action
+                      label="Watch example"
+                      accessibilityLabel={`Watch ${template.name} example`}
+                      testID={`watch-example-${template.id}`}
+                      onPress={() => setExample({ template, source })}
+                    />
+                  )}
+                  {count > 0 && (
+                    <Action
+                      label="New draft"
+                      accessibilityLabel={`New draft for ${template.name}`}
+                      onPress={() => onNewDraft(template, slots)}
+                    />
+                  )}
+                </>
               }
             />
           );
@@ -77,6 +91,7 @@ export function TemplateGallery({
           )
         }
       />
+      {example && <TemplateExample {...example} onClose={() => setExample(null)} />}
     </>
   );
 }

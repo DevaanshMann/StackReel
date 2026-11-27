@@ -5,6 +5,10 @@ For a ranked list, open **Top 5 Countdown** and pick five videos in order, from 
 to set the list title and name each pick. The template adds the rank numbers and ends the 25-second reel on your winner.
 [See the countdown in the iPhone preview](../../docs/ios-top-5-countdown.png).
 
+Tap **Watch example** on a template card to see its cuts, captions, and transitions before choosing your videos.
+The silent examples come with the app and play offline. Tap **Close example** to return to the gallery, then tap
+the template name to start or resume a reel. [See a gallery example on iPhone](../../docs/ios-gallery-example.jpg).
+
 Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
 video. Use **Replace from Photos** or **Replace from Files** to choose a different video. The iOS Photos picker gives StackReel access
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
@@ -164,6 +168,10 @@ Expo Go cannot load the StackReel engine. Android and web display an unsupported
 `pnpm --filter @stackreel/mobile exec expo prebuild --platform ios --no-install`.
 
 ## Smoke test
+
+On a fresh install, open **Watch example** for each template. Check that the movie starts, pauses, and resumes.
+Close the last example and open **Projects**. It should still be empty. Repeat on a Release build with the device
+offline to verify that all three movies ship with the app.
 
 1. On the Simulator, use `xcrun simctl addmedia booted /path/to/clip.mp4` to seed Photos. Prepare videos long enough
    for all slots and a video shorter than the minimum. Use **Save to Files** from the Photos share sheet to make a

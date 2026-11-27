@@ -25,10 +25,12 @@ from the Zod schema, so adding a value to the schema means adding it to an examp
 have no enum, such as speed, gain and fades, music ducking, text styles, rotation and safe-zone insets, and that
 some slot sets a short-clip policy.
 
-## Not here yet
+## Preview media
 
-Each template will also ship a `.thumb.jpg` and a short `.preview.mp4`. Both are rendered by an engine, so they arrive
-with the render engines (Phase 4).
+The iOS gallery ships [playable examples](../../apps/mobile/assets/previews/) for Before / After, Hook & Reveal,
+and Top 5 Countdown. Thumbnails and previews for the rest of the catalog are planned for Phase 4.
+
+## Other assets
 
 Sticker ids (`map-pin`, `sparkle`, `fire`, `badge-new`, `arrow-curved`, `trophy`, `flash`) and font names refer to
 assets the app will bundle. They don't exist in the repo yet.
