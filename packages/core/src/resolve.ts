@@ -437,7 +437,16 @@ export function resolve(project: Project, options: ResolveOptions = {}): RenderP
       );
       const voice = audio.filter((a) => a.gainDb > MUTED_DB && (marked.size === 0 || marked.has(a.id)));
       const regions = unionRanges(
-        voice.map((a) => ({ startUs: Math.max(a.startUs, startUs), endUs: Math.min(a.endUs, durationUs) })),
+        voice.map((entry) => {
+          let endUs = entry.endUs;
+          const { source } = entry;
+          if (entry.kind === "video" && source.fitMode !== "trim" && source.afterEnd === "hold") {
+            // Embedded audio stops when the selected footage runs out, including at the minimum slow-motion rate.
+            const playedUs = Math.round((source.sourceEndUs - source.sourceStartUs) / source.rate);
+            endUs = snap(Math.min(endUs, entry.startUs + playedUs));
+          }
+          return { startUs: Math.max(entry.startUs, startUs), endUs: Math.min(endUs, durationUs) };
+        }),
       ).filter((r) => r.endUs > r.startUs);
       audio.push({
         id: "music",

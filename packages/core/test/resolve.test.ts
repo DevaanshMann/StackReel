@@ -660,6 +660,22 @@ describe("resolve: audio", () => {
   };
   const regions = (p: Project) => plan(p, { assets }).audio.find((a) => a.id === "music")?.ducking?.regions;
 
+  it("releases music ducking when the video source runs out and its final frame holds", () => {
+    const t = clips([{ startUs: 500_000, durationUs: 2_000_000, speed: 2 }], {
+      audio: { music: { slot: "music" }, duckMusicUnderVoice: true },
+    });
+    const short = bound(t);
+    short.bindings["c0"] = bind("video.mp4", 1_500_000, 500_000);
+    short.bindings["music"] = bind("music.m4a");
+    const ducking = (policy: "freeze" | "loop" | "slow") =>
+      plan(short, { assets: assetsFor(short), shortClipPolicy: policy, minSpeed: 1 }).audio.find(
+        (a) => a.id === "music",
+      )?.ducking?.regions;
+    expect(ducking("freeze")).toEqual([{ startUs: 500_000, endUs: 1_000_000 }]);
+    expect(ducking("slow")).toEqual([{ startUs: 500_000, endUs: 1_500_000 }]);
+    expect(ducking("loop")).toEqual([{ startUs: 500_000, endUs: 2_500_000 }]);
+  });
+
   it("ducks only under clips marked as voice when the template marks any", () => {
     expect(regions(marked({ "vo/0": true }))).toEqual([{ startUs: 2_500_000, endUs: 3_500_000 }]);
     expect(regions(marked({ "main/0": true, "vo/0": false }))).toEqual([{ startUs: 500_000, endUs: 2_000_000 }]);
