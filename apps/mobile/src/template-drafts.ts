@@ -90,7 +90,7 @@ export function removeDraftFile(file: File) {
 }
 
 function pruneDraftFiles(directory: Directory, keep: ReadonlySet<string>) {
-  // Discovery can run while a duplicate is still copying media into its unpublished folder.
+  // Discovery can run while a new draft is still copying media into its unpublished folder.
   const session = activeSessionFiles.get(directory.uri);
   if (copyingDirectories.has(directory.uri)) return;
   try {
@@ -143,6 +143,28 @@ export function renameTemplateDraft(template: MobileTemplate, name: string, draf
   for (const { file } of snapshots) removeDraftFile(file);
 }
 
+/** Reserve a new instance folder. The writer publishes its first manifest or returns null to cancel. */
+export async function withNewTemplateDraft<T>(
+  template: MobileTemplate,
+  draftId: string,
+  write: (directory: Directory) => Promise<T>,
+): Promise<T> {
+  if (draftId === template.id) throw new Error("A new draft needs a unique ID.");
+  const directory = draftDirectory(template, draftId);
+  directory.parentDirectory.create({ intermediates: true, idempotent: true });
+  directory.create();
+  copyingDirectories.add(directory.uri);
+  let committed = false;
+  try {
+    const result = await write(directory);
+    committed = result !== null;
+    return result;
+  } finally {
+    copyingDirectories.delete(directory.uri);
+    if (!committed) pruneDraftFiles(directory, new Set());
+  }
+}
+
 export async function duplicateTemplateDraft(template: MobileTemplate, sourceId: string, name: string) {
   const trimmedName = name.trim();
   if (!trimmedName) throw new Error("Enter a name for the draft.");
@@ -157,14 +179,9 @@ export async function duplicateTemplateDraft(template: MobileTemplate, sourceId:
   }
 
   const instances = templateDirectory(template, "StackReelDraftInstances");
-  instances.create({ intermediates: true, idempotent: true });
   let draftId = randomUUID();
   while (draftId === template.id || new Directory(instances, draftId).exists) draftId = randomUUID();
-  const destination = new Directory(instances, draftId);
-  destination.create();
-  copyingDirectories.add(destination.uri);
-  let committed = false;
-  try {
+  return withNewTemplateDraft(template, draftId, async (destination) => {
     for (const basename of files) {
       const file = new File(original, basename);
       if (file.exists) await file.copy(new File(destination, basename));
@@ -172,12 +189,8 @@ export async function duplicateTemplateDraft(template: MobileTemplate, sourceId:
     const draft = restoreDraftEdits(template, destination, { ...manifest, saved });
     const source = createTemplateSource(template, draft.clips, draft.textOverrides, draft.music);
     commitDraftManifest(destination, 0, saved);
-    committed = true;
     return { draftId, draft, source };
-  } finally {
-    copyingDirectories.delete(destination.uri);
-    if (!committed) pruneDraftFiles(destination, new Set());
-  }
+  });
 }
 
 type Manifest = ReturnType<typeof readDraftManifest>;
