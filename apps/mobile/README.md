@@ -145,6 +145,7 @@ Use **Undo** and **Redo** to step through the last 20 changes in an open single-
 framing, volume, caption, export resolution, and video replacement. Undoing a replacement brings back the
 previous video with its edits. Making a different edit after undoing clears Redo. When you leave the editor
 or quit StackReel, the draft keeps the version on screen and the next editing session starts with empty history.
+[See a restored video and its history controls on iPhone](../../docs/ios-single-clip-undo-redo.jpg).
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
