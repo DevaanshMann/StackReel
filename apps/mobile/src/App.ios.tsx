@@ -1242,7 +1242,7 @@ export default function App() {
               {singleDraft.loadError} Try again, or choose New draft in Templates to start another reel.
             </Text>
           )}
-          <View style={styles.navigation}>
+          <View style={[styles.navigation, styles.actions]}>
             {clip ? (
               <View style={styles.buttonRow}>
                 <Action

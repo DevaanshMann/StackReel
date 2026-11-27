@@ -149,6 +149,7 @@ If **Projects** says a single-clip draft’s saved video is unavailable, open it
 **Relink from Files**. Pick the original video. StackReel checks its dimensions and frame range so it can restore
 your trim, framing, volume, caption, and export resolution. You can cancel or try another file without losing the
 saved edit. After relinking, tap **Export MP4** to make a fresh copy.
+[See the relink controls on iPhone](../../docs/ios-single-clip-relink.png).
 
 Use **Undo** and **Redo** to step through the last 20 changes in an open single-clip draft, including trim,
 framing, volume, caption, export resolution, and video replacement. Undoing a replacement brings back the
