@@ -143,8 +143,10 @@ Use **Replace from Photos** or **Replace from Files** inside a draft to replace 
 
 After exporting a single clip or a template, tap **Save to Photos** to add the MP4 to your photo library.
 iOS asks for permission to add videos to Photos. You can still use **Share MP4** if you decline.
-To keep a file, choose **Share MP4** → **Save to Files**. StackReel clears its temporary exports on the next
-cold launch. Videos you saved to Photos or Files stay available.
+You can close StackReel and come back to share later. Reopen the draft from **Projects** to save or share its last
+completed MP4. If you change the reel or its export resolution, or iOS clears the cached video to free space, tap
+**Export MP4** again. To keep a permanent copy, use **Save to Photos** or **Share MP4** → **Save to Files**.
+[See the save and share controls in a reopened sample reel](../../docs/ios-reopened-export.jpg).
 
 You can make several reels from the same template. Open a template and make an edit to save your first draft.
 To start another, go back to **Templates** and tap **New draft** on that template’s card. When a template has
@@ -159,8 +161,7 @@ Tap **Delete** beside a draft and confirm to remove its edits and imported media
 original files stay in place. [See two Before / After reels in Projects](../../docs/ios-multiple-template-drafts.png).
 When drafts share a name, the delete confirmation also shows the selected draft’s template.
 [See the confirmation for a Before / After draft](../../docs/ios-same-name-delete-confirmation.png).
-If an imported video is missing, choose a replacement from Photos or Files or clear its slot. Export again after
-relaunch, or use **Save to Files** in the share sheet to keep a finished MP4.
+If an imported video is missing, choose a replacement from Photos or Files or clear its slot.
 If StackReel can’t reopen a draft, the recovery screen preserves its saved edits and media copies. You can
 start a new reel from **Templates** or delete the unreadable draft from **Projects**.
 
@@ -274,10 +275,10 @@ offline to verify that all three movies ship with the app.
 17. In **Projects**, tap **Duplicate** twice on a reel with two videos and music. Open the first copy and change its
     caption. Reopen the original and second copy to check their captions. Delete the original, relaunch, and export
     the first copy. Check that its edited caption, clips, and soundtrack appear in the export.
-18. Export a reel and save it to both Photos and Files. In the Simulator's app data container, note the MP4 in
-    `Library/Caches/StackReelExports`. Background StackReel, return, and open **Share MP4** again. Force-quit
-    and relaunch to the gallery. Before exporting again, verify that the cached MP4 is gone. Play the saved
-    video in Photos and in Files, then reopen the draft from **Projects** and export and share a fresh MP4.
+18. Export the editable **Before / After** sample. Quit StackReel, relaunch it, and reopen the sample from
+    **Projects**. Use **Save to Photos** and **Share MP4** without tapping **Export MP4** again. Change a caption,
+    apply it, and relaunch. Check that the draft requires a fresh export and the saved video in Photos still plays.
+    Repeat with a single clip exported at **1080p**, then change its export resolution to **720p**.
 19. Fill **Before / After** and scrub to a frame with a caption. Turn **Safe zones** on and off while paused and
     check that the frame stays in place. Turn it on during playback and scrub across the cut. Export with the guide
     visible and play the saved MP4 in Photos to check that the shaded edges and outline are absent. Toggle the guide

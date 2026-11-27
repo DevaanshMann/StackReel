@@ -1,6 +1,6 @@
 # StackReel privacy policy
 
-Last updated November 25, 2026
+Last updated November 26, 2026
 
 StackReel collects no data about the reels you edit. The iOS editor previews and exports your reel on your device without sending us your clips, music, captions, or editing activity. You don’t need a StackReel account. This policy covers the current iOS development build.
 
@@ -12,7 +12,7 @@ To remove a template draft, open **Projects**, tap **Delete** beside the draft, 
 
 ## Exports and sharing
 
-Exporting creates a temporary MP4. StackReel checks for old exports to remove when the app starts fresh. **Save to Photos** requests permission to add the video to your library. If you use iCloud Photos, Apple may sync that copy. **Share MP4** opens the iOS share sheet. The app or service you choose can receive and keep the video.
+StackReel keeps the latest completed MP4 for each exported draft in the app’s local cache so you can reopen the draft and share it later. Editing the reel or deleting the draft clears its cached export. iOS may also clear cached files to free space. **Save to Photos** requests permission to add the video to your library. If you use iCloud Photos, Apple may sync that copy. **Share MP4** opens the iOS share sheet. The app or service you choose can receive and keep the video.
 
 ## Development builds
 

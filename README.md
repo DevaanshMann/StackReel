@@ -495,6 +495,7 @@ _Runs in parallel with Phase 3._
    - [x] Choose 720p or 1080p for iOS single-clip exports
    - [ ] Resolution choices for templates and Android, frame rate (30/60 fps), and quality (standard/high)
    - [x] iOS MP4 export progress with cancel and screen sleep prevention during export
+   - [x] Save or share the last completed iOS export when reopening a template or single-clip draft
    - [ ] Android export progress with cancel and screen sleep prevention during export
    - [ ] Post-export: save to gallery, share sheet, and quick-share buttons that open TikTok, Instagram, or YouTube via their share intents
 7. **Polish**

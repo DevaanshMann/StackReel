@@ -25,6 +25,7 @@ import { TemplateVolume, VolumeSheet } from "./TemplateVolume";
 import { VideoImportActions } from "./VideoImportActions";
 import { canvas as singleClipCanvas } from "./clip-source";
 import type { ClipFrameRange, SingleClipFit, SingleClipResolution } from "./clip-source";
+import { clearDraftExport, restoreDraftExport, retainDraftExport } from "./draft-export";
 import { discardPickerCopy } from "./draft-files";
 import { getNamedDrafts, nextDraftName } from "./draft-names";
 import {
@@ -176,6 +177,16 @@ function readSingleDraft(draftId: string): SingleDraft | null {
   } catch {
     return { ...emptySingleDraft, loadError: "Couldn’t reopen the saved single-clip draft." };
   }
+}
+
+function singleExportSource(clip: SingleClip) {
+  return clip.exportResolution === 720 ? clip.source : createSingleClipSource(clip, clip.exportResolution);
+}
+
+function restoreSingleOutput(draftId: string, draft: SingleDraft | null) {
+  if (!draft?.clip || draft.outputUri) return draft;
+  const uri = restoreDraftExport({ kind: "single", draftId }, singleExportSource(draft.clip));
+  return uri ? { ...draft, outputUri: uri } : draft;
 }
 
 function getEditorDraft(drafts: TemplateDrafts | null, editor: Editor) {
@@ -357,8 +368,14 @@ export default function App() {
   }
 
   function openDraft(template: MobileTemplate, slots: TemplateVideoSlot[], draftId: string) {
-    if (editor.kind !== "home" || !isCurrentScreen() || !templateDrafts?.[template.id]?.[draftId]) return;
-    navigate({ kind: "template", template, slots, draftId, home: editor });
+    const draft = templateDrafts?.[template.id]?.[draftId];
+    if (editor.kind !== "home" || activeOperation.current || !isCurrentScreen() || !draft) return;
+    const next: TemplateEditor = { kind: "template", template, slots, draftId, home: editor };
+    if (!draft.loadError && !draft.outputUri) {
+      const uri = restoreDraftExport(next, draft.source);
+      if (uri) storeTemplateDraft(next, { ...draft, outputUri: uri });
+    }
+    navigate(next);
   }
 
   function openTemplate(template: MobileTemplate, slots: TemplateVideoSlot[]) {
@@ -486,6 +503,7 @@ export default function App() {
             finish(operation);
             try {
               deleteTemplateDraft(template, draftId);
+              clearDraftExport({ kind: "template", template, draftId });
               const siblings = { ...currentTemplateDrafts.current?.[template.id] };
               delete siblings[draftId];
               storeTemplateDrafts({ ...currentTemplateDrafts.current, [template.id]: siblings });
@@ -510,7 +528,10 @@ export default function App() {
   ) {
     storeTemplateDraft(editor, draft);
     setHistoryLabels({ undoLabel, redoLabel });
-    if (draft.outputUri !== previousOutputUri) removeCachedFile(previousOutputUri);
+    if (draft.outputUri !== previousOutputUri) {
+      clearDraftExport(editor);
+      removeCachedFile(previousOutputUri);
+    }
   }
 
   function commitDraftEdit(editor: TemplateEditor, draft: TemplateDraft, label: string) {
@@ -698,7 +719,10 @@ export default function App() {
   }
 
   function openSingleDraft(draftId: string) {
-    if (editor.kind !== "home" || !isCurrentScreen() || !singleDrafts[draftId]) return;
+    const draft = singleDrafts[draftId];
+    if (editor.kind !== "home" || activeOperation.current || !isCurrentScreen() || !draft) return;
+    const restored = restoreSingleOutput(draftId, draft);
+    if (restored !== draft) storeSingleDraft(draftId, restored);
     navigate({ kind: "single", draftId, home: editor });
   }
 
@@ -725,6 +749,7 @@ export default function App() {
             if (!isCurrentOperation(operation)) return;
             try {
               deleteSingleClipDraft(editor.draftId);
+              clearDraftExport(editor);
               storeSingleDraft(editor.draftId, null);
               removeCachedFile(singleDraft.outputUri);
               setFeedback({ kind: "status", message: "Single-clip draft deleted." });
@@ -748,6 +773,7 @@ export default function App() {
   function publishSingleEdit(clip: SingleClip) {
     if (clip === singleDraft.clip) return;
     storeSingleDraft(clip.draftId, { clip, outputUri: null });
+    clearDraftExport({ kind: "single", draftId: clip.draftId });
     removeCachedFile(singleDraft.outputUri);
   }
 
@@ -786,8 +812,7 @@ export default function App() {
       if (!isCurrentOperation(operation)) return;
       const clip = await importSingleClipDraft(asset, metadata, () => isCurrentOperation(operation), editor.draftId);
       if (!clip || !isCurrentOperation(operation)) return;
-      storeSingleDraft(clip.draftId, { clip, outputUri: null });
-      removeCachedFile(outputUri);
+      publishSingleEdit(clip);
     } catch (cause) {
       if (isCurrentOperation(operation)) {
         setFeedback({ kind: "error", message: errorMessage("Couldn’t import the video.", cause) });
@@ -869,20 +894,20 @@ export default function App() {
   }
 
   async function startExport() {
-    if (!source) return;
+    if (editor.kind === "home" || !source) return;
     const job: ExportJob = { kind: "export", id: randomUUID(), cancelling: false };
     if (!begin(job)) return;
     try {
       const clip = singleDraft.clip;
-      const exportSource = clip ? createSingleClipSource(clip, clip.exportResolution) : source;
+      const exportSource = clip ? singleExportSource(clip) : source;
       const { uri } = await exportMP4(exportSource, job.id);
       if (isCurrentOperation(job)) {
+        const retainedUri = retainDraftExport(editor, exportSource, uri, outputUri);
         if (editor.kind === "template") {
-          storeTemplateDraft(editor, { ...templateDraft, outputUri: uri });
-        } else if (editor.kind === "single") {
-          storeSingleDraft(editor.draftId, { ...singleDraft, outputUri: uri });
+          storeTemplateDraft(editor, { ...templateDraft, outputUri: retainedUri });
+        } else {
+          storeSingleDraft(editor.draftId, { ...singleDraft, outputUri: retainedUri });
         }
-        if (uri !== outputUri) removeCachedFile(outputUri);
       } else {
         removeCachedFile(uri);
       }
@@ -913,10 +938,20 @@ export default function App() {
     }
   }
 
+  function hasExportFile(uri: string) {
+    const file = new File(uri);
+    if (file.exists && file.size > 0) return true;
+    if (editor.kind === "template") storeTemplateDraft(editor, { ...templateDraft, outputUri: null });
+    if (editor.kind === "single") storeSingleDraft(editor.draftId, { ...singleDraft, outputUri: null });
+    setFeedback({ kind: "error", message: "The cached MP4 is unavailable. Tap Export MP4 to make a new copy." });
+    return false;
+  }
+
   async function shareVideo() {
     const operation = { kind: "share" } as const;
     if (!outputUri || !begin(operation)) return;
     try {
+      if (!hasExportFile(outputUri)) return;
       if (!(await isAvailableAsync())) throw new Error("Sharing is unavailable on this device.");
       if (isCurrentOperation(operation)) await shareAsync(outputUri, { UTI: "public.mpeg-4" });
     } catch (cause) {
@@ -939,6 +974,7 @@ export default function App() {
     }
 
     try {
+      if (!hasExportFile(outputUri)) return;
       const { granted, canAskAgain } = await requestPermissionsAsync(true);
       if (!isCurrentOperation(operation)) return;
       if (!granted) {
@@ -1159,7 +1195,10 @@ export default function App() {
                 onPress={() => {
                   if (activeOperation.current || !isCurrentScreen()) return;
                   setFeedback(null);
-                  storeSingleDraft(editor.draftId, readSingleDraft(editor.draftId));
+                  storeSingleDraft(
+                    editor.draftId,
+                    restoreSingleOutput(editor.draftId, readSingleDraft(editor.draftId)),
+                  );
                 }}
                 disabled={busy}
               />
