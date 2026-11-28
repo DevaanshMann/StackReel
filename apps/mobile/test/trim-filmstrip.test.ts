@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  draggedTrimFrame,
   filmstripGrabOffset,
   filmstripIntent,
   filmstripSamples,
   filmstripStartFrame,
   filmstripWindow,
+  trimHandleAt,
 } from "../src/trim-filmstrip";
 
 const bounds = { firstFrame: 12, sourceEndFrame: 112, durationFrames: 20 };
@@ -71,5 +73,46 @@ describe("trim filmstrip", () => {
     expect(samples).toHaveLength(8);
     expect(samples).toEqual([...new Set(samples)].sort((a, b) => a - b));
     expect(samples[7]).toBeLessThan(long.sourceEndFrame);
+  });
+});
+
+describe("single-clip filmstrip handles", () => {
+  const source = { startFrame: 300, endFrame: 450 };
+  const cut = { startFrame: 360, endFrame: 390 };
+
+  it("picks the nearest endpoint using the source track, with a midpoint tap favoring the start", () => {
+    expect(trimHandleAt(source, cut, -10, 300)).toBe("startFrame");
+    expect(trimHandleAt(source, cut, 150, 300)).toBe("startFrame");
+    expect(trimHandleAt(source, cut, 151, 300)).toBe("endFrame");
+    expect(trimHandleAt(source, cut, 310, 300)).toBe("endFrame");
+  });
+
+  it("starts at the original boundary and snaps deltas to whole source frames", () => {
+    expect(draggedTrimFrame(source, cut, "startFrame", 0, 300)).toBe(360);
+    expect(draggedTrimFrame(source, cut, "endFrame", 0.8, 300)).toBe(390);
+    expect(draggedTrimFrame(source, cut, "startFrame", 3.2, 300)).toBe(362);
+    expect(draggedTrimFrame(source, cut, "endFrame", -3.2, 300)).toBe(388);
+    expect(draggedTrimFrame(source, cut, "endFrame", 3.2, 0)).toBe(390);
+  });
+
+  it("keeps both edges in bounds and preserves at least one frame", () => {
+    expect(draggedTrimFrame(source, cut, "startFrame", -999, 300)).toBe(source.startFrame);
+    expect(draggedTrimFrame(source, cut, "endFrame", 999, 300)).toBe(source.endFrame);
+    expect(draggedTrimFrame(source, cut, "startFrame", 999, 300)).toBe(cut.endFrame - 1);
+    expect(draggedTrimFrame(source, cut, "endFrame", -999, 300)).toBe(cut.startFrame + 1);
+    const oneFrame = { startFrame: 20, endFrame: 21 };
+    expect(draggedTrimFrame(oneFrame, oneFrame, "startFrame", 300, 300)).toBe(20);
+    expect(draggedTrimFrame(oneFrame, oneFrame, "endFrame", -300, 300)).toBe(21);
+  });
+
+  it("can grab either side of a subpixel selection at each end of a long source", () => {
+    const long = { startFrame: 900, endFrame: 108_900 };
+    const first = { startFrame: 900, endFrame: 901 };
+    const last = { startFrame: 108_899, endFrame: 108_900 };
+    expect(trimHandleAt(long, first, 0, 320)).toBe("startFrame");
+    expect(trimHandleAt(long, first, 1, 320)).toBe("endFrame");
+    expect(trimHandleAt(long, last, 319, 320)).toBe("startFrame");
+    expect(trimHandleAt(long, last, 320, 320)).toBe("endFrame");
+    expect(draggedTrimFrame(long, last, "startFrame", -16, 320)).toBe(103_499);
   });
 });
