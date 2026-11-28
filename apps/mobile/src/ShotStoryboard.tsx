@@ -96,11 +96,10 @@ export function ShotStoryboard({
               testID={`storyboard-shot-${slot.id}`}
               accessibilityRole="button"
               accessibilityLabel={`Shot ${number} of ${shots.length}, ${slot.label}, ${status}`}
+              accessibilityValue={cueLabel ? { text: `Preview at ${cueLabel}` } : undefined}
               accessibilityState={{ selected: chosen, disabled: busy }}
               accessibilityHint={
-                cueLabel
-                  ? `Pauses the preview at ${cueLabel} and shows controls for this shot. Play continues from there.`
-                  : "Shows controls for this shot."
+                cueLabel ? "Pauses the preview here and shows controls for this shot." : "Shows controls for this shot."
               }
               disabled={busy}
               focusable={!busy}

@@ -3,7 +3,7 @@ import { US_PER_SECOND } from "@stackreel/core";
 import { StackReelPreviewView } from "@stackreel/engine";
 import type { StackReelPreviewViewRef } from "@stackreel/engine";
 import { MIN_HIT_TARGET, darkColors, neutral, radius, space } from "@stackreel/ui";
-import { useImperativeHandle, useRef, useState } from "react";
+import { useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode, Ref } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, useWindowDimensions, View } from "react-native";
 import type { ViewProps, ViewStyle } from "react-native";
@@ -88,6 +88,14 @@ export function ClipPreview({
       else cueBeforeReady.current = seconds;
     },
   }));
+
+  useLayoutEffect(() => {
+    // The native ready event and a card tap can arrive in the same render batch.
+    if (duration > 0 && cueBeforeReady.current !== null) {
+      void seekToSeconds(cueBeforeReady.current, duration);
+      cueBeforeReady.current = null;
+    }
+  }, [duration]);
 
   async function seekToSeconds(target: number, durationSeconds: number) {
     dragging.current = false;
@@ -274,13 +282,7 @@ export function ClipPreview({
             style={viewport?.videoStyle ?? StyleSheet.absoluteFill}
             source={source}
             playing={playing && !suspended && scrubPosition === null}
-            onReady={({ nativeEvent: { durationSeconds } }) => {
-              setDuration(durationSeconds);
-              if (cueBeforeReady.current !== null) {
-                void seekToSeconds(cueBeforeReady.current, durationSeconds);
-                cueBeforeReady.current = null;
-              }
-            }}
+            onReady={({ nativeEvent }) => setDuration(nativeEvent.durationSeconds)}
             onPositionChange={({ nativeEvent }) => {
               if (duration <= 0 || dragging.current || pendingSeek.current) return;
               const seconds = nativeEvent.positionSeconds;
