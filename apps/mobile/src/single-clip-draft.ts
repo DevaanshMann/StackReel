@@ -1,5 +1,5 @@
 import { randomUUID } from "expo-crypto";
-import { Directory, File, FileMode, Paths } from "expo-file-system";
+import { Directory, File, Paths } from "expo-file-system";
 import { normalizeClipReframe } from "./clip-reframe";
 import type { ClipReframe } from "./clip-reframe";
 import {
@@ -19,6 +19,7 @@ import {
   mediaName,
   pendingName,
   snapshotName,
+  readableSize,
 } from "./draft-files";
 import { readSingleClipCaption } from "./single-clip-caption";
 import type { PickedVideo } from "./video-picker";
@@ -136,18 +137,6 @@ export function listSingleClipDraftIds(): string[] {
     ids.push(...saved.map((entry) => entry.name).sort());
   }
   return ids;
-}
-
-function readableSize(file: File) {
-  const handle = file.open(FileMode.ReadOnly);
-  try {
-    const bytes = handle.size;
-    if (bytes === null || !Number.isSafeInteger(bytes) || bytes <= 0)
-      throw new Error("The video is empty or unreadable.");
-    return bytes;
-  } finally {
-    handle.close();
-  }
 }
 
 function readManifest(directory: Directory, draftId: string) {

@@ -45,6 +45,7 @@ export async function createBeforeAfterSample(
       textOverrides: { "labels/2": "Three pots, one summer" },
       music: null,
       missingSlots: [],
+      recoverableSlots: {},
       missingMusic: false,
     };
     const source = createTemplateSource(template, clips, draft.textOverrides, draft.music);

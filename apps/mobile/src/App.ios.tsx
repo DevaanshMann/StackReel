@@ -98,6 +98,7 @@ type TemplateDraft = TemplateDraftEdits & {
   source: string | null;
   outputUri: string | null;
   missingSlots: readonly string[];
+  recoverableSlots: Readonly<Record<string, string>>;
   missingMusic: boolean;
   loadError?: string;
 };
@@ -113,7 +114,7 @@ type TemplateEditor = {
   home: Home;
 };
 type Editor = Home | { kind: "single"; draftId: string; home: Home } | TemplateEditor;
-type ImportOperation = { kind: "import"; source: VideoPickerSource; slotId?: string };
+type ImportOperation = { kind: "import"; source: VideoPickerSource; slotId?: string; relink?: boolean };
 type SlotEdit = {
   kind: "trim" | "reframe" | "volume";
   editor: TemplateEditor;
@@ -166,6 +167,7 @@ const emptyTemplateDraft: TemplateDraft = {
   source: null,
   outputUri: null,
   missingSlots: [],
+  recoverableSlots: {},
   missingMusic: false,
 };
 
@@ -689,9 +691,16 @@ export default function App() {
     finish(operation);
   }
 
-  async function selectTemplateVideos(slots: readonly TemplateVideoSlot[], source: VideoPickerSource) {
+  async function selectTemplateVideos(slots: readonly TemplateVideoSlot[], source: VideoPickerSource, relink = false) {
     if (editor.kind !== "template" || !slots.length) return;
-    const operation: ImportOperation = { kind: "import", source, ...(slots.length === 1 && { slotId: slots[0]!.id }) };
+    const session = currentDraftSession.current;
+    if (session?.kind !== "template") return;
+    const operation: ImportOperation = {
+      kind: "import",
+      source,
+      relink,
+      ...(slots.length === 1 && { slotId: slots[0]!.id }),
+    };
     if (!begin(operation)) return;
     try {
       await importTemplateVideos({
@@ -700,6 +709,7 @@ export default function App() {
         slots,
         source,
         isCurrent: () => isCurrentOperation(operation),
+        ...(relink && operation.slotId && { validateClip: session.history.prepareRelink(operation.slotId) }),
         onInvalidVideo: (error) =>
           new Promise<boolean>((resolve) => {
             if (!isCurrentOperation(operation)) return resolve(false);
@@ -715,6 +725,11 @@ export default function App() {
             AccessibilityInfo.announceForAccessibility(error.message);
           }),
         commit: (imported) => {
+          if (relink && operation.slotId) {
+            const restored = session.history.relink(operation.slotId, imported[operation.slotId]!, templateDraft);
+            publishDraftEdit(editor, restored, templateDraft.outputUri, session.history);
+            return;
+          }
           const clips = { ...templateDraft.clips, ...imported };
           const missingSlots = templateDraft.missingSlots.filter((id) => !Object.hasOwn(imported, id));
           const ids = Object.keys(imported);
@@ -722,7 +737,10 @@ export default function App() {
             (id) => Object.hasOwn(templateDraft.clips, id) || templateDraft.missingSlots.includes(id),
           );
           const label = ids.length > 1 ? "import videos" : replaced ? "replace video" : "add video";
-          commitDraftEdit(editor, { ...templateDraft, clips, missingSlots }, label);
+          const recoverableSlots = Object.fromEntries(
+            Object.entries(templateDraft.recoverableSlots).filter(([id]) => !Object.hasOwn(imported, id)),
+          );
+          commitDraftEdit(editor, { ...templateDraft, clips, missingSlots, recoverableSlots }, label);
         },
       });
     } catch (cause) {
@@ -730,7 +748,11 @@ export default function App() {
         if (cause instanceof SlotImportError) {
           setFeedback({ kind: "error", slotId: cause.slot.id, message: cause.message });
         } else {
-          const summary = slots.length > 1 ? "Couldn’t import the selected videos." : "Couldn’t import the video.";
+          const summary = relink
+            ? "Couldn’t relink the video."
+            : slots.length > 1
+              ? "Couldn’t import the selected videos."
+              : "Couldn’t import the video.";
           setFeedback({ ...operation, kind: "error", message: errorMessage(summary, cause) });
         }
       }
@@ -1196,12 +1218,15 @@ export default function App() {
           slots={editor.slots}
           clips={templateDraft.clips}
           missingSlots={templateDraft.missingSlots}
+          recoverableSlots={templateDraft.recoverableSlots}
+          relinking={importing && activity.relink === true}
           busy={busy}
           importingSlotId={importing ? activity.slotId : undefined}
           importingFrom={importing ? activity.source : undefined}
           recovery={importing ? activity.recovery : undefined}
           slotError={feedback?.kind === "error" && feedback.slotId !== undefined ? feedback : null}
           swapError={feedback?.scope === "swap" ? feedback.message : undefined}
+          onRelink={(slot, source) => selectTemplateVideos([slot], source, true)}
           onSelectOrdered={(slots) => selectTemplateVideos(slots, "Photos")}
           onSelect={(slot, source) => selectTemplateVideos([slot], source)}
           onTrim={(slot) => openSlotEdit("trim", slot)}

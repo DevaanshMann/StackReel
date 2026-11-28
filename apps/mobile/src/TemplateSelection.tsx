@@ -287,11 +287,14 @@ export function TemplateVideoSlots({
   slots,
   clips,
   missingSlots,
+  recoverableSlots,
+  relinking,
   busy,
   importingSlotId,
   importingFrom,
   recovery,
   slotError,
+  onRelink,
   swapError,
   onSelect,
   onSelectOrdered,
@@ -306,12 +309,15 @@ export function TemplateVideoSlots({
   slots: readonly TemplateVideoSlot[];
   clips: Readonly<Record<string, TemplateClip>>;
   missingSlots: readonly string[];
+  recoverableSlots: Readonly<Record<string, string>>;
+  relinking: boolean;
   busy: boolean;
   importingSlotId: string | undefined;
   importingFrom: VideoPickerSource | undefined;
   recovery: ImportRecovery | undefined;
   slotError: { slotId?: string; message: string } | null;
   swapError: string | undefined;
+  onRelink: (slot: TemplateVideoSlot, source: VideoPickerSource) => void;
   onSelect: (slot: TemplateVideoSlot, source: VideoPickerSource) => void;
   onSelectOrdered: (slots: TemplateVideoSlot[]) => void;
   onTrim: (slot: TemplateVideoSlot) => void;
@@ -388,6 +394,7 @@ export function TemplateVideoSlots({
       {slots.map((slot) => {
         const clip = clips[slot.id];
         const missing = missingSlots.includes(slot.id);
+        const recoverable = missing && Object.hasOwn(recoverableSlots, slot.id);
         return (
           <View key={slot.id} style={[styles.panel, styles.slot]}>
             <View style={styles.slotCopy}>
@@ -412,15 +419,27 @@ export function TemplateVideoSlots({
               )}
               {missing && (
                 <Text accessibilityRole="alert" style={textStyles.error}>
-                  Saved video is missing. Replace it or clear this slot.
+                  {recoverable
+                    ? `“${recoverableSlots[slot.id]}” is unavailable. Relink the original to keep your trim, framing, and audio level.`
+                    : "Saved video is missing. Replace it or clear this slot."}
                 </Text>
               )}
             </View>
+            {recoverable && (
+              <VideoImportActions
+                action="Relink"
+                importingFrom={relinking && importingSlotId === slot.id ? importingFrom : undefined}
+                busy={busy}
+                primary
+                slotLabel={slot.label}
+                onSelect={(source) => onRelink(slot, source)}
+              />
+            )}
             <VideoImportActions
               action={clip || missing ? "Replace" : "Choose"}
-              importingFrom={importingSlotId === slot.id ? importingFrom : undefined}
+              importingFrom={!relinking && importingSlotId === slot.id ? importingFrom : undefined}
               busy={busy}
-              primary={emptySlots.length < 2 && slot === nextSlot}
+              primary={!recoverable && emptySlots.length < 2 && slot === nextSlot}
               slotLabel={slot.label}
               onSelect={(source) => onSelect(slot, source)}
             />

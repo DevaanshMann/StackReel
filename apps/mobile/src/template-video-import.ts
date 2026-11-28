@@ -1,6 +1,6 @@
 import { probeVideo } from "@stackreel/engine";
 import { File, Paths } from "expo-file-system";
-import { discardPickerCopy, isPickerCacheFile } from "./draft-files";
+import { discardPickerCopy, isPickerCacheFile, readableSize } from "./draft-files";
 import { createDraftMediaFile, removeDraftFile } from "./template-drafts";
 import { createTemplateClip } from "./template-editor";
 import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
@@ -35,6 +35,7 @@ export async function importTemplateVideos({
   slots,
   source,
   isCurrent,
+  validateClip,
   onInvalidVideo,
   commit,
 }: {
@@ -43,6 +44,7 @@ export async function importTemplateVideos({
   slots: readonly TemplateVideoSlot[];
   source: VideoPickerSource;
   isCurrent: () => boolean;
+  validateClip?: (clip: TemplateClip) => void;
   onInvalidVideo?: (error: SlotImportError) => Promise<boolean>;
   commit: (clips: Record<string, TemplateClip>) => void;
 }) {
@@ -82,6 +84,7 @@ export async function importTemplateVideos({
           const metadata = await probeVideo(asset.uri);
           if (!isCurrent()) return;
           clip = createTemplateClip(slot, asset.uri, asset.name, metadata);
+          validateClip?.(clip);
           break;
         } catch (cause) {
           if (!isCurrent()) return;
@@ -97,9 +100,11 @@ export async function importTemplateVideos({
         const target = createDraftMediaFile(template, asset.draftFileName, draftId);
         staged.push(target);
         const file = new File(asset.uri);
+        const bytes = file.size;
         if (isPickerCacheFile(file) && !laterUris.has(asset.uri)) await file.move(target);
         else await file.copy(target);
         if (!isCurrent()) return;
+        if (readableSize(target) !== bytes) throw new Error("The imported video is incomplete.");
         clips[slot.id] = { ...clip, uri: target.uri };
       } catch (cause) {
         throw new SlotImportError(slot, cause);

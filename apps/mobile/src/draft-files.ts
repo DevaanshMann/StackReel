@@ -1,5 +1,5 @@
 import { randomUUID } from "expo-crypto";
-import { Directory, File, Paths } from "expo-file-system";
+import { Directory, File, FileMode, Paths } from "expo-file-system";
 
 export const snapshotName = /^draft-(\d{1,15})\.json$/;
 export const pendingName = "pending.json";
@@ -22,6 +22,18 @@ export function allocateDraftMedia(directory: Directory, importedName: string) {
     file = new File(directory, `${randomUUID()}${extension.toLowerCase()}`);
   } while (file.exists);
   return file;
+}
+
+export function readableSize(file: File) {
+  const handle = file.open(FileMode.ReadOnly);
+  try {
+    const bytes = handle.size;
+    if (bytes === null || !Number.isSafeInteger(bytes) || bytes <= 0)
+      throw new Error("The video is empty or unreadable.");
+    return bytes;
+  } finally {
+    handle.close();
+  }
 }
 
 export function discardFile(file: File) {
