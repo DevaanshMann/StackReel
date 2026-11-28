@@ -15,10 +15,12 @@ replace either video, or tap **Export MP4** to render the reel. The sample works
 Reopen it from **Projects** to continue editing. Tapping **Edit sample reel** again creates a separate copy.
 [See the sample reel action in the iPhone gallery](../../docs/ios-edit-sample-reel.png).
 
-The **Storyboard** shows the shots in order. Tap a shot to see its source and editing controls. Filled shots show a
-thumbnail from the current trim. Empty and missing shots are labeled so you can see where footage is needed.
-When all required videos are ready, the assembled reel plays in the preview above the storyboard.
-[See the storyboard in the iPhone editor](../../docs/ios-template-storyboard.jpg).
+The **Storyboard** shows the shots in order. Tap a shot to see its source and editing controls. Once the reel is
+playable, each shot also shows its time in the reel. Tapping the card pauses the preview there so you can inspect
+the cut or press **Play** to watch from that point. In **Balcony in bloom**, tap **After** to jump to 0:03.8,
+just past the crossfade. Tap the card again any time to return to that frame.
+Empty and missing shots still open their footage controls.
+[See the shot and its preview on iPhone](../../docs/ios-storyboard-preview-cues.jpg).
 
 Each selected shot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
 video. Use **Replace from Photos** or **Replace from Files** to choose a different video. The iOS Photos picker gives StackReel access

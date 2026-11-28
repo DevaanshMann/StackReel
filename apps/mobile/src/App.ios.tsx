@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentRef } from "react";
 import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
+import type { ClipPreviewRef } from "./ClipPreview";
 import { ReframeSheet } from "./ReframeSheet";
 import { Action, Screen, textStyles } from "./Screen";
 import type { ScreenRef } from "./Screen";
@@ -85,6 +86,7 @@ import { importTemplateMusic } from "./template-music-import";
 import type { MusicSource } from "./template-music-import";
 import { getTemplateSafeZoneGuide } from "./template-safe-zones";
 import { createBeforeAfterSample } from "./template-sample";
+import { getStoryboardCueTimes } from "./template-storyboard";
 import { importTemplateVideos, removeCachedFile, SlotImportError } from "./template-video-import";
 import { pickVideo } from "./video-picker";
 import type { VideoPickerSource } from "./video-picker";
@@ -234,6 +236,7 @@ function getSlotPreviewTemplateGainDb(template: MobileTemplate, slotId: string) 
 export default function App() {
   const mounted = useRef(false);
   const editorScreenRef = useRef<ScreenRef>(null);
+  const reelPreviewRef = useRef<ClipPreviewRef>(null);
   const frameButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
   const [frameOpen, setFrameOpen] = useState(false);
   const activeOperation = useRef<Operation | null>(null);
@@ -252,6 +255,7 @@ export default function App() {
   const [historyLabels, setHistoryLabels] = useState(emptyHistoryLabels);
 
   const template = editor.kind === "template" ? editor.template : null;
+  const cueTimes = useMemo(() => (template ? getStoryboardCueTimes(template) : {}), [template]);
   const textFields = template ? getTemplateTextFields(template) : [];
   const templateDraft = getEditorDraft(templateDrafts, editor);
   const singleDraft = editor.kind === "single" ? (singleDrafts[editor.draftId] ?? emptySingleDraft) : emptySingleDraft;
@@ -1244,6 +1248,10 @@ export default function App() {
           slots={editor.slots}
           selectedSlotId={selectedSlotId}
           onSelectSlot={setSelectedSlotId}
+          cueTimes={source ? cueTimes : {}}
+          onCueShot={(timeUs) => {
+            if (!activeOperation.current && isCurrentScreen()) reelPreviewRef.current?.cueShot(timeUs);
+          }}
           clips={templateDraft.clips}
           missingSlots={templateDraft.missingSlots}
           recoverableSlots={templateDraft.recoverableSlots}
@@ -1591,6 +1599,7 @@ export default function App() {
       {source && (
         <ClipPreview
           key={source}
+          ref={reelPreviewRef}
           storyboard={!!template}
           singleWorkspace={!!clip}
           canvas={canvas}
