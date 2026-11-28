@@ -15,7 +15,12 @@ replace either video, or tap **Export MP4** to render the reel. The sample works
 Reopen it from **Projects** to continue editing. Tapping **Edit sample reel** again creates a separate copy.
 [See the sample reel action in the iPhone gallery](../../docs/ios-edit-sample-reel.png).
 
-Each required slot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
+The **Storyboard** shows the shots in order. Tap a shot to see its source and editing controls. Filled shots show a
+thumbnail from the current trim. Empty and missing shots are labeled so you can see where footage is needed.
+When all required videos are ready, the assembled reel plays in the preview above the storyboard.
+[See the storyboard in the iPhone editor](../../docs/ios-template-storyboard.jpg).
+
+Each selected shot shows its minimum clip duration. Tap **Choose from Photos** or **Choose from Files** to add a
 video. Use **Replace from Photos** or **Replace from Files** to choose a different video. The iOS Photos picker gives StackReel access
 to the videos you select. Once every required slot is filled, you can play, scrub, export, and share the assembled H.264
 MP4. If a clip meets the minimum and ends before its slot does, the reel holds the last frame. The clip’s
@@ -51,7 +56,7 @@ positions. To discard the selection, tap **Cancel import** or cancel the replace
 videos together when every pick is ready, so one **Undo** removes the whole import.
 [See how to replace a short B-roll clip on iPhone](../../docs/ios-ordered-import-recovery.png).
 
-Under **Required videos**, tap **Swap Before and After** to exchange those two clips. In **Hook & Reveal**, the swap
+Below the selected shot’s controls, tap **Swap Before and After** to exchange those two clips. In **Hook & Reveal**, the swap
 button names the two filled slots. If all three are filled, tap **Swap clips**, then choose a named pair or tap **Cancel**.
 Each clip keeps its framing and as much of its original trim position as the new slot allows. If a clip is too short
 for its destination, the error names that slot and the draft and prior export stay as they were. A successful swap
@@ -213,7 +218,7 @@ offline to verify that all three movies ship with the app.
 1. On the Simulator, use `xcrun simctl addmedia booted /path/to/clip.mp4` to seed Photos. Prepare videos long enough
    for all slots and a video shorter than the minimum. Use **Save to Files** from the Photos share sheet to make a
    video available in Files too.
-2. Open **Before / After**. Check the **Before** and **After** duration guidance and verify **Export MP4** is disabled
+2. Open **Before / After**. Select **Before** and **After** in the storyboard to check their duration guidance and verify **Export MP4** is disabled
    until both videos are added. Open **Edit text** and check that all three fields show their defaults and limits.
    Use emoji to reach a field’s limit, then go one character past it and verify that **Apply text** is disabled.
    Enter a new **Before label** and **Caption**, clear the **After label**, and apply.
