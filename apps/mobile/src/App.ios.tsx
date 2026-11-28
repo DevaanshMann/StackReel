@@ -7,12 +7,15 @@ import { useKeepAwake } from "expo-keep-awake";
 import { Asset, requestPermissionsAsync } from "expo-media-library";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentRef } from "react";
 import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { ClipPreview, PreviewFrame, errorMessage } from "./ClipPreview";
 import { ReframeSheet } from "./ReframeSheet";
 import { Action, Screen, textStyles } from "./Screen";
 import type { ScreenRef } from "./Screen";
 import { SingleClipCaptionEditor } from "./SingleClipCaptionEditor";
+import { SingleClipFramePanel } from "./SingleClipFramePanel";
+import { SingleClipToolDock } from "./SingleClipToolDock";
 import { SingleClipTrim } from "./SingleClipTrim";
 import { TemplateExample } from "./TemplateExample";
 import { TemplateMusicControls } from "./TemplateMusicControls";
@@ -173,10 +176,6 @@ const emptyTemplateDraft: TemplateDraft = {
 };
 
 const firstScreen: Home = { kind: "home", tab: "templates" };
-const framingOptions = [
-  { fit: "contain", label: "Fit" },
-  { fit: "cover", label: "Fill" },
-] as const;
 const emptyHistoryLabels: HistoryLabels = { undoLabel: null, redoLabel: null };
 const slotEditLabels: Record<SlotEdit["kind"], string> = {
   trim: "trim",
@@ -235,6 +234,8 @@ function getSlotPreviewTemplateGainDb(template: MobileTemplate, slotId: string) 
 export default function App() {
   const mounted = useRef(false);
   const editorScreenRef = useRef<ScreenRef>(null);
+  const frameButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const [frameOpen, setFrameOpen] = useState(false);
   const activeOperation = useRef<Operation | null>(null);
   const pendingImportChoice = useRef<ImportRecovery["answer"] | null>(null);
   const currentEditor = useRef<Editor>(firstScreen);
@@ -353,7 +354,10 @@ export default function App() {
     if (activeOperation.current || !isCurrentScreen()) return false;
     activeOperation.current = operation;
     setActivity(operation.kind === "export" ? { ...operation, progress: 0 } : operation);
-    if (operation.kind !== "fullscreen") setFeedback(null);
+    if (operation.kind !== "fullscreen") {
+      setFrameOpen(false);
+      setFeedback(null);
+    }
     return true;
   }
 
@@ -374,6 +378,7 @@ export default function App() {
     resetDraftSession(next);
     currentEditor.current = next;
     setSelectedSlotId(undefined);
+    setFrameOpen(false);
     setFeedback(null);
     setEditor(next);
   }
@@ -1184,7 +1189,7 @@ export default function App() {
   const { undoLabel, redoLabel } = historyLabels;
   const backAction = (
     <Action
-      label={template ? (fromProjects ? "‹ Projects" : "‹ Templates") : backLabel}
+      label={fromProjects ? "‹ Projects" : "‹ Templates"}
       accessibilityLabel={backLabel}
       onPress={() => navigate({ ...editor.home })}
       disabled={busy}
@@ -1193,13 +1198,15 @@ export default function App() {
   const historyControls = (
     <View role="toolbar" accessibilityLabel="Edit history" style={styles.buttonRow}>
       <Action
-        label={undoLabel ? `Undo ${undoLabel}` : "Undo"}
+        label={undoLabel && !clip ? `Undo ${undoLabel}` : "Undo"}
+        accessibilityLabel={undoLabel ? `Undo ${undoLabel}` : "Undo"}
         testID={`${editor.kind}-undo`}
         onPress={() => applyDraftHistory("undo")}
         disabled={busy || !undoLabel}
       />
       <Action
-        label={redoLabel ? `Redo ${redoLabel}` : "Redo"}
+        label={redoLabel && !clip ? `Redo ${redoLabel}` : "Redo"}
+        accessibilityLabel={redoLabel ? `Redo ${redoLabel}` : "Redo"}
         testID={`${editor.kind}-redo`}
         onPress={() => applyDraftHistory("redo")}
         disabled={busy || !redoLabel}
@@ -1208,21 +1215,21 @@ export default function App() {
   );
   const editorHeader = (
     <>
-      <View style={template ? styles.storyboardNavigation : styles.navigation}>
+      <View style={styles.editorNavigation}>
         {backAction}
-        {template && historyControls}
+        {(template || clip) && historyControls}
       </View>
       <View style={styles.details}>
-        <Text accessibilityRole="header" style={textStyles.heading}>
-          {templateDraft.name ?? template?.name ?? "Single-clip editor"}
+        <Text accessibilityRole="header" style={textStyles.heading} numberOfLines={clip ? 2 : undefined}>
+          {templateDraft.name ?? template?.name ?? singleProjectLabel ?? "Single-clip editor"}
         </Text>
-        <Text style={textStyles.muted}>
-          {template ? `${canvas.width} × ${canvas.height}` : "9:16"} · {canvas.fps} fps
-        </Text>
-        {singleProjectLabel && <Text style={textStyles.body}>{singleProjectLabel}</Text>}
-        {clip && <Text style={textStyles.muted}>Original audio {clip.volumePercent}%</Text>}
+        {(template || clip) && (
+          <Text style={textStyles.muted}>
+            {template ? `${canvas.width} × ${canvas.height}` : "9:16"} · {canvas.fps} fps
+            {clip && ` · Original audio ${clip.volumePercent}%`}
+          </Text>
+        )}
       </View>
-      {!template && clip && historyControls}
       {feedback?.scope === "history" && (
         <Text accessibilityRole="alert" style={textStyles.error}>
           {feedback.message}
@@ -1299,29 +1306,7 @@ export default function App() {
             </Text>
           )}
           <View style={[styles.navigation, styles.actions]}>
-            {clip ? (
-              <View style={styles.buttonRow}>
-                <Action
-                  label="Trim clip"
-                  testID="single-trim-open"
-                  onPress={() => begin({ kind: "single-trim", clip })}
-                  disabled={busy}
-                />
-                <Action
-                  label="Volume"
-                  accessibilityLabel="Original audio volume"
-                  testID="single-volume-open"
-                  onPress={() => begin({ kind: "single-volume", clip })}
-                  disabled={busy}
-                />
-                <Action
-                  label={clip.caption ? "Edit caption" : "Add caption"}
-                  testID="single-caption-open"
-                  onPress={() => begin({ kind: "single-caption", clip })}
-                  disabled={busy}
-                />
-              </View>
-            ) : (
+            {!clip && (
               <Action
                 label="Try again"
                 onPress={() => {
@@ -1343,38 +1328,6 @@ export default function App() {
               disabled={busy}
             />
           </View>
-          {clip && (
-            <View style={styles.details}>
-              <Text style={textStyles.body}>Framing</Text>
-              <View style={styles.buttonRow}>
-                {framingOptions.map(({ fit, label }) => (
-                  <Action
-                    key={fit}
-                    label={clip.fit === fit ? `✓ ${label}` : label}
-                    accessibilityLabel={label}
-                    testID={`single-framing-${label.toLowerCase()}`}
-                    selected={clip.fit === fit}
-                    primary={clip.fit === fit}
-                    disabled={busy}
-                    onPress={() => changeSingleFraming(fit)}
-                  />
-                ))}
-                {clip.fit === "cover" && (
-                  <Action
-                    label="Reframe"
-                    testID="single-reframe-open"
-                    disabled={busy}
-                    onPress={() => begin({ kind: "single-reframe", clip })}
-                  />
-                )}
-              </View>
-              {feedback?.scope === "framing" && (
-                <Text accessibilityRole="alert" style={textStyles.error}>
-                  {feedback.message}
-                </Text>
-              )}
-            </View>
-          )}
         </>
       )}
     </>
@@ -1468,7 +1421,46 @@ export default function App() {
     </>
   );
   const editorScreen = (
-    <Screen ref={editorScreenRef} page={editor.draftId} title={template ? null : "StackReel"} fullScreen={fullScreen}>
+    <Screen
+      ref={editorScreenRef}
+      page={editor.draftId}
+      title={null}
+      fullScreen={fullScreen}
+      footer={
+        !fullScreen &&
+        clip && (
+          <View>
+            {frameOpen && (
+              <SingleClipFramePanel
+                fit={clip.fit}
+                onChangeFit={changeSingleFraming}
+                onReframe={() => begin({ kind: "single-reframe", clip })}
+                onClose={() => {
+                  setFrameOpen(false);
+                  requestAnimationFrame(() => {
+                    if (frameButtonRef.current)
+                      AccessibilityInfo.sendAccessibilityEvent(frameButtonRef.current, "focus");
+                  });
+                }}
+                error={feedback?.scope === "framing" ? feedback.message : undefined}
+              />
+            )}
+            <SingleClipToolDock
+              disabled={busy}
+              frameExpanded={frameOpen}
+              frameButtonRef={frameButtonRef}
+              hasCaption={!!clip.caption}
+              onTrim={() => begin({ kind: "single-trim", clip })}
+              onFrame={() => {
+                if (!activeOperation.current && isCurrentScreen()) setFrameOpen((open) => !open);
+              }}
+              onVolume={() => begin({ kind: "single-volume", clip })}
+              onCaption={() => begin({ kind: "single-caption", clip })}
+            />
+          </View>
+        )
+      }
+    >
       {activity?.kind === "single-reframe" && (
         <ReframeSheet
           id="single"
@@ -1596,11 +1588,11 @@ export default function App() {
         />
       )}
       {!fullScreen && editorHeader}
-      {!fullScreen && !template && editorDetails}
       {source && (
         <ClipPreview
           key={source}
           storyboard={!!template}
+          singleWorkspace={!!clip}
           canvas={canvas}
           source={source}
           suspended={busy && !exporting}
@@ -1618,8 +1610,16 @@ export default function App() {
           safeZoneGuide={template ? getTemplateSafeZoneGuide(template) : null}
         />
       )}
-      {!fullScreen && template && editorDetails}
+      {!fullScreen && !clip && editorDetails}
       {!fullScreen && editorActions}
+      {!fullScreen && clip && (
+        <View style={styles.projectMedia}>
+          <Text accessibilityRole="header" style={styles.sectionHeading}>
+            Project media
+          </Text>
+          {editorDetails}
+        </View>
+      )}
     </Screen>
   );
 
@@ -1726,7 +1726,7 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.55 },
   tabLabel: { color: darkColors.textMuted, fontSize: fontSize.md, fontWeight: "600", textAlign: "center" },
   activeTabLabel: { color: darkColors.accent },
-  storyboardNavigation: {
+  editorNavigation: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
@@ -1737,6 +1737,13 @@ const styles = StyleSheet.create({
   details: { gap: space[1] },
   buttonRow: { flexDirection: "row", flexWrap: "wrap", maxWidth: "100%", gap: space[2] },
   actions: { gap: space[2] },
+  projectMedia: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: darkColors.border,
+    paddingTop: space[4],
+    gap: space[3],
+  },
+  sectionHeading: { color: darkColors.text, fontSize: fontSize.lg, fontWeight: "700" },
   progress: { gap: space[2], marginBottom: space[1] },
   progressTrack: { height: 6, borderRadius: radius.full, backgroundColor: darkColors.border, overflow: "hidden" },
   progressFill: { height: "100%", backgroundColor: darkColors.accent },

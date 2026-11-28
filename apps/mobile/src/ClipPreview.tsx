@@ -4,7 +4,7 @@ import type { StackReelPreviewViewRef } from "@stackreel/engine";
 import { MIN_HIT_TARGET, darkColors, neutral, radius, space } from "@stackreel/ui";
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Switch, Text, useWindowDimensions, View } from "react-native";
 import type { ViewProps, ViewStyle } from "react-native";
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
 import { SafeZoneOverlay } from "./SafeZoneOverlay";
@@ -52,6 +52,7 @@ export function ClipPreview({
   suspended,
   viewport,
   storyboard = false,
+  singleWorkspace = false,
   safeZoneGuide,
   fullScreen,
 }: {
@@ -59,6 +60,7 @@ export function ClipPreview({
   source: string;
   suspended: boolean;
   storyboard?: boolean;
+  singleWorkspace?: boolean;
   viewport?: { maxWidth: number; props: ViewProps; videoStyle: ViewStyle };
   safeZoneGuide?: SafeZoneGuide | null;
   fullScreen?: { active: boolean; disabled: boolean; onChange: (expanded: boolean) => void };
@@ -103,11 +105,18 @@ export function ClipPreview({
   const expanded = fullScreen?.active ?? false;
   const windowFrame = useSafeAreaFrame();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   // A ScrollView can offer its content the height of the entire inline editor.
   const fullHeight = Math.max(0, windowFrame.height - insets.top - insets.bottom);
+  // Leave room for the project header, transport and tool dock on shorter phones.
+  const workspaceWidth =
+    fullHeight > 0 ? Math.min(300, fullHeight * 0.53 * (canvas.width / canvas.height)) : previewMaxWidth;
+  const inlineWidth = singleWorkspace ? workspaceWidth : storyboard ? 152 : previewMaxWidth;
   const seekDisabled = suspended || duration <= 0;
   const visiblePosition = scrubPosition ?? position;
   const inlineStoryboard = storyboard && !expanded;
+  const inlineWorkspace = singleWorkspace && !expanded;
+  const wrapTransport = inlineWorkspace && fontScale >= 1.6;
   const fullScreenControl = fullScreen && (
     <Action
       testID={expanded ? "preview-fullscreen-close" : "preview-fullscreen-open"}
@@ -138,16 +147,35 @@ export function ClipPreview({
       />
     </View>
   );
+  const expandControl = inlineWorkspace && fullScreen && (
+    <Pressable
+      testID="preview-fullscreen-open"
+      accessibilityRole="button"
+      accessibilityLabel="Open full-screen preview"
+      accessibilityState={{ disabled: fullScreen.disabled }}
+      disabled={fullScreen.disabled}
+      onPress={() => fullScreen.onChange(true)}
+      style={({ pressed }) => [styles.expandButton, (pressed || fullScreen.disabled) && styles.dimmed]}
+    >
+      <View accessible={false} style={styles.expandIcon}>
+        <View style={[styles.corner, styles.topLeft]} />
+        <View style={[styles.corner, styles.topRight]} />
+        <View style={[styles.corner, styles.bottomLeft]} />
+        <View style={[styles.corner, styles.bottomRight]} />
+      </View>
+    </Pressable>
+  );
   const playbackControls = (
     <>
-      <View style={styles.transport}>
+      <View style={[styles.transport, wrapTransport && styles.wrappedTransport]}>
         <Action
           label={playing ? "Pause" : "Play"}
           onPress={() => setPlaying((wasPlaying) => !wasPlaying)}
           disabled={duration <= 0 || suspended || scrubPosition !== null}
         />
+        {wrapTransport && expandControl}
         <View
-          style={styles.timeline}
+          style={wrapTransport ? styles.wrappedTimeline : styles.timeline}
           testID="preview-position"
           accessible
           accessibilityRole="adjustable"
@@ -191,6 +219,7 @@ export function ClipPreview({
             </View>
           </View>
         </View>
+        {!wrapTransport && expandControl}
       </View>
       {inlineStoryboard ? (
         <View style={styles.previewOptions}>
@@ -213,13 +242,15 @@ export function ClipPreview({
       accessibilityViewIsModal={expanded}
       onAccessibilityEscape={expanded ? () => fullScreen?.onChange(false) : undefined}
       style={
-        expanded ? [styles.fullPreview, { height: fullHeight }] : [styles.controls, storyboard && styles.storyboard]
+        expanded
+          ? [styles.fullPreview, { height: fullHeight }]
+          : [styles.controls, (storyboard || singleWorkspace) && styles.previewCard]
       }
     >
-      {!inlineStoryboard && fullScreenControl}
+      {!inlineStoryboard && !inlineWorkspace && fullScreenControl}
       <PreviewFrame
         canvas={canvas}
-        maxWidth={viewport?.maxWidth ?? (storyboard ? 152 : previewMaxWidth)}
+        maxWidth={viewport?.maxWidth ?? inlineWidth}
         expanded={expanded}
         testID={fullScreen ? "preview-frame" : undefined}
       >
@@ -293,7 +324,7 @@ const styles = StyleSheet.create({
   fullTransport: { flexGrow: 0, maxHeight: "45%", paddingHorizontal: space[3] },
   viewport: { alignItems: "center", justifyContent: "center" },
   controls: { gap: space[3] },
-  storyboard: {
+  previewCard: {
     backgroundColor: darkColors.surface,
     borderRadius: radius.xl,
     padding: space[3],
@@ -307,6 +338,24 @@ const styles = StyleSheet.create({
     gap: space[2],
   },
   transport: { flexDirection: "row", alignItems: "center", gap: space[3] },
+  wrappedTransport: { flexWrap: "wrap", justifyContent: "space-between", rowGap: space[1] },
+  wrappedTimeline: { width: "100%" },
+  expandButton: {
+    width: MIN_HIT_TARGET,
+    height: MIN_HIT_TARGET,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: radius.lg,
+    borderColor: darkColors.border,
+    borderWidth: 1,
+  },
+  expandIcon: { width: 18, height: 18 },
+  corner: { position: "absolute", width: 7, height: 7, borderColor: darkColors.text },
+  topLeft: { top: 0, left: 0, borderTopWidth: 2, borderLeftWidth: 2 },
+  topRight: { top: 0, right: 0, borderTopWidth: 2, borderRightWidth: 2 },
+  bottomLeft: { bottom: 0, left: 0, borderBottomWidth: 2, borderLeftWidth: 2 },
+  bottomRight: { bottom: 0, right: 0, borderBottomWidth: 2, borderRightWidth: 2 },
+  dimmed: { opacity: 0.55 },
   timeline: { flex: 1 },
   slider: { height: 44 },
   timestamps: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
