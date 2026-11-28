@@ -1,3 +1,4 @@
+import { frameToUs } from "@stackreel/core";
 import type { ClipFrameRange } from "./clip-source";
 import type { getTemplateTrimWindow } from "./template-editor";
 
@@ -65,4 +66,10 @@ export function draggedTrimFrame(
   return boundary === "startFrame"
     ? Math.max(bounds.startFrame, Math.min(selection.endFrame - 1, frame))
     : Math.max(selection.startFrame + 1, Math.min(bounds.endFrame, frame));
+}
+
+/** Seek inside the last frame so rounding its boundary to microseconds can't show the frame before it. */
+export function trimOutPreviewUs(selection: ClipFrameRange, fps: number) {
+  const frames = selection.endFrame - selection.startFrame;
+  return Math.floor((frameToUs(frames - 1, fps) + frameToUs(frames, fps)) / 2);
 }

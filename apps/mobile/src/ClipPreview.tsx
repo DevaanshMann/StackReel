@@ -133,7 +133,10 @@ export function ClipPreview({
   }
 
   async function togglePlayback() {
-    if (!playing && replayFromStart.current && !(await seekToSeconds(0, duration))) return;
+    if (!playing && replayFromStart.current) {
+      if (!(await seekToSeconds(0, duration, true))) return;
+      replayFromStart.current = false;
+    }
     setPlaying((wasPlaying) => !wasPlaying);
   }
 

@@ -29,6 +29,7 @@ export function SingleClipFilmstrip({
   const [width, setWidth] = useState(0);
   const [unavailable, setUnavailable] = useState(false);
   const gesture = useRef<{
+    identifier: GestureResponderEvent["nativeEvent"]["identifier"];
     pageX: number;
     pageY: number;
     selection: ClipFrameRange;
@@ -41,9 +42,19 @@ export function SingleClipFilmstrip({
   const left = gutter + ((selection.startFrame - bounds.startFrame) / sourceFrames) * trackWidth;
   const right = gutter + ((selection.endFrame - bounds.startFrame) / sourceFrames) * trackWidth;
 
+  function cancelGesture() {
+    const touch = gesture.current;
+    gesture.current = null;
+    if (touch?.intent === "drag") onRelease(touch.boundary, null);
+  }
+
   function move({ nativeEvent }: GestureResponderEvent, release: boolean) {
     const touch = gesture.current;
     if (!touch) return;
+    if (nativeEvent.identifier !== touch.identifier || nativeEvent.touches.length > 1) {
+      cancelGesture();
+      return;
+    }
     if (release) gesture.current = null;
     const dx = nativeEvent.pageX - touch.pageX;
     touch.intent = filmstripIntent(touch.intent, dx, nativeEvent.pageY - touch.pageY);
@@ -61,9 +72,12 @@ export function SingleClipFilmstrip({
         pointerEvents="box-only"
         style={styles.strip}
         onLayout={({ nativeEvent }) => setWidth(nativeEvent.layout.width)}
-        onStartShouldSetResponder={() => trackWidth > 0 && sourceFrames > 1}
-        onResponderGrant={({ nativeEvent: { pageX, pageY, locationX } }) => {
+        onStartShouldSetResponder={({ nativeEvent }) =>
+          trackWidth > 0 && sourceFrames > 1 && nativeEvent.touches.length === 1
+        }
+        onResponderGrant={({ nativeEvent: { identifier, pageX, pageY, locationX } }) => {
           gesture.current = {
+            identifier,
             pageX,
             pageY,
             selection,
@@ -72,14 +86,13 @@ export function SingleClipFilmstrip({
             intent: "pending",
           };
         }}
+        onTouchStart={({ nativeEvent }) => {
+          if (nativeEvent.touches.length > 1) cancelGesture();
+        }}
         onResponderMove={(event) => move(event, false)}
         onResponderRelease={(event) => move(event, true)}
         onResponderTerminationRequest={() => gesture.current?.intent !== "drag"}
-        onResponderTerminate={() => {
-          const touch = gesture.current;
-          gesture.current = null;
-          if (touch?.intent === "drag") onRelease(touch.boundary, null);
-        }}
+        onResponderTerminate={cancelGesture}
       >
         <View style={styles.track}>
           <FilmstripThumbnails

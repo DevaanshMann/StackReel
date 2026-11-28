@@ -10,6 +10,7 @@ import { canvas, getClipFrameRange } from "./clip-source";
 import type { ClipFrameRange } from "./clip-source";
 import { createSingleClipSource } from "./single-clip-draft";
 import type { SingleClip } from "./single-clip-draft";
+import { trimOutPreviewUs } from "./trim-filmstrip";
 
 const boundaries = ["startFrame", "endFrame"] as const;
 type Boundary = (typeof boundaries)[number];
@@ -93,7 +94,7 @@ export function SingleClipTrim({
           key={previewSource}
           canvas={canvas}
           source={previewSource}
-          trimEndStillUs={previewEnd ? frameToUs(selection.endFrame - selection.startFrame - 1, canvas.fps) : undefined}
+          trimEndStillUs={previewEnd ? trimOutPreviewUs(selection, canvas.fps) : undefined}
           suspended={drag !== null}
           viewport={{ maxWidth: 152, props: { testID: "single-trim-preview" }, videoStyle: StyleSheet.absoluteFill }}
         />

@@ -7,6 +7,7 @@ import {
   filmstripStartFrame,
   filmstripWindow,
   trimHandleAt,
+  trimOutPreviewUs,
 } from "../src/trim-filmstrip";
 
 const bounds = { firstFrame: 12, sourceEndFrame: 112, durationFrames: 20 };
@@ -115,4 +116,9 @@ describe("single-clip filmstrip handles", () => {
     expect(trimHandleAt(long, last, 320, 320)).toBe("endFrame");
     expect(draggedTrimFrame(long, last, "startFrame", -16, 320)).toBe(103_499);
   });
+});
+
+it("cues inside the last retained preview frame, relative to In even for a one-frame cut", () => {
+  expect(trimOutPreviewUs({ startFrame: 79, endFrame: 81 }, 30)).toBe(50_000);
+  expect(trimOutPreviewUs({ startFrame: 79, endFrame: 80 }, 30)).toBe(16_666);
 });
