@@ -1,12 +1,14 @@
 import { darkColors, fontSize, space } from "@stackreel/ui";
 import { StyleSheet, Text, View } from "react-native";
 import { Action, textStyles } from "./Screen";
+import type { TemplateDraftEdits } from "./template-drafts";
 import type { TemplateMusic } from "./template-editor";
 import type { MusicSource } from "./template-music-import";
 
 export function TemplateMusicControls({
   music,
   missingMusic,
+  recoverableMusic,
   busy,
   importing,
   error,
@@ -17,17 +19,19 @@ export function TemplateMusicControls({
 }: {
   music: TemplateMusic | null;
   missingMusic: boolean;
+  recoverableMusic: TemplateDraftEdits["recoverableMusic"];
   busy: boolean;
-  importing: MusicSource | null;
+  importing: { source: MusicSource; relink: boolean } | null;
   error: string | undefined;
-  onSelect: (source: MusicSource) => void;
+  onSelect: (source: MusicSource, relink?: boolean) => void;
   onRemove: () => void;
   onStart: () => void;
   onVolume: () => void;
 }) {
-  const selectLabel = music ? "Replace music" : "Choose music from Files";
-
+  const selectLabel = missingMusic ? "Replace music from Files" : music ? "Replace music" : "Choose music from Files";
   const usingDaybreak = music?.starterId === "daybreak";
+  const restoreDaybreak = missingMusic && recoverableMusic?.starterId === "daybreak";
+  const importSource = importing?.relink ? null : importing?.source;
 
   return (
     <View testID="template-music" style={styles.section}>
@@ -47,19 +51,41 @@ export function TemplateMusicControls({
           {music.name}
         </Text>
       )}
+      {missingMusic && (
+        <Text testID="template-music-missing" accessibilityRole="alert" style={textStyles.error}>
+          {recoverableMusic
+            ? `“${recoverableMusic.name}” is missing. Restore it to keep your music start and volume.`
+            : "Saved music is missing."}
+        </Text>
+      )}
       <View style={styles.actions}>
+        {missingMusic && recoverableMusic && (
+          <Action
+            label={
+              importing?.relink ? "Restoring music…" : restoreDaybreak ? "Restore Daybreak" : "Relink music from Files"
+            }
+            testID={restoreDaybreak ? "restore-daybreak-music" : "relink-template-music"}
+            onPress={() => onSelect(restoreDaybreak ? "daybreak" : "files", true)}
+            disabled={busy}
+            primary
+          />
+        )}
         <Action
-          label={importing === "files" ? "Importing music…" : selectLabel}
+          label={importSource === "files" ? "Importing music…" : selectLabel}
           testID={music ? "replace-template-music" : "choose-template-music"}
           onPress={() => onSelect("files")}
           disabled={busy}
         />
-        <Action
-          label={importing === "daybreak" ? "Adding Daybreak…" : usingDaybreak ? "Daybreak selected" : "Use Daybreak"}
-          testID="use-daybreak-music"
-          onPress={() => onSelect("daybreak")}
-          disabled={busy || usingDaybreak}
-        />
+        {!restoreDaybreak && (
+          <Action
+            label={
+              importSource === "daybreak" ? "Adding Daybreak…" : usingDaybreak ? "Daybreak selected" : "Use Daybreak"
+            }
+            testID="use-daybreak-music"
+            onPress={() => onSelect("daybreak")}
+            disabled={busy || usingDaybreak}
+          />
+        )}
         {music && !missingMusic && (
           <>
             <Action label="Music start" testID="edit-music-start" onPress={onStart} disabled={busy} />
@@ -75,11 +101,6 @@ export function TemplateMusicControls({
           />
         )}
       </View>
-      {missingMusic && (
-        <Text testID="template-music-missing" accessibilityRole="alert" style={textStyles.error}>
-          Saved music is missing.
-        </Text>
-      )}
       {error && (
         <Text testID="template-music-error" accessibilityRole="alert" style={textStyles.error}>
           {error}

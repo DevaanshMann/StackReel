@@ -78,9 +78,10 @@ You can set the level before filling every video slot. Once the reel is complete
 to hear the music and clips together. Apply the change to save it with the draft and use it in the next export.
 [See the music volume control on iPhone](../../docs/ios-template-music-volume.png).
 
-If a draft’s imported music is missing, use **Choose music from Files** to replace it or **Remove missing music** to
-clear the warning and continue with the clips’ own audio. Removing missing music keeps the other edits and any MP4
-you already exported from the current preview.
+If a draft’s music is missing, tap **Relink music from Files** and choose the original audio file to keep your
+music start and volume. For the bundled track, tap **Restore Daybreak**. If you choose audio with a different
+playable range, you can try again. Use **Replace music from Files** to start a new mix, or **Remove missing music**
+to continue with the clips’ own audio. Removing missing music keeps any MP4 already exported without the track.
 
 Tap **Edit text** to change a template’s captions and labels, even before adding videos. The editor shows the current
 wording, the template defaults, and character counts for fields with limits. Clear a field to hide that overlay.
@@ -285,7 +286,7 @@ offline to verify that all three movies ship with the app.
     **Choose videos from Photos** lists **Your hook shot** followed by **B-roll** and leaves **The reveal** filled.
 15. In a test installation with a complete draft and imported music, remove the imported music copy from that
     draft’s folder and relaunch. Reopen the draft from **Projects** and check that
-    **Choose music from Files** and **Remove missing music** are both available. Export the draft, tap
+    **Replace music from Files** and **Remove missing music** are both available. Export the draft, tap
     **Remove missing music**, and check that the warning clears and **Share MP4** is still available. Relaunch and
     verify that the warning stays gone and the videos and text edits are still present.
 16. Edit a **Before / After** reel, return to **Templates**, and tap **New draft** on **Before / After**.
@@ -379,6 +380,11 @@ offline to verify that all three movies ship with the app.
     imported copy of that clip out of the test simulator’s draft folder. Reopen from **Projects**, cancel a relink,
     then try a video of a different duration. Select the original video, reopen the draft, and export again. Compare
     the cut, framing, and sound of the first slot with the earlier MP4 and check that the second slot still plays.
+
+38. In a sample reel, choose a song from Files, change **Music start** and **Music volume**, and export. Quit the
+    app and move the imported audio copy out of the test simulator’s draft folder. Reopen the project and tap
+    **Relink music from Files**. Cancel once, try a shorter track, then choose the original. Reopen and export again.
+    Compare the song section and level with the first MP4. Repeat with **Daybreak**, using **Restore Daybreak**.
 
 ### Export display sleep on iPhone
 

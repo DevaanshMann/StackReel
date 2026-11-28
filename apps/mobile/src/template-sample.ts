@@ -47,6 +47,7 @@ export async function createBeforeAfterSample(
       missingSlots: [],
       recoverableSlots: {},
       missingMusic: false,
+      recoverableMusic: null,
     };
     const source = createTemplateSource(template, clips, draft.textOverrides, draft.music);
     if (!source) throw new Error("The sample is missing a required video.");

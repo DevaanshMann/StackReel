@@ -139,7 +139,7 @@ type Operation =
   | TextEdit
   | { kind: HistoryDirection }
   | { kind: "duplicate"; templateId: string; draftId: string }
-  | { kind: "import-music"; source: MusicSource }
+  | { kind: "import-music"; source: MusicSource; relink: boolean }
   | { kind: "clear-video" | "remove-music" | "share" | "save-photos" | "rename" | "delete" }
   | ExportJob;
 type Activity =
@@ -169,6 +169,7 @@ const emptyTemplateDraft: TemplateDraft = {
   missingSlots: [],
   recoverableSlots: {},
   missingMusic: false,
+  recoverableMusic: null,
 };
 
 const firstScreen: Home = { kind: "home", tab: "templates" };
@@ -920,9 +921,11 @@ export default function App() {
     }
   }
 
-  async function selectMusic(source: MusicSource) {
+  async function selectMusic(source: MusicSource, relink = false) {
     if (editor.kind !== "template" || !editor.template.audio?.music) return;
-    const operation = { kind: "import-music", source } as const;
+    const session = currentDraftSession.current;
+    if (session?.kind !== "template") return;
+    const operation = { kind: "import-music", source, relink } as const;
     if (!begin(operation)) return;
     try {
       await importTemplateMusic({
@@ -931,16 +934,27 @@ export default function App() {
         source,
         currentMusic: templateDraft.music,
         isCurrent: () => isCurrentOperation(operation),
-        commit: (music) =>
+        ...(relink && { validateMusic: session.history.prepareMusicRelink() }),
+        commit: (music) => {
+          if (relink) {
+            const restored = session.history.relinkMusic(music, templateDraft);
+            publishDraftEdit(editor, restored, templateDraft.outputUri, session.history);
+            AccessibilityInfo.announceForAccessibilityWithOptions("Soundtrack restored with its saved edits.", {
+              queue: true,
+            });
+            return;
+          }
           commitDraftEdit(
             editor,
-            { ...templateDraft, music, missingMusic: false },
+            { ...templateDraft, music, missingMusic: false, recoverableMusic: null },
             templateDraft.music || templateDraft.missingMusic ? "replace music" : "add music",
-          ),
+          );
+        },
       });
     } catch (cause) {
       if (isCurrentOperation(operation)) {
-        setFeedback({ kind: "error", scope: "music", message: errorMessage("Couldn’t import the music.", cause) });
+        const summary = relink ? "Couldn’t restore the soundtrack." : "Couldn’t import the music.";
+        setFeedback({ kind: "error", scope: "music", message: errorMessage(summary, cause) });
       }
     } finally {
       finish(operation);
@@ -1362,8 +1376,9 @@ export default function App() {
         <TemplateMusicControls
           music={templateDraft.music}
           missingMusic={templateDraft.missingMusic}
+          recoverableMusic={templateDraft.recoverableMusic}
           busy={busy}
-          importing={activity?.kind === "import-music" ? activity.source : null}
+          importing={activity?.kind === "import-music" ? activity : null}
           error={feedback?.scope === "music" ? feedback.message : undefined}
           onVolume={() => openMusicEdit("music-volume")}
           onStart={() => openMusicEdit("music-start")}

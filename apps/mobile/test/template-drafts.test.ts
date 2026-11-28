@@ -378,6 +378,7 @@ describe("template draft storage", () => {
       recoverableSlots: {},
       missingSlots: [],
       missingMusic: true,
+      recoverableMusic: null,
     });
     saveTemplateDraft(beforeAfter, loaded);
     const next = new File(musicFile.parentDirectory, "draft-2.json");
@@ -423,6 +424,7 @@ describe("template draft storage", () => {
       recoverableSlots: {},
       missingSlots: [before.id],
       missingMusic: false,
+      recoverableMusic: null,
     });
     expect(beforeFile.exists).toBe(true);
   });
@@ -453,6 +455,7 @@ describe("template draft storage", () => {
       recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
+      recoverableMusic: null,
     });
     for (const file of [first.beforeFile, second.beforeFile, second.afterFile, second.musicFile]) {
       expect(file.textSync()).toBe("fixture");
@@ -697,6 +700,7 @@ describe("template draft storage", () => {
       recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
+      recoverableMusic: null,
     });
     expect(
       JSON.parse(createTemplateSource(hook, reopened.clips, reopened.textOverrides, reopened.music)!).assets,
@@ -758,6 +762,7 @@ describe("template draft storage", () => {
       recoverableSlots: { [before.id]: "Before.mov" },
       missingSlots: [before.id],
       missingMusic: true,
+      recoverableMusic: { name: "Track.m4a" },
     });
   });
 
@@ -836,6 +841,7 @@ describe("template draft storage", () => {
       recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
+      recoverableMusic: null,
     });
   });
 
@@ -861,7 +867,7 @@ describe("template draft storage", () => {
     soundtrack.writeSync("fixture");
     const music = createTemplateMusic(soundtrack.uri, "Replacement.m4a", { startUs: 0, durationUs: 2_000_000 });
     saveTemplateDraft(beforeAfter, { ...reopened, music, missingMusic: false });
-    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...reopened, music, missingMusic: false });
+    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...reopened, music, missingMusic: false, recoverableMusic: null });
   });
 
   it("forgets missing music and keeps the rendered export and draft edits", () => {
@@ -878,9 +884,9 @@ describe("template draft storage", () => {
     const render = commitTemplateDraftUpdate(beforeAfter, clearTemplateMusic({ ...draft, source, outputUri }));
     expect(render).toEqual({ source, outputUri });
 
-    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...draft, missingMusic: false });
+    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...draft, missingMusic: false, recoverableMusic: null });
     musicFile.writeSync("restored music copy");
-    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...draft, missingMusic: false });
+    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...draft, missingMusic: false, recoverableMusic: null });
   });
 
   it("can retry a failed missing music removal and keeps missing video references", () => {
@@ -902,7 +908,7 @@ describe("template draft storage", () => {
 
     storage.interruptMove = false;
     removeMusic();
-    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...draft, missingMusic: false });
+    expect(loadTemplateDraft(beforeAfter)).toEqual({ ...draft, missingMusic: false, recoverableMusic: null });
 
     afterFile.writeSync("restored video copy");
     expect(loadTemplateDraft(beforeAfter)).toEqual({
@@ -911,6 +917,7 @@ describe("template draft storage", () => {
       recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
+      recoverableMusic: null,
     });
   });
 
@@ -1025,6 +1032,7 @@ describe("template draft storage", () => {
         recoverableSlots: {},
         missingSlots: [],
         missingMusic: false,
+        recoverableMusic: null,
       });
     },
   );
@@ -1053,6 +1061,7 @@ describe("template draft storage", () => {
         recoverableSlots: {},
         missingSlots: [],
         missingMusic: false,
+        recoverableMusic: null,
       });
     },
   );
@@ -1073,6 +1082,7 @@ describe("template draft storage", () => {
         recoverableSlots: {},
         missingSlots: [],
         missingMusic: false,
+        recoverableMusic: null,
       });
 
       const name = "Weekend cut";
@@ -1092,7 +1102,14 @@ describe("template draft storage", () => {
       slots: beforeAfter.slots.map((slot) => (slot.id === before.id ? { ...slot, label: "Opening shot" } : slot)),
     };
     const restored = loadTemplateDraft(updatedTemplate)!;
-    expect(restored).toEqual({ ...edits, name: null, recoverableSlots: {}, missingSlots: [], missingMusic: false });
+    expect(restored).toEqual({
+      ...edits,
+      name: null,
+      recoverableSlots: {},
+      missingSlots: [],
+      missingMusic: false,
+      recoverableMusic: null,
+    });
 
     const textOverrides = setTemplateText(
       getTemplateTextFields(updatedTemplate)[0]!,
@@ -1236,6 +1253,7 @@ describe("in-session template draft history", () => {
       recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
+      recoverableMusic: null,
     });
     expect(session.undo(noExport)).toBeNull();
     expect(session.redoLabel).toBe("Import videos");
@@ -1546,6 +1564,219 @@ describe("in-session template draft history", () => {
     expect(beforeFile.exists && afterFile.exists && note.exists).toBe(true);
     expect(cold.createTemplateDraftSession(beforeAfter).undoLabel).toBeNull();
     session.close();
+  });
+});
+
+describe("recovering a missing template soundtrack", () => {
+  const load = () => loadTemplateDraft(beforeAfter, firstDraftId)!;
+  const noExport = { source: null, outputUri: null };
+
+  function missingMusic(starterId?: "daybreak") {
+    const { edits, musicFile } = fixture(firstDraftId, 15_000_000);
+    edits.music = setTemplateMusicStart(setTemplateMusicVolume(edits.music, 0), 60, beforeAfter.durationUs);
+    if (starterId) edits.music.starterId = starterId;
+    saveTemplateDraft(beforeAfter, { ...edits, name: "Weekend cut" }, firstDraftId);
+    const snapshot = new File(musicFile.parentDirectory, "draft-1.json");
+    const saved = JSON.parse(snapshot.textSync());
+    saved.music.futureMix = { balance: 25 };
+    snapshot.writeSync(JSON.stringify(saved));
+    musicFile.delete();
+    return { edits, musicFile, saved, snapshot };
+  }
+
+  it.each([undefined, "daybreak"] as const)(
+    "restores the original mix for source %s and starts fresh undo history",
+    (starterId) => {
+      const { edits, musicFile, saved } = missingMusic(starterId);
+      const partial = load();
+      expect(partial.recoverableMusic).toEqual({ name: edits.music.name, ...(starterId && { starterId }) });
+      const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+      try {
+        const silent = session.commit({ ...partial, ...noExport, name: "Final cut" }, "Rename");
+        expect(session.undoLabel).toBe("Rename");
+        const validate = session.prepareMusicRelink();
+        const file = createDraftMediaFile(beforeAfter, "new-name.m4a", firstDraftId);
+        const imported = createTemplateMusic(file.uri, "new-name.m4a", { startUs: 25_001, durationUs: 15_000_000 });
+        if (starterId) imported.starterId = starterId;
+        validate(imported);
+        file.writeSync("restored soundtrack");
+        const restored = session.relinkMusic(imported, { ...silent, outputUri: "file:///silent.mp4" });
+        expect(restored).toMatchObject({
+          name: "Final cut",
+          clips: edits.clips,
+          textOverrides: edits.textOverrides,
+          music: {
+            ...edits.music,
+            uri: file.uri,
+            sourceStartUs: imported.sourceStartUs,
+            sourceEndUs: imported.sourceEndUs,
+          },
+          missingMusic: false,
+          recoverableMusic: null,
+          outputUri: null,
+        });
+        const source = createTemplateSource(beforeAfter, edits.clips, edits.textOverrides, edits.music)!;
+        expect(JSON.parse(restored.source!).plan).toEqual(JSON.parse(source).plan);
+        expect(Object.values(JSON.parse(restored.source!).assets)).toContain(file.uri);
+        const published = JSON.parse(new File(musicFile.parentDirectory, "draft-3.json").textSync());
+        expect(published.music).toEqual({
+          ...saved.music,
+          file: file.name,
+          sourceStartUs: imported.sourceStartUs,
+          sourceEndUs: imported.sourceEndUs,
+        });
+        expect(session.undoLabel).toBeNull();
+        expect(session.redoLabel).toBeNull();
+        const changed = session.commit({ ...restored, music: setTemplateMusicVolume(restored.music!, 50) }, "Volume");
+        expect(session.undo(changed)?.music).toEqual(restored.music);
+        expect(load().music).toEqual(restored.music);
+      } finally {
+        session.close();
+      }
+      expect(load().music).toMatchObject({ name: edits.music.name, startFrame: 60, volumePercent: 0 });
+    },
+  );
+
+  it("rejects incompatible timing or source before staging and again before publication", () => {
+    const { edits } = missingMusic();
+    const partial = load();
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    try {
+      const beforePick = new Map(storage.files);
+      const validate = session.prepareMusicRelink();
+      for (const candidate of [
+        { ...edits.music, sourceStartUs: 0 },
+        { ...edits.music, sourceEndUs: 20_000_000 },
+        { ...edits.music, starterId: "daybreak" as const },
+      ]) {
+        expect(() => validate(candidate)).toThrow(/original/);
+        expect(() => session.relinkMusic(candidate, noExport)).toThrow(/original/);
+      }
+      // Closing the picker after validation is prepared makes no persistent change.
+      expect(storage.files).toEqual(beforePick);
+      expect(load()).toEqual(partial);
+      expect(session.undoLabel).toBeNull();
+    } finally {
+      session.close();
+    }
+  });
+
+  it("requires a readable, staged file owned by the draft and allows retry after a failed commit", () => {
+    const { edits } = missingMusic("daybreak");
+    const partial = load();
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    try {
+      const validate = session.prepareMusicRelink();
+      const { starterId: _starterId, ...fromFiles } = edits.music;
+      expect(() => validate(fromFiles)).toThrow(/original/);
+      const tryFile = (uri: string) => session.relinkMusic({ ...edits.music, uri }, noExport);
+      const file = createDraftMediaFile(beforeAfter, "track.m4a", firstDraftId);
+      const foreign = createDraftMediaFile(beforeAfter, "track.m4a", secondDraftId);
+      foreign.writeSync("other draft");
+      expect(() => tryFile(foreign.uri)).toThrow(/staged/);
+      expect(() => tryFile(edits.clips[before.id]!.uri)).toThrow(/staged/);
+      expect(() => tryFile(file.uri)).toThrow(/unreadable/);
+      file.writeSync("");
+      expect(() => tryFile(file.uri)).toThrow(/empty/);
+      file.writeSync("audio");
+      storage.blockedRead = file.uri;
+      expect(() => tryFile(file.uri)).toThrow(/unreadable/);
+      storage.blockedRead = "";
+      storage.interruptMove = true;
+      expect(() => tryFile(file.uri)).toThrow(/Interrupted/);
+      expect(load()).toEqual(partial);
+      expect(session.undoLabel).toBeNull();
+      storage.interruptMove = false;
+      expect(tryFile(file.uri).music).toMatchObject({ uri: file.uri, starterId: "daybreak" });
+    } finally {
+      storage.blockedRead = "";
+      storage.interruptMove = false;
+      session.close();
+    }
+  });
+
+  it("preserves a newer revision while the picker is open", () => {
+    const { edits } = missingMusic();
+    const stale = load();
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    try {
+      session.prepareMusicRelink();
+      renameTemplateDraft(beforeAfter, "Newer cut", firstDraftId);
+      const file = createDraftMediaFile(beforeAfter, "track.m4a", firstDraftId);
+      file.writeSync("audio");
+      expect(() => session.relinkMusic({ ...edits.music, uri: file.uri }, noExport)).toThrow(/changed/);
+      expect(() => session.commit({ ...stale, ...noExport, name: "Stale cut" }, "Rename")).toThrow(/changed/);
+      expect(load()).toMatchObject({
+        name: "Newer cut",
+        missingMusic: true,
+        recoverableMusic: { name: edits.music.name },
+      });
+    } finally {
+      session.close();
+    }
+  });
+
+  it("requires a fresh selection after another edit in the same session", () => {
+    const { edits } = missingMusic();
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    try {
+      session.prepareMusicRelink();
+      session.commit({ ...load(), ...noExport, name: "Revised cut" }, "Rename");
+      const file = createDraftMediaFile(beforeAfter, "track.m4a", firstDraftId);
+      file.writeSync("audio");
+      const imported = { ...edits.music, uri: file.uri };
+      expect(() => session.relinkMusic(imported, noExport)).toThrow(/changed/);
+      expect(session.undoLabel).toBe("Rename");
+      session.prepareMusicRelink()(imported);
+      expect(session.relinkMusic(imported, noExport).name).toBe("Revised cut");
+    } finally {
+      session.close();
+    }
+  });
+
+  it("recovers legacy defaults from an empty saved file and keeps a separate slot warning", () => {
+    const { musicFile, beforeFile, edits } = fixture(firstDraftId);
+    saveTemplateDraft(beforeAfter, edits, firstDraftId);
+    musicFile.writeSync("");
+    beforeFile.delete();
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    try {
+      const partial = load();
+      expect(partial).toMatchObject({ missingMusic: true, music: null, recoverableMusic: { name: edits.music.name } });
+      const validate = session.prepareMusicRelink();
+      const imported = { ...edits.music, name: "Renamed.m4a" };
+      validate(imported);
+      const file = createDraftMediaFile(beforeAfter, imported.name, firstDraftId);
+      file.writeSync("audio");
+      const restored = session.relinkMusic({ ...imported, uri: file.uri }, noExport);
+      expect(restored).toMatchObject({
+        missingMusic: false,
+        recoverableMusic: null,
+        missingSlots: [before.id],
+        recoverableSlots: partial.recoverableSlots,
+        source: null,
+      });
+      expect(restored.music).toEqual({ ...edits.music, uri: file.uri });
+    } finally {
+      session.close();
+    }
+  });
+
+  it("preserves unsupported soundtrack provenance until an explicit replacement or removal", () => {
+    const { saved, snapshot } = missingMusic();
+    saved.music.starterId = "future-track";
+    snapshot.writeSync(JSON.stringify(saved));
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    try {
+      const partial = load();
+      expect(partial).toMatchObject({ music: null, missingMusic: true, recoverableMusic: null });
+      expect(() => session.prepareMusicRelink()).toThrow(/unsupported/);
+      expect(JSON.parse(snapshot.textSync()).music).toEqual(saved.music);
+      session.commit({ ...clearTemplateMusic(partial), ...noExport }, "Remove music");
+      expect(load()).toMatchObject({ music: null, missingMusic: false, recoverableMusic: null });
+    } finally {
+      session.close();
+    }
   });
 });
 

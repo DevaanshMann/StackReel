@@ -3,7 +3,7 @@ import { Asset } from "expo-asset";
 import { getDocumentAsync } from "expo-document-picker";
 import { File } from "expo-file-system";
 import daybreak from "../assets/music/daybreak.m4a";
-import { discardPickerCopy, isPickerCacheFile } from "./draft-files";
+import { discardPickerCopy, isPickerCacheFile, readableSize } from "./draft-files";
 import { createDraftMediaFile, removeDraftFile } from "./template-drafts";
 import { createTemplateMusic } from "./template-editor";
 import type { MobileTemplate, TemplateMusic } from "./template-editor";
@@ -29,6 +29,7 @@ export async function importTemplateMusic({
   source,
   currentMusic,
   isCurrent,
+  validateMusic,
   commit,
 }: {
   template: MobileTemplate;
@@ -36,6 +37,7 @@ export async function importTemplateMusic({
   source: MusicSource;
   currentMusic: TemplateMusic | null;
   isCurrent: () => boolean;
+  validateMusic?: (music: TemplateMusic) => void;
   commit: (music: TemplateMusic) => void;
 }) {
   if (!isCurrent() || (source === "daybreak" && currentMusic?.starterId === source)) return;
@@ -47,12 +49,15 @@ export async function importTemplateMusic({
     const metadata = await probeAudio(track.uri);
     if (!isCurrent()) return;
     const music = createTemplateMusic(track.uri, track.name, metadata);
+    if (source === "daybreak") music.starterId = source;
+    validateMusic?.(music);
     target = createDraftMediaFile(template, track.filename, draftId);
     const original = new File(track.uri);
+    const bytes = original.size;
     if (source === "files" && isPickerCacheFile(original)) await original.move(target);
     else await original.copy(target);
     if (!isCurrent()) return;
-    if (source === "daybreak") music.starterId = source;
+    if (readableSize(target) !== bytes) throw new Error("The imported audio file is incomplete.");
     commit({ ...music, uri: target.uri });
     target = undefined;
   } finally {
