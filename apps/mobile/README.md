@@ -180,6 +180,7 @@ When drafts share a name, the delete confirmation also shows the selected draft�
 If a template slot’s saved video is missing, tap **Relink from Photos** or **Relink from Files** and choose the
 original video. When its dimensions and playable frame range match, the slot gets its saved trim, framing, and
 volume back. To use different footage with a fresh cut, choose **Replace** instead. You can also clear the slot.
+[See the relink controls for the Before slot on iPhone](../../docs/ios-template-slot-relink.png).
 If StackReel can’t reopen a draft, the recovery screen preserves its saved edits and media copies. You can
 start a new reel from **Templates** or delete the unreadable draft from **Projects**.
 
