@@ -117,9 +117,10 @@ Choose **Single-clip editor** from the gallery and pick a video from Photos or F
 footage. Play or scrub the preview, or use the bottom toolbar to trim the clip, change its framing, adjust its
 volume, or add a caption. The same tools are available when you reopen the draft from **Projects**.
 
-Tap **Trim** to set where the clip starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f** to adjust by one frame. Play the
-selection to check its picture and sound. **Apply trim** uses that selection for preview and export. To bring back
-footage, reopen **Trim** and extend the range, or tap **Reset trim** to select the full video.
+Tap **Trim** to set where the clip starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f**
+to adjust by one frame. Play the selection to check its picture and sound. **Apply trim** uses that selection for
+preview and export. To bring back footage, reopen **Trim** and extend the range, or tap **Reset trim** to select
+the full video.
 [See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
 
 Under **Export resolution**, choose **720p** (720 × 1280) or **1080p** (1080 × 1920), then tap **Export MP4**.
@@ -127,13 +128,13 @@ Both sizes use the same framing, caption, and sound at 30 fps. Drafts start at 7
 when you reopen them or replace the video. After changing resolution, export again to save or share that size.
 [See the export resolution picker on iPhone](../../docs/ios-single-clip-export-resolution.png).
 
-Tap **Add caption**, enter up to 80 characters, then tap **Apply caption**. The caption wraps to fit and appears
-throughout the selected cut in preview and in the exported MP4. Use **Edit caption** to change it, or **Clear caption**
+Tap **Caption**, enter up to 80 characters, then tap **Apply caption**. The caption wraps to fit and appears
+throughout the selected cut in preview and in the exported MP4. Open **Caption** again to change it, or **Clear caption**
 and then **Apply caption** to remove it. The caption stays with the project when you trim or reframe. Export again
 after changing the caption. Canceling or applying the same wording keeps the previous MP4 available to share.
 [See a caption on a single clip on iPhone](../../docs/ios-single-clip-caption.png).
 
-Under **Framing**, choose **Fit** to show the whole picture or **Fill** to fill the vertical frame.
+Tap **Frame** and choose **Fit** to show the whole picture or **Fill** to fill the vertical frame.
 Fill starts with a centered crop. Export again after changing the framing to save or share the result.
 [See Fill applied to a single clip on iPhone](../../docs/ios-single-clip-framing.png).
 
@@ -333,20 +334,20 @@ offline to verify that all three movies ship with the app.
     video and trim return. Undo the caption, redo it, and compare the wording in preview. Undo the caption again
     and apply a different one. Verify **Redo** is disabled and the new wording appears in the exported reel.
     Leave the editor and reopen the draft. The last edit should be saved and both history controls disabled.
-25. In **Single-clip editor**, pick a video with distinct scenes and sound and export it. Open **Trim clip**, move
+25. In **Single-clip editor**, pick a video with distinct scenes and sound and export it. Open **Trim**, move
     both ends, then cancel. Confirm the original MP4 is still shareable. Apply a shorter selection and export again.
-    Check the first and last scenes, the sound, and the duration of the exported file. Reopen **Trim clip**, tap
+    Check the first and last scenes, the sound, and the duration of the exported file. Reopen **Trim**, tap
     **Reset trim**, and apply to restore the full recording. Replacing the video should start with its full range.
 26. Import a single clip, apply a trim at each end, and quit StackReel. Relaunch, open **Projects**, tap the filename,
-    and check both frame positions in **Trim clip**. Export and check the saved cut. Cancel a replacement and then
+    and check both frame positions in **Trim**. Export and check the saved cut. Cancel a replacement and then
     cancel **Delete draft**. Reopen the editor and check that the cut is still there. Confirm **Delete draft**,
     relaunch, and verify the project is gone and the original video is still available in Photos or Files.
-27. Import a landscape clip with a recognizable center and edges. Export in **Fit**, then tap **Fit** again and check
+27. Import a landscape clip with a recognizable center and edges. Export in **Fit**, then open **Frame**, tap **Fit** again, and check
     that **Share MP4** stays available. Choose **Fill** and check that the picture covers the vertical preview and
     sharing requires a fresh export. Apply a trim, reopen the draft after relaunch, and export. Check the center
     crop, duration, and audio in the MP4. Switch back to **Fit** to see the original edges.
-28. In **Fill**, open **Reframe** and move an off-center subject into view. Zoom in, apply, and export. Compare
-    the subject's position in the preview, **Trim clip**, and the MP4. Change the framing and cancel. Confirm
+28. Open **Frame**, choose **Fill**, then tap **Reframe** and move an off-center subject into view. Zoom in, apply, and export. Compare
+    the subject's position in the preview, **Trim**, and the MP4. Change the framing and cancel. Confirm
     the MP4 is still shareable. Switch to Fit and back to Fill, then reopen the draft after relaunch and confirm
     the saved crop. Use **Reset** and **Apply** to return to centered Fill.
 29. Import a single video with recognizable audio, trim it, and export. Open **Volume**, lower the level, and
