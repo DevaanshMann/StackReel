@@ -371,7 +371,14 @@ describe("template draft storage", () => {
     saved.music[field] = value;
     snapshot.writeSync(JSON.stringify(saved));
     const loaded = loadTemplateDraft(beforeAfter)!;
-    expect(loaded).toEqual({ ...edits, name: null, music: null, missingSlots: [], missingMusic: true });
+    expect(loaded).toEqual({
+      ...edits,
+      name: null,
+      music: null,
+      recoverableSlots: {},
+      missingSlots: [],
+      missingMusic: true,
+    });
     saveTemplateDraft(beforeAfter, loaded);
     const next = new File(musicFile.parentDirectory, "draft-2.json");
     expect(JSON.parse(next.textSync()).music).toEqual(saved.music);
@@ -413,6 +420,7 @@ describe("template draft storage", () => {
       ...edits,
       name: null,
       clips: { [after.id]: edits.clips[after.id] },
+      recoverableSlots: {},
       missingSlots: [before.id],
       missingMusic: false,
     });
@@ -442,6 +450,7 @@ describe("template draft storage", () => {
     expect(first.afterFile.exists || first.musicFile.exists).toBe(false);
     expect(loadTemplateDraft(beforeAfter, secondDraftId)).toEqual({
       ...secondEdits,
+      recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
     });
@@ -685,6 +694,7 @@ describe("template draft storage", () => {
         [bRoll!.id]: clips[bRoll!.id],
         [reveal!.id]: { ...framedHook, trimOutUs: 5_000_000 },
       },
+      recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
     });
@@ -745,6 +755,7 @@ describe("template draft storage", () => {
       clips: { [after.id]: edits.clips[after.id] },
       textOverrides: edits.textOverrides,
       music: null,
+      recoverableSlots: { [before.id]: "Before.mov" },
       missingSlots: [before.id],
       missingMusic: true,
     });
@@ -822,6 +833,7 @@ describe("template draft storage", () => {
       ...edits,
       name: "Weekend cut",
       textOverrides,
+      recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
     });
@@ -843,7 +855,7 @@ describe("template draft storage", () => {
     saveTemplateDraft(beforeAfter, { ...draft, clips, missingSlots: [] });
 
     const reopened = loadTemplateDraft(beforeAfter)!;
-    expect(reopened).toEqual({ ...draft, clips, missingSlots: [], missingMusic: true });
+    expect(reopened).toEqual({ ...draft, clips, recoverableSlots: {}, missingSlots: [], missingMusic: true });
 
     const soundtrack = createDraftMediaFile(beforeAfter, "Replacement.m4a");
     soundtrack.writeSync("fixture");
@@ -896,6 +908,7 @@ describe("template draft storage", () => {
     expect(loadTemplateDraft(beforeAfter)).toEqual({
       ...draft,
       clips: edits.clips,
+      recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
     });
@@ -1006,7 +1019,13 @@ describe("template draft storage", () => {
       }
 
       expect(storage.files).toEqual(originalFiles);
-      expect(loadTemplateDraft(beforeAfter)).toEqual({ ...edits, name, missingSlots: [], missingMusic: false });
+      expect(loadTemplateDraft(beforeAfter)).toEqual({
+        ...edits,
+        name,
+        recoverableSlots: {},
+        missingSlots: [],
+        missingMusic: false,
+      });
     },
   );
 
@@ -1028,7 +1047,13 @@ describe("template draft storage", () => {
 
       expect(storage.files).toEqual(originalFiles);
       expect(musicFile.textSync()).toBe("imported soundtrack");
-      expect(loadTemplateDraft(beforeAfter)).toEqual({ ...edits, name, missingSlots: [], missingMusic: false });
+      expect(loadTemplateDraft(beforeAfter)).toEqual({
+        ...edits,
+        name,
+        recoverableSlots: {},
+        missingSlots: [],
+        missingMusic: false,
+      });
     },
   );
 
@@ -1041,7 +1066,14 @@ describe("template draft storage", () => {
       manifest.writeSync(JSON.stringify({ ...JSON.parse(manifest.textSync()), music }));
 
       const restored = loadTemplateDraft(beforeAfterWithoutMusic)!;
-      expect(restored).toEqual({ ...edits, name: null, music: null, missingSlots: [], missingMusic: false });
+      expect(restored).toEqual({
+        ...edits,
+        name: null,
+        music: null,
+        recoverableSlots: {},
+        missingSlots: [],
+        missingMusic: false,
+      });
 
       const name = "Weekend cut";
       renameTemplateDraft(beforeAfterWithoutMusic, name);
@@ -1060,7 +1092,7 @@ describe("template draft storage", () => {
       slots: beforeAfter.slots.map((slot) => (slot.id === before.id ? { ...slot, label: "Opening shot" } : slot)),
     };
     const restored = loadTemplateDraft(updatedTemplate)!;
-    expect(restored).toEqual({ ...edits, name: null, missingSlots: [], missingMusic: false });
+    expect(restored).toEqual({ ...edits, name: null, recoverableSlots: {}, missingSlots: [], missingMusic: false });
 
     const textOverrides = setTemplateText(
       getTemplateTextFields(updatedTemplate)[0]!,
@@ -1201,6 +1233,7 @@ describe("in-session template draft history", () => {
     expect(session.undo({ source, outputUri: "file:///export.mp4" })).toEqual({
       ...empty,
       ...noExport,
+      recoverableSlots: {},
       missingSlots: [],
       missingMusic: false,
     });
@@ -1516,6 +1549,220 @@ describe("in-session template draft history", () => {
   });
 });
 
+describe("recovering a missing template video", () => {
+  const picked = { uri: "file:///Documents/pick.mov", name: "Selected.mov", draftFileName: "pick.mov" };
+  const load = () => loadTemplateDraft(beforeAfter, firstDraftId)!;
+
+  function missingVideo() {
+    const { beforeFile, edits } = fixture(firstDraftId, 15_000_000);
+    edits.clips[before.id] = setTemplateClipVolume(edits.clips[before.id]!, 35);
+    edits.music = setTemplateMusicStart(setTemplateMusicVolume(edits.music, 60), 30, beforeAfter.durationUs);
+    saveTemplateDraft(beforeAfter, { ...edits, name: "Balcony cut" }, firstDraftId);
+    const original = load();
+    beforeFile.delete();
+    const damaged = load();
+    expect(damaged.missingSlots).toEqual([before.id]);
+    expect(damaged.recoverableSlots).toEqual({ [before.id]: original.clips[before.id]!.name });
+    return { original, damaged };
+  }
+
+  beforeEach(() => {
+    new File(picked.uri).writeSync("original footage");
+    vi.mocked(pickVideo).mockResolvedValue(picked);
+    vi.mocked(probeVideo).mockResolvedValue(metadata);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.resetAllMocks();
+  });
+
+  async function recover(
+    session: ReturnType<typeof createTemplateDraftSession>,
+    source: "Photos" | "Files",
+  ): Promise<ReturnType<typeof session.relink> | undefined> {
+    let restored: ReturnType<typeof session.relink> | undefined;
+    await importTemplateVideos({
+      template: beforeAfter,
+      draftId: firstDraftId,
+      slots: [before],
+      source,
+      isCurrent: () => true,
+      validateClip: session.prepareRelink(before.id),
+      commit: (clips) => {
+        restored = session.relink(before.id, clips[before.id]!, { source: null, outputUri: null });
+      },
+    });
+    return restored;
+  }
+
+  it.each(["Photos", "Files"] as const)(
+    "restores the cut and mix from %s and reopens the recovered reel",
+    async (source) => {
+      const { original, damaged } = missingVideo();
+      const initialSource = createTemplateSource(beforeAfter, original.clips, original.textOverrides, original.music)!;
+      const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+      try {
+        const beforeRelink = session.commit({ ...damaged, source: null, outputUri: null, music: null }, "remove music");
+        session.undo(beforeRelink);
+        expect(session.redoLabel).toBe("remove music");
+        // A representation with a slightly different timebase can have exactly the same playable frames.
+        vi.mocked(probeVideo).mockResolvedValueOnce({ ...metadata, durationUs: metadata.durationUs + 1 });
+        const render = await recover(session, source);
+        expect(session.redoLabel).toBeNull();
+        expect(render?.outputUri).toBeNull();
+        expect(pickVideo).toHaveBeenCalledWith(source);
+        const restored = load();
+        const clip = restored.clips[before.id]!;
+        expect(clip.uri).not.toBe(original.clips[before.id]!.uri);
+        expect(clip).toEqual({ ...original.clips[before.id], uri: clip.uri, sourceEndUs: metadata.durationUs + 1 });
+        expect(new File(clip.uri).textSync()).toBe("original footage");
+        expect(restored).toEqual({ ...original, clips: { ...original.clips, [before.id]: clip } });
+        const sourceAfter = createTemplateSource(beforeAfter, restored.clips, restored.textOverrides, restored.music)!;
+        expect(JSON.parse(sourceAfter).plan).toEqual(JSON.parse(initialSource).plan);
+        expect(render?.source).toBe(sourceAfter);
+        expect(Object.values(JSON.parse(sourceAfter).assets)).toContain(clip.uri);
+        expect(session.undo({ source: sourceAfter, outputUri: null })).toBeNull();
+        const muted = { ...restored, clips: { ...restored.clips, [before.id]: setTemplateClipVolume(clip, 0) } };
+        const next = session.commit({ ...muted, source: sourceAfter, outputUri: null }, "mute");
+        expect(session.undo(next)).toMatchObject({ clips: restored.clips, source: sourceAfter });
+      } finally {
+        session.close();
+      }
+      const reopened = load();
+      expect(reopened.missingSlots).toEqual([]);
+      expect(reopened.clips[before.id]).toMatchObject({
+        volumePercent: 35,
+        reframe: original.clips[before.id]!.reframe,
+      });
+    },
+  );
+
+  it.each([
+    ["dimensions", { ...metadata, width: 1080, height: 1920 }, /dimensions/i],
+    ["source start", { ...metadata, startUs: 100_000, durationUs: metadata.durationUs - 100_000 }, /frame range/i],
+    ["source end", { ...metadata, durationUs: metadata.durationUs + 100_000 }, /frame range/i],
+  ] as const)("can retry a selection with incompatible %s", async (_reason, candidate, message) => {
+    const { damaged } = missingVideo();
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    const beforeAttempt = new Map(storage.files);
+    const copy = vi.spyOn(File.prototype, "copy");
+    vi.mocked(probeVideo).mockResolvedValueOnce(candidate);
+    try {
+      await expect(recover(session, "Files")).rejects.toThrow(message);
+      expect(copy).not.toHaveBeenCalled();
+      expect(storage.files).toEqual(beforeAttempt);
+      expect(load()).toEqual(damaged);
+      expect(session.undoLabel).toBeNull();
+      await recover(session, "Files");
+      expect(load().missingSlots).toEqual([]);
+    } finally {
+      session.close();
+    }
+  });
+
+  it("keeps a newer revision if the draft changes while the selected footage is copying", async () => {
+    const { damaged } = missingVideo();
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    let stagedFile: File | undefined;
+    vi.spyOn(File.prototype, "copy").mockImplementationOnce(async function (this: File, destination) {
+      stagedFile = new File(destination.uri);
+      stagedFile.writeSync(this.textSync());
+      renameTemplateDraft(beforeAfter, "Newer edit", firstDraftId);
+    });
+    try {
+      await expect(recover(session, "Files")).rejects.toThrow(/changed/i);
+      expect(stagedFile?.exists).toBe(false);
+      expect(load()).toEqual({ ...damaged, name: "Newer edit" });
+      expect(session.undoLabel).toBeNull();
+    } finally {
+      session.close();
+    }
+  });
+
+  it.each(["cancel", "copy failure", "truncated copy", "manifest failure"] as const)(
+    "keeps the saved edits and can retry after %s",
+    async (failure) => {
+      const { damaged } = missingVideo();
+      const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+      const beforeAttempt = new Map(storage.files);
+      try {
+        if (failure === "cancel") vi.mocked(pickVideo).mockResolvedValueOnce(null);
+        if (failure === "copy failure" || failure === "truncated copy") {
+          vi.spyOn(File.prototype, "copy").mockImplementationOnce(async (destination) => {
+            new File(destination.uri).writeSync("partial");
+            if (failure === "copy failure") throw new Error("Interrupted copy");
+          });
+        }
+        if (failure === "manifest failure") storage.interruptMove = true;
+        const attempt = recover(session, "Files");
+        if (failure === "cancel") await attempt;
+        else await expect(attempt).rejects.toThrow();
+        expect(storage.files).toEqual(beforeAttempt);
+        expect(load()).toEqual(damaged);
+        expect(session.undoLabel).toBeNull();
+        storage.interruptMove = false;
+        await recover(session, "Files");
+        expect(load().missingSlots).toEqual([]);
+      } finally {
+        storage.interruptMove = false;
+        session.close();
+      }
+    },
+  );
+
+  it("recovers an unreadable video independently while another slot and the soundtrack are missing", async () => {
+    const { original } = missingVideo();
+    const clip = original.clips[before.id]!;
+    const afterClip = original.clips[after.id]!;
+    new File(clip.uri).writeSync("unreadable file");
+    storage.blockedRead = clip.uri;
+    new File(afterClip.uri).delete();
+    new File(original.music!.uri).delete();
+    const session = createTemplateDraftSession(beforeAfter, firstDraftId);
+    try {
+      expect(load().recoverableSlots).toEqual({ [before.id]: clip.name, [after.id]: afterClip.name });
+      const restored = await recover(session, "Files");
+      expect(restored).toMatchObject({
+        clips: { [before.id]: { name: clip.name, volumePercent: 35 } },
+        missingSlots: [after.id],
+        recoverableSlots: { [after.id]: afterClip.name },
+        missingMusic: true,
+        source: null,
+      });
+      expect(load().recoverableSlots).toEqual({ [after.id]: afterClip.name });
+      new File(afterClip.uri).writeSync("other footage");
+      new File(original.music!.uri).writeSync("soundtrack");
+      const reopened = load();
+      expect(reopened.clips[after.id]).toEqual(afterClip);
+      expect(reopened.music).toEqual(original.music);
+    } finally {
+      storage.blockedRead = "";
+      session.close();
+    }
+  });
+
+  it("can deliberately replace the missing video with different footage and start a fresh cut", async () => {
+    const { original, damaged } = missingVideo();
+    const portrait = { ...metadata, width: 720, height: 1280 };
+    vi.mocked(probeVideo).mockResolvedValueOnce(portrait);
+    await importTemplateVideos({
+      template: beforeAfter,
+      draftId: firstDraftId,
+      slots: [before],
+      source: "Files",
+      isCurrent: () => true,
+      commit: (clips) =>
+        saveTemplateDraft(beforeAfter, { ...damaged, clips: { ...damaged.clips, ...clips } }, firstDraftId),
+    });
+    const replaced = load();
+    expect(replaced.recoverableSlots).toEqual({});
+    const clip = replaced.clips[before.id]!;
+    expect(clip).toEqual(createTemplateClip(before, clip.uri, picked.name, portrait));
+    expect(replaced).toEqual({ ...original, clips: { ...original.clips, [before.id]: clip } });
+    expect(new File(picked.uri).textSync()).toBe("original footage");
+  });
+});
+
 describe("ordered template video import", () => {
   const slots = getVideoSlots(hook);
   const textOverrides = { "text/0": "Watch closely" };
@@ -1811,7 +2058,7 @@ describe("ordered template video import", () => {
     });
     missing.writeSync("recovered video");
     const reopened = loadTemplateDraft(hook)!;
-    expect(reopened).toEqual({ ...saved, missingSlots: [] });
+    expect(reopened).toEqual({ ...saved, recoverableSlots: {}, missingSlots: [] });
     expect(missing.exists).toBe(false);
     const targets = getEmptyVideoSlots(slots, reopened.clips, reopened.missingSlots);
     expect(targets).toEqual([first, middle]);

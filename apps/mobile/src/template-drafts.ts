@@ -7,6 +7,7 @@ import {
   draftSnapshots,
   mediaName,
   pendingName,
+  readableSize,
   snapshotName,
 } from "./draft-files";
 import {
@@ -22,7 +23,13 @@ import {
   setTemplateMusicStart,
   setTemplateMusicVolume,
 } from "./template-editor";
-import type { MobileTemplate, TemplateClip, TemplateMusic, TemplateTextOverrides } from "./template-editor";
+import type {
+  MobileTemplate,
+  TemplateClip,
+  TemplateMusic,
+  TemplateTextOverrides,
+  TemplateVideoSlot,
+} from "./template-editor";
 
 export type TemplateDraftEdits = {
   name?: string | null;
@@ -30,6 +37,7 @@ export type TemplateDraftEdits = {
   textOverrides: TemplateTextOverrides;
   music: TemplateMusic | null;
   missingSlots?: readonly string[];
+  recoverableSlots?: Readonly<Record<string, string>>;
   missingMusic?: boolean;
 };
 
@@ -334,6 +342,17 @@ export function createTemplateDraftSession(template: MobileTemplate, draftId = t
     return state;
   }
 
+  function missingSlot(slotId: string) {
+    const { revision, manifest } = current();
+    const slot = getVideoSlots(template).find(({ id }) => id === slotId);
+    const original = manifest?.clips[slotId];
+    if (!manifest || !slot || !hasDraftMediaFile(original))
+      throw new Error("The saved slot is unavailable for relinking.");
+    const savedClip = readClipSettings(template, slot, original, directory);
+    if (hasReadableVideo(new File(savedClip.uri))) throw new Error("The saved video is already available.");
+    return { slot, original, savedClip, revision, manifest };
+  }
+
   function publish(
     revision: number,
     saved: Record<string, unknown>,
@@ -410,6 +429,33 @@ export function createTemplateDraftSession(template: MobileTemplate, draftId = t
       }
       return render;
     },
+    prepareRelink(slotId: string) {
+      const { slot, savedClip, revision } = missingSlot(slotId);
+      // A change made while the picker or file copy is open must invalidate this recovery.
+      lastRevision = revision;
+      return (clip: TemplateClip) => checkRelinkSource(slot, savedClip, clip);
+    },
+    relink(slotId: string, imported: TemplateClip, render: RenderState) {
+      const { slot, original, savedClip, revision, manifest } = missingSlot(slotId);
+      checkRelinkSource(slot, savedClip, imported);
+      const file = new File(imported.uri);
+      if (new File(directory, file.name).uri !== file.uri || !sessionFiles.staged.has(file.name))
+        throw new Error("The selected video must be staged in this draft.");
+      readableSize(file);
+      const binding = {
+        ...original,
+        file: file.name,
+        sourceStartUs: imported.sourceStartUs,
+        sourceEndUs: imported.sourceEndUs,
+      };
+      const saved = { ...manifest.saved, clips: { ...manifest.clips, [slotId]: binding } };
+      const edits = restoreDraftEdits(template, directory, parseDraftManifest(template, saved));
+      if (!edits.clips[slotId]) throw new Error("Couldn’t restore the saved video edits.");
+      const restored = { ...edits, ...renderDraftUpdate(template, edits, render) };
+      // Undo can start with the next edit without bringing back the missing file.
+      publish(revision, saved, [], [], isDegraded(edits));
+      return restored;
+    },
     undo: (render: RenderState) => step("undo", render),
     redo: (render: RenderState) => step("redo", render),
     close() {
@@ -432,7 +478,8 @@ export function createTemplateDraftSession(template: MobileTemplate, draftId = t
 
 export function clearTemplateVideoSlot(draft: TemplateDraftEdits, slotId: string) {
   const { [slotId]: _cleared, ...clips } = draft.clips;
-  return { clips, missingSlots: (draft.missingSlots ?? []).filter((id) => id !== slotId) };
+  const { [slotId]: _relinked, ...recoverableSlots } = draft.recoverableSlots ?? {};
+  return { clips, missingSlots: (draft.missingSlots ?? []).filter((id) => id !== slotId), recoverableSlots };
 }
 
 export function clearTemplateMusic<T extends TemplateDraftEdits>({
@@ -477,13 +524,12 @@ function parseDraftManifest(template: MobileTemplate, saved: unknown) {
   return { saved, clips: saved.clips, textOverrides };
 }
 
-function readAsset(value: unknown, directory: Directory) {
+function readAssetSettings(value: unknown, directory: Directory) {
   if (!hasDraftMediaFile(value)) {
     throw new Error("Invalid draft media reference.");
   }
   const file = new File(directory, value.file);
   if (
-    !file.exists ||
     typeof value.name !== "string" ||
     !Number.isSafeInteger(value.sourceStartUs) ||
     !Number.isSafeInteger(value.sourceEndUs)
@@ -500,6 +546,59 @@ function readAsset(value: unknown, directory: Directory) {
     sourceEndUs: value.sourceEndUs as number,
     volumePercent: value.volumePercent ?? 100,
   };
+}
+
+function readClipSettings(template: MobileTemplate, slot: TemplateVideoSlot, value: unknown, directory: Directory) {
+  if (
+    !record(value) ||
+    typeof value.width !== "number" ||
+    typeof value.height !== "number" ||
+    typeof value.trimInUs !== "number" ||
+    typeof value.trimOutUs !== "number"
+  ) {
+    throw new Error("Invalid saved video settings.");
+  }
+  const { volumePercent, ...asset } = readAssetSettings(value, directory);
+  const clip: TemplateClip = {
+    ...asset,
+    width: value.width,
+    height: value.height,
+    trimInUs: value.trimInUs,
+    trimOutUs: value.trimOutUs,
+  };
+  if (value.reframe !== undefined) {
+    const reframe = value.reframe;
+    if (
+      !record(reframe) ||
+      typeof reframe.zoom !== "number" ||
+      typeof reframe.x !== "number" ||
+      typeof reframe.y !== "number"
+    ) {
+      throw new Error("Invalid saved framing.");
+    }
+    clip.reframe = { zoom: reframe.zoom, x: reframe.x, y: reframe.y };
+    getTemplateCrop(clip, template.canvas);
+  }
+  getTemplateTrimWindow(slot, clip);
+  return setTemplateClipVolume(clip, volumePercent);
+}
+
+function checkRelinkSource(slot: TemplateVideoSlot, savedClip: TemplateClip, imported: TemplateClip) {
+  if (savedClip.width !== imported.width || savedClip.height !== imported.height)
+    throw new Error(`Select the original video with dimensions ${savedClip.width} × ${savedClip.height}.`);
+  const expected = getTemplateTrimWindow(slot, savedClip);
+  const selected = getTemplateTrimWindow(slot, imported);
+  if (expected.firstFrame !== selected.firstFrame || expected.sourceEndFrame !== selected.sourceEndFrame)
+    throw new Error("Select the original, untrimmed video. The source frame range differs from this draft.");
+}
+
+function hasReadableVideo(file: File) {
+  try {
+    readableSize(file);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function isDegraded(draft: TemplateDraftEdits) {
@@ -545,42 +644,17 @@ function restoreDraftEdits(
 
   const clips: Record<string, TemplateClip> = {};
   const missingSlots: string[] = [];
+  const recoverableSlots: Record<string, string> = {};
   for (const slot of getVideoSlots(template)) {
     const value = savedClips[slot.id];
     if (value === undefined) continue;
     try {
-      if (
-        !record(value) ||
-        typeof value.width !== "number" ||
-        typeof value.height !== "number" ||
-        typeof value.trimInUs !== "number" ||
-        typeof value.trimOutUs !== "number"
-      ) {
-        throw new Error("Invalid saved video settings.");
+      const clip = readClipSettings(template, slot, value, directory);
+      if (hasReadableVideo(new File(clip.uri))) clips[slot.id] = clip;
+      else {
+        recoverableSlots[slot.id] = clip.name;
+        missingSlots.push(slot.id);
       }
-      const { volumePercent, ...asset } = readAsset(value, directory);
-      const clip: TemplateClip = {
-        ...asset,
-        width: value.width,
-        height: value.height,
-        trimInUs: value.trimInUs,
-        trimOutUs: value.trimOutUs,
-      };
-      if (value.reframe !== undefined) {
-        const reframe = value.reframe;
-        if (
-          !record(reframe) ||
-          typeof reframe.zoom !== "number" ||
-          typeof reframe.x !== "number" ||
-          typeof reframe.y !== "number"
-        ) {
-          throw new Error("Invalid saved framing.");
-        }
-        clip.reframe = { zoom: reframe.zoom, x: reframe.x, y: reframe.y };
-        getTemplateCrop(clip, template.canvas);
-      }
-      getTemplateTrimWindow(slot, clip);
-      clips[slot.id] = setTemplateClipVolume(clip, volumePercent);
     } catch {
       missingSlots.push(slot.id);
     }
@@ -590,7 +664,8 @@ function restoreDraftEdits(
   let missingMusic = false;
   if (saved.music) {
     try {
-      const { uri, name, sourceStartUs, sourceEndUs, volumePercent } = readAsset(saved.music, directory);
+      const { uri, name, sourceStartUs, sourceEndUs, volumePercent } = readAssetSettings(saved.music, directory);
+      if (!new File(uri).exists) throw new Error("Draft music is unavailable.");
       const track = createTemplateMusic(uri, name, { startUs: sourceStartUs, durationUs: sourceEndUs - sourceStartUs });
       if (record(saved.music) && saved.music.starterId === "daybreak") track.starterId = saved.music.starterId;
       let restored = setTemplateMusicVolume(track, volumePercent);
@@ -609,5 +684,5 @@ function restoreDraftEdits(
     }
   }
 
-  return { name, clips, textOverrides, music, missingSlots, missingMusic };
+  return { name, clips, textOverrides, music, missingSlots, recoverableSlots, missingMusic };
 }
