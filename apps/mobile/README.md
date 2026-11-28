@@ -116,6 +116,7 @@ or duplicate the draft. [See the clip volume control on iOS](../../docs/ios-temp
 Choose **Single-clip editor** from the gallery and pick a video from Photos or Files. The editor opens on your
 footage. Play or scrub the preview, or use the bottom toolbar to trim the clip, change its framing, adjust its
 volume, or add a caption. The same tools are available when you reopen the draft from **Projects**.
+[See the single-clip workspace on iPhone](../../docs/ios-single-clip-workspace.jpg).
 
 Tap **Trim** to set where the clip starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f**
 to adjust by one frame. Play the selection to check its picture and sound. **Apply trim** uses that selection for
