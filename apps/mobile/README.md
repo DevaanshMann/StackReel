@@ -82,6 +82,7 @@ If a draft’s music is missing, tap **Relink music from Files** and choose the 
 music start and volume. For the bundled track, tap **Restore Daybreak**. If you choose audio with a different
 playable range, you can try again. Use **Replace music from Files** to start a new mix, or **Remove missing music**
 to continue with the clips’ own audio. Removing missing music keeps any MP4 already exported without the track.
+[See the Restore Daybreak control on iPhone](../../docs/ios-template-music-relink.png).
 
 Tap **Edit text** to change a template’s captions and labels, even before adding videos. The editor shows the current
 wording, the template defaults, and character counts for fields with limits. Clear a field to hide that overlay.
