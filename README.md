@@ -493,6 +493,7 @@ _Runs in parallel with Phase 3._
    - [ ] Auto-save every edit (debounced) to SQLite and the app sandbox
    - [ ] Project list with thumbnails. Duplicate, rename, delete.
    - [x] Relink unavailable footage from Photos or Files in iOS template and single-clip drafts and keep the saved edits
+   - [x] Restore missing iOS template soundtracks with their saved start point and volume
    - [ ] Relink missing project media on Android
 6. **Export & share**
    - [x] Choose 720p or 1080p for iOS single-clip exports

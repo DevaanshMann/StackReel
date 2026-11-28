@@ -29,7 +29,7 @@ export function readableSize(file: File) {
   try {
     const bytes = handle.size;
     if (bytes === null || !Number.isSafeInteger(bytes) || bytes <= 0)
-      throw new Error("The video is empty or unreadable.");
+      throw new Error("The file is empty or unreadable.");
     return bytes;
   } finally {
     handle.close();

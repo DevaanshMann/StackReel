@@ -112,7 +112,7 @@ it("stores an independently editable Daybreak and distinguishes a Files import w
   }
 });
 
-it.each(["copy failure", "stale copy", "commit failure"] as const)(
+it.each(["copy failure", "truncated copy", "stale copy", "commit failure"] as const)(
   "preserves the previous soundtrack and removes staged audio after a %s",
   async (failure) => {
     const session = createTemplateDraftSession(template, template.id);
@@ -127,6 +127,7 @@ it.each(["copy failure", "stale copy", "commit failure"] as const)(
       vi.spyOn(File.prototype, "copy").mockImplementation(async function (this: File, target) {
         await copy.call(this, target);
         if (failure === "copy failure") throw new Error("Interrupted copy");
+        if (failure === "truncated copy") target.writeSync("part");
         if (failure === "stale copy") current = false;
       });
       const save = vi.fn((music: TemplateMusic) => {
@@ -151,11 +152,47 @@ it.each(["copy failure", "stale copy", "commit failure"] as const)(
   },
 );
 
-it("leaves the draft alone when the Files picker is cancelled", async () => {
-  vi.mocked(getDocumentAsync).mockResolvedValue({ canceled: true, assets: null });
-  const commit = vi.fn();
-  await importTemplateMusic({ ...options, source: "files", commit });
-  expect(probeAudio).not.toHaveBeenCalled();
-  expect(commit).not.toHaveBeenCalled();
-  expect(loadTemplateDraft(template)).toBeNull();
+it("keeps the missing soundtrack recoverable across a cancelled or incompatible Files pick", async () => {
+  const session = createTemplateDraftSession(template, template.id);
+  try {
+    await importTemplateMusic({
+      ...options,
+      commit: (music) => session.commit({ ...draft, music }, "add music"),
+    });
+    new File(loadTemplateDraft(template)!.music!.uri).delete();
+    const files = new Map(storage.files);
+    const validateMusic = vi.fn((music: TemplateMusic) => {
+      if (music.starterId !== "daybreak") throw new Error("Expected bundled Daybreak");
+    });
+    const commit = vi.fn<(music: TemplateMusic) => void>();
+    const relink = { ...options, validateMusic, commit };
+
+    vi.mocked(probeAudio).mockClear();
+    vi.mocked(getDocumentAsync).mockResolvedValue({ canceled: true, assets: null });
+    await importTemplateMusic({ ...relink, source: "files" });
+    expect(probeAudio).not.toHaveBeenCalled();
+    expect(validateMusic).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+    expect(storage.files).toEqual(files);
+
+    chooseFile(); // The picker returns a different song also named Daybreak.
+    const move = vi.spyOn(File.prototype, "move");
+    await expect(importTemplateMusic({ ...relink, source: "files" })).rejects.toThrow("Expected bundled Daybreak");
+    expect(validateMusic).toHaveBeenLastCalledWith(
+      expect.objectContaining({ name: "Daybreak", uri: pickedUri, sourceEndUs: metadata.durationUs }),
+    );
+    expect(move).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+    expect(storage.files).toEqual(files);
+    expect(loadTemplateDraft(template)?.missingMusic).toBe(true);
+
+    await importTemplateMusic(relink);
+    expect(validateMusic).toHaveBeenLastCalledWith(expect.objectContaining({ uri: bundledUri, starterId: "daybreak" }));
+    expect(commit).toHaveBeenCalledTimes(1);
+    const restored = commit.mock.calls[0]![0];
+    expect(restored.uri).not.toBe(bundledUri);
+    expect(new File(restored.uri).textSync()).toBe("bundled audio");
+  } finally {
+    session.close();
+  }
 });

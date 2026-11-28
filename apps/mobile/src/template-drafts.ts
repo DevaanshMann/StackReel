@@ -1,3 +1,4 @@
+import { usToFrame } from "@stackreel/core";
 import { Id } from "@stackreel/template-schema";
 import { randomUUID } from "expo-crypto";
 import { Directory, File, Paths } from "expo-file-system";
@@ -39,6 +40,7 @@ export type TemplateDraftEdits = {
   missingSlots?: readonly string[];
   recoverableSlots?: Readonly<Record<string, string>>;
   missingMusic?: boolean;
+  recoverableMusic?: Pick<TemplateMusic, "name" | "starterId"> | null;
 };
 
 const draftUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
@@ -332,6 +334,7 @@ export function createTemplateDraftSession(template: MobileTemplate, draftId = t
   let past: HistoryEntry[] = [];
   let future: HistoryEntry[] = [];
   let lastRevision: number | undefined;
+  let musicRelinkRevision: number | undefined;
 
   function current() {
     if (activeSessionFiles.get(directory.uri) !== sessionFiles) throw new Error("The draft session has ended.");
@@ -349,8 +352,27 @@ export function createTemplateDraftSession(template: MobileTemplate, draftId = t
     if (!manifest || !slot || !hasDraftMediaFile(original))
       throw new Error("The saved slot is unavailable for relinking.");
     const savedClip = readClipSettings(template, slot, original, directory);
-    if (hasReadableVideo(new File(savedClip.uri))) throw new Error("The saved video is already available.");
+    if (hasReadableMedia(new File(savedClip.uri))) throw new Error("The saved video is already available.");
     return { slot, original, savedClip, revision, manifest };
+  }
+
+  function missingSoundtrack() {
+    const { revision, manifest } = current();
+    const original = manifest?.saved.music;
+    if (!manifest || !hasDraftMediaFile(original))
+      throw new Error("The saved soundtrack is unavailable for relinking.");
+    const savedMusic = readMusicSettings(template, original, directory);
+    if (hasReadableMedia(new File(savedMusic.uri))) throw new Error("The saved soundtrack is already available.");
+    if (!musicRecoveryInfo(original, savedMusic)) throw new Error("The saved soundtrack settings are unsupported.");
+    return { revision, manifest, original, savedMusic };
+  }
+
+  function stagedFile(uri: string, kind: "video" | "soundtrack") {
+    const file = new File(uri);
+    if (new File(directory, file.name).uri !== file.uri || !sessionFiles.staged.has(file.name))
+      throw new Error(`The selected ${kind} must be staged in this draft.`);
+    if (!hasReadableMedia(file)) throw new Error(`The selected ${kind} is empty or unreadable.`);
+    return file;
   }
 
   function publish(
@@ -438,10 +460,7 @@ export function createTemplateDraftSession(template: MobileTemplate, draftId = t
     relink(slotId: string, imported: TemplateClip, render: RenderState) {
       const { slot, original, savedClip, revision, manifest } = missingSlot(slotId);
       checkRelinkSource(slot, savedClip, imported);
-      const file = new File(imported.uri);
-      if (new File(directory, file.name).uri !== file.uri || !sessionFiles.staged.has(file.name))
-        throw new Error("The selected video must be staged in this draft.");
-      readableSize(file);
+      const file = stagedFile(imported.uri, "video");
       const binding = {
         ...original,
         file: file.name,
@@ -454,6 +473,32 @@ export function createTemplateDraftSession(template: MobileTemplate, draftId = t
       const restored = { ...edits, ...renderDraftUpdate(template, edits, render) };
       // Undo can start with the next edit without bringing back the missing file.
       publish(revision, saved, [], [], isDegraded(edits));
+      return restored;
+    },
+    prepareMusicRelink() {
+      const { savedMusic, revision } = missingSoundtrack();
+      lastRevision = revision;
+      musicRelinkRevision = revision;
+      return (music: TemplateMusic) => checkMusicRelinkSource(savedMusic, music, template.canvas.fps);
+    },
+    relinkMusic(imported: TemplateMusic, render: RenderState) {
+      const { revision, manifest, original, savedMusic } = missingSoundtrack();
+      if (musicRelinkRevision !== undefined && musicRelinkRevision !== revision)
+        throw new Error("The saved draft changed. Reopen it before relinking.");
+      checkMusicRelinkSource(savedMusic, imported, template.canvas.fps);
+      const file = stagedFile(imported.uri, "soundtrack");
+      const music = {
+        ...original,
+        file: file.name,
+        sourceStartUs: imported.sourceStartUs,
+        sourceEndUs: imported.sourceEndUs,
+      };
+      const saved = { ...manifest.saved, music };
+      const edits = restoreDraftEdits(template, directory, parseDraftManifest(template, saved));
+      if (!edits.music) throw new Error("Couldn’t restore the saved soundtrack edits.");
+      const restored = { ...edits, ...renderDraftUpdate(template, edits, render) };
+      publish(revision, saved, [], [], isDegraded(edits));
+      musicRelinkRevision = undefined;
       return restored;
     },
     undo: (render: RenderState) => step("undo", render),
@@ -485,9 +530,10 @@ export function clearTemplateVideoSlot(draft: TemplateDraftEdits, slotId: string
 export function clearTemplateMusic<T extends TemplateDraftEdits>({
   music: _music,
   missingMusic: _missingMusic,
+  recoverableMusic: _recoverableMusic,
   ...draft
 }: T) {
-  return { ...draft, music: null, missingMusic: false };
+  return { ...draft, music: null, missingMusic: false, recoverableMusic: null };
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -592,7 +638,38 @@ function checkRelinkSource(slot: TemplateVideoSlot, savedClip: TemplateClip, imp
     throw new Error("Select the original, untrimmed video. The source frame range differs from this draft.");
 }
 
-function hasReadableVideo(file: File) {
+function readMusicSettings(template: MobileTemplate, value: unknown, directory: Directory) {
+  if (!hasDraftMediaFile(value)) throw new Error("Invalid draft soundtrack reference.");
+  const { uri, name, sourceStartUs, sourceEndUs, volumePercent } = readAssetSettings(value, directory);
+  const track = createTemplateMusic(uri, name, { startUs: sourceStartUs, durationUs: sourceEndUs - sourceStartUs });
+  if (value.starterId === "daybreak") track.starterId = value.starterId;
+  const music = setTemplateMusicVolume(track, volumePercent);
+  if (value.startFrame === undefined) return music;
+  const { startFrame } = value;
+  if (typeof startFrame !== "number" || !Number.isSafeInteger(startFrame) || startFrame < 0)
+    throw new Error("Invalid saved music start.");
+  // A longer revision of the template can leave less room to move the soundtrack.
+  const { maxFrame } = getTemplateMusicStartRange(music, template.durationUs);
+  return setTemplateMusicStart(music, Math.min(startFrame, maxFrame), template.durationUs);
+}
+
+function musicRecoveryInfo(original: unknown, music: TemplateMusic) {
+  // Playback tolerates unknown starter IDs, but recovery needs to know the original source.
+  if (!record(original) || original.starterId !== music.starterId || original.sourceStartUs !== music.sourceStartUs)
+    return null;
+  return { name: music.name, ...(music.starterId && { starterId: music.starterId }) };
+}
+
+function checkMusicRelinkSource(saved: TemplateMusic, imported: TemplateMusic, fps: number) {
+  if (saved.starterId !== imported.starterId) throw new Error("Select the original soundtrack from the same source.");
+  if (
+    usToFrame(saved.sourceStartUs, fps, "ceil") !== usToFrame(imported.sourceStartUs, fps, "ceil") ||
+    usToFrame(saved.sourceEndUs, fps, "floor") !== usToFrame(imported.sourceEndUs, fps, "floor")
+  )
+    throw new Error("Select the original, untrimmed soundtrack. The source frame range differs from this draft.");
+}
+
+function hasReadableMedia(file: File) {
   try {
     readableSize(file);
     return true;
@@ -650,7 +727,7 @@ function restoreDraftEdits(
     if (value === undefined) continue;
     try {
       const clip = readClipSettings(template, slot, value, directory);
-      if (hasReadableVideo(new File(clip.uri))) clips[slot.id] = clip;
+      if (hasReadableMedia(new File(clip.uri))) clips[slot.id] = clip;
       else {
         recoverableSlots[slot.id] = clip.name;
         missingSlots.push(slot.id);
@@ -662,27 +739,19 @@ function restoreDraftEdits(
 
   let music: TemplateMusic | null = null;
   let missingMusic = false;
+  let recoverableMusic: Pick<TemplateMusic, "name" | "starterId"> | null = null;
   if (saved.music) {
     try {
-      const { uri, name, sourceStartUs, sourceEndUs, volumePercent } = readAssetSettings(saved.music, directory);
-      if (!new File(uri).exists) throw new Error("Draft music is unavailable.");
-      const track = createTemplateMusic(uri, name, { startUs: sourceStartUs, durationUs: sourceEndUs - sourceStartUs });
-      if (record(saved.music) && saved.music.starterId === "daybreak") track.starterId = saved.music.starterId;
-      let restored = setTemplateMusicVolume(track, volumePercent);
-      if (record(saved.music) && saved.music.startFrame !== undefined) {
-        const { startFrame } = saved.music;
-        if (typeof startFrame !== "number" || !Number.isSafeInteger(startFrame) || startFrame < 0) {
-          throw new Error("Invalid saved music start.");
-        }
-        // A longer revision of the template can leave less room to move the soundtrack.
-        const { maxFrame } = getTemplateMusicStartRange(restored, template.durationUs);
-        restored = setTemplateMusicStart(restored, Math.min(startFrame, maxFrame), template.durationUs);
+      const track = readMusicSettings(template, saved.music, directory);
+      if (hasReadableMedia(new File(track.uri))) music = track;
+      else {
+        missingMusic = true;
+        recoverableMusic = musicRecoveryInfo(saved.music, track);
       }
-      music = restored;
     } catch {
       missingMusic = true;
     }
   }
 
-  return { name, clips, textOverrides, music, missingSlots, recoverableSlots, missingMusic };
+  return { name, clips, textOverrides, music, missingSlots, recoverableSlots, missingMusic, recoverableMusic };
 }
