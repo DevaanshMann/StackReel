@@ -120,11 +120,11 @@ footage. Play or scrub the preview, or use the bottom toolbar to trim the clip, 
 volume, or add a caption. The same tools are available when you reopen the draft from **Projects**.
 [See the single-clip workspace on iPhone](../../docs/ios-single-clip-workspace.jpg).
 
-Tap **Trim** to set where the clip starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f**
-to adjust by one frame. Play the selection to check its picture and sound. **Apply trim** uses that selection for
-preview and export. To bring back footage, reopen **Trim** and extend the range, or tap **Reset trim** to select
-the full video.
-[See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
+Tap **Trim** and drag the two handles on the filmstrip. The highlighted footage stays in your reel.
+Use **−1f** or **+1f** under **In** or **Out** to move a cut by one frame. Adjusting **Out** shows the last
+frame you’ll keep. Press **Play** to review the cut from **In**. **Apply trim** saves it for preview and export.
+Reopen **Trim** to extend either end, or tap **Reset trim** to select the full video.
+[See the single-clip filmstrip on iPhone](../../docs/ios-single-clip-filmstrip.jpg).
 
 Under **Export resolution**, choose **720p** (720 × 1280) or **1080p** (1080 × 1920), then tap **Export MP4**.
 Both sizes use the same framing, caption, and sound at 30 fps. Drafts start at 720p and remember your choice

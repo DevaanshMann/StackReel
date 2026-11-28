@@ -56,6 +56,7 @@ export function ClipPreview({
   viewport,
   storyboard = false,
   singleWorkspace = false,
+  trimEndStillUs,
   safeZoneGuide,
   fullScreen,
 }: {
@@ -65,6 +66,8 @@ export function ClipPreview({
   suspended: boolean;
   storyboard?: boolean;
   singleWorkspace?: boolean;
+  /** Show the last retained frame after an Out edit, then play the cut from its beginning. */
+  trimEndStillUs?: number | undefined;
   viewport?: { maxWidth: number; props: ViewProps; videoStyle: ViewStyle };
   safeZoneGuide?: SafeZoneGuide | null;
   fullScreen?: { active: boolean; disabled: boolean; onChange: (expanded: boolean) => void };
@@ -72,7 +75,8 @@ export function ClipPreview({
   const preview = useRef<StackReelPreviewViewRef>(null);
   const dragging = useRef(false);
   const pendingSeek = useRef<{ seconds: number } | null>(null);
-  const cueBeforeReady = useRef<number | null>(null);
+  const cueBeforeReady = useRef<number | null>(trimEndStillUs === undefined ? null : trimEndStillUs / US_PER_SECOND);
+  const replayFromStart = useRef(trimEndStillUs !== undefined);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const [scrubPosition, setScrubPosition] = useState<number | null>(null);
@@ -82,6 +86,7 @@ export function ClipPreview({
 
   useImperativeHandle(ref, () => ({
     cueShot(timeUs) {
+      replayFromStart.current = false;
       setPlaying(false);
       const seconds = timeUs / US_PER_SECOND;
       if (duration > 0) void seekToSeconds(seconds, duration);
@@ -92,12 +97,13 @@ export function ClipPreview({
   useLayoutEffect(() => {
     // The native ready event and a card tap can arrive in the same render batch.
     if (duration > 0 && cueBeforeReady.current !== null) {
-      void seekToSeconds(cueBeforeReady.current, duration);
+      void seekToSeconds(cueBeforeReady.current, duration, replayFromStart.current);
       cueBeforeReady.current = null;
     }
   }, [duration]);
 
-  async function seekToSeconds(target: number, durationSeconds: number) {
+  async function seekToSeconds(target: number, durationSeconds: number, replay = false) {
+    replayFromStart.current = replay;
     dragging.current = false;
     const view = preview.current;
     if (!view || durationSeconds <= 0) return;
@@ -110,7 +116,9 @@ export function ClipPreview({
     if (seconds >= durationSeconds) setPlaying(false);
     try {
       await view.seekTo(seconds);
-      if (preview.current === view && pendingSeek.current === request) setPosition(seconds);
+      if (preview.current !== view || pendingSeek.current !== request) return;
+      setPosition(seconds);
+      return true;
     } catch (cause) {
       if (preview.current === view && pendingSeek.current === request) {
         setPlaying(false);
@@ -122,6 +130,14 @@ export function ClipPreview({
         setScrubPosition(null);
       }
     }
+  }
+
+  async function togglePlayback() {
+    if (!playing && replayFromStart.current) {
+      if (!(await seekToSeconds(0, duration, true))) return;
+      replayFromStart.current = false;
+    }
+    setPlaying((wasPlaying) => !wasPlaying);
   }
 
   const expanded = fullScreen?.active ?? false;
@@ -192,7 +208,7 @@ export function ClipPreview({
       <View style={[styles.transport, wrapTransport && styles.wrappedTransport]}>
         <Action
           label={playing ? "Pause" : "Play"}
-          onPress={() => setPlaying((wasPlaying) => !wasPlaying)}
+          onPress={() => void togglePlayback()}
           disabled={duration <= 0 || suspended || scrubPosition !== null}
         />
         {wrapTransport && expandControl}
