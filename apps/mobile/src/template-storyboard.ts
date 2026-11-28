@@ -1,4 +1,5 @@
-import type { TemplateClip, TemplateVideoSlot } from "./template-editor";
+import { frameToUs, usToFrame } from "@stackreel/core";
+import type { MobileTemplate, TemplateClip, TemplateVideoSlot } from "./template-editor";
 
 export type StoryboardShot = {
   slot: TemplateVideoSlot;
@@ -7,6 +8,33 @@ export type StoryboardShot = {
   status: "Ready" | "Empty" | "Missing";
   thumbnailTimeUs: number | undefined;
 };
+
+/** Reel time for previewing each shot, independent of the trim within its source video. */
+export function getStoryboardCueTimes(template: MobileTemplate): Readonly<Record<string, number>> {
+  const cues: Record<string, number> = Object.create(null);
+  const videoSlots = new Set(template.slots.filter((slot) => slot.kind === "video").map((slot) => slot.id));
+  const fps = template.canvas.fps;
+  for (const track of template.tracks) {
+    if (track.type !== "video") continue;
+    for (const item of track.items) {
+      if (!videoSlots.has(item.slot)) continue;
+      const start = usToFrame(item.startUs, fps, "round");
+      const end = usToFrame(item.startUs + item.durationUs, fps, "round");
+      if (end <= start) continue;
+
+      // Match the renderer's snapped transition boundary. An item that transitions
+      // for its entire duration can only be cued as far as its last visible frame.
+      const transition = item.transitionIn;
+      const cueFrame =
+        transition && transition.type !== "cut"
+          ? Math.min(usToFrame(item.startUs + transition.durationUs, fps, "round"), end - 1)
+          : start;
+      const cueUs = frameToUs(cueFrame, fps);
+      cues[item.slot] = Math.min(cues[item.slot] ?? cueUs, cueUs);
+    }
+  }
+  return cues;
+}
 
 export function getStoryboardShots(
   slots: readonly TemplateVideoSlot[],

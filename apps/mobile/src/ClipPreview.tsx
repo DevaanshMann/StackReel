@@ -1,9 +1,10 @@
 import Slider from "@react-native-community/slider";
+import { US_PER_SECOND } from "@stackreel/core";
 import { StackReelPreviewView } from "@stackreel/engine";
 import type { StackReelPreviewViewRef } from "@stackreel/engine";
 import { MIN_HIT_TARGET, darkColors, neutral, radius, space } from "@stackreel/ui";
-import { useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useImperativeHandle, useRef, useState } from "react";
+import type { ReactNode, Ref } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, useWindowDimensions, View } from "react-native";
 import type { ViewProps, ViewStyle } from "react-native";
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,6 +14,7 @@ import { fitPreviewCanvas } from "./template-safe-zones";
 import type { SafeZoneGuide } from "./template-safe-zones";
 
 type PreviewCanvas = { width: number; height: number };
+export type ClipPreviewRef = { cueShot: (timeUs: number) => void };
 const previewMaxWidth = 224;
 
 export function PreviewFrame({
@@ -47,6 +49,7 @@ export function PreviewFrame({
 }
 
 export function ClipPreview({
+  ref,
   canvas,
   source,
   suspended,
@@ -56,6 +59,7 @@ export function ClipPreview({
   safeZoneGuide,
   fullScreen,
 }: {
+  ref?: Ref<ClipPreviewRef>;
   canvas: PreviewCanvas;
   source: string;
   suspended: boolean;
@@ -68,6 +72,7 @@ export function ClipPreview({
   const preview = useRef<StackReelPreviewViewRef>(null);
   const dragging = useRef(false);
   const pendingSeek = useRef<{ seconds: number } | null>(null);
+  const cueBeforeReady = useRef<number | null>(null);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const [scrubPosition, setScrubPosition] = useState<number | null>(null);
@@ -75,17 +80,26 @@ export function ClipPreview({
   const [error, setError] = useState<string | null>(null);
   const [showSafeZones, setShowSafeZones] = useState(false);
 
-  async function seek(fraction: number) {
+  useImperativeHandle(ref, () => ({
+    cueShot(timeUs) {
+      setPlaying(false);
+      const seconds = timeUs / US_PER_SECOND;
+      if (duration > 0) void seekToSeconds(seconds, duration);
+      else cueBeforeReady.current = seconds;
+    },
+  }));
+
+  async function seekToSeconds(target: number, durationSeconds: number) {
     dragging.current = false;
     const view = preview.current;
-    if (!view || duration <= 0) return;
+    if (!view || durationSeconds <= 0) return;
 
-    const seconds = fraction * duration;
+    const seconds = Math.max(0, Math.min(target, durationSeconds));
     const request = { seconds };
     pendingSeek.current = request;
     setScrubPosition(seconds);
     setError(null);
-    if (seconds >= duration) setPlaying(false);
+    if (seconds >= durationSeconds) setPlaying(false);
     try {
       await view.seekTo(seconds);
       if (preview.current === view && pendingSeek.current === request) setPosition(seconds);
@@ -188,7 +202,7 @@ export function ClipPreview({
             const step = Math.min(5, duration / 10);
             const from = pendingSeek.current?.seconds ?? position;
             const seconds = Math.min(duration, Math.max(0, from + (actionName === "increment" ? step : -step)));
-            void seek(seconds / duration);
+            void seekToSeconds(seconds, duration);
           }}
         >
           <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -209,9 +223,9 @@ export function ClipPreview({
               }}
               onValueChange={(fraction) => {
                 if (dragging.current) setScrubPosition(fraction * duration);
-                else void seek(fraction);
+                else void seekToSeconds(fraction * duration, duration);
               }}
-              onSlidingComplete={seek}
+              onSlidingComplete={(fraction) => void seekToSeconds(fraction * duration, duration)}
             />
             <View style={styles.timestamps}>
               <Text style={styles.time}>{timeLabel(visiblePosition)}</Text>
@@ -260,7 +274,13 @@ export function ClipPreview({
             style={viewport?.videoStyle ?? StyleSheet.absoluteFill}
             source={source}
             playing={playing && !suspended && scrubPosition === null}
-            onReady={({ nativeEvent }) => setDuration(nativeEvent.durationSeconds)}
+            onReady={({ nativeEvent: { durationSeconds } }) => {
+              setDuration(durationSeconds);
+              if (cueBeforeReady.current !== null) {
+                void seekToSeconds(cueBeforeReady.current, durationSeconds);
+                cueBeforeReady.current = null;
+              }
+            }}
             onPositionChange={({ nativeEvent }) => {
               if (duration <= 0 || dragging.current || pendingSeek.current) return;
               const seconds = nativeEvent.positionSeconds;
@@ -270,6 +290,7 @@ export function ClipPreview({
             onError={({ nativeEvent }) => {
               dragging.current = false;
               pendingSeek.current = null;
+              cueBeforeReady.current = null;
               setScrubPosition(null);
               setPlaying(false);
               setDuration(0);
@@ -300,7 +321,7 @@ export function errorMessage(summary: string, cause: unknown) {
   return typeof message === "string" && message ? `${summary} ${message}` : summary;
 }
 
-function timeLabel(seconds: number) {
+export function timeLabel(seconds: number) {
   const tenths = Math.max(0, Math.floor(seconds * 10));
   const total = Math.floor(tenths / 10);
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}.${tenths % 10}`;

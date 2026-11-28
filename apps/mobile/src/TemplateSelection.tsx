@@ -289,6 +289,8 @@ export type ImportRecovery = { error: SlotImportError; answer: (replace: boolean
 export function TemplateVideoSlots({
   selectedSlotId,
   onSelectSlot,
+  cueTimes,
+  onCueShot,
   slots,
   clips,
   missingSlots,
@@ -313,6 +315,8 @@ export function TemplateVideoSlots({
 }: {
   selectedSlotId: string | undefined;
   onSelectSlot: (slotId: string) => void;
+  cueTimes: Readonly<Record<string, number>>;
+  onCueShot: (timeUs: number) => void;
   slots: readonly TemplateVideoSlot[];
   clips: Readonly<Record<string, TemplateClip>>;
   missingSlots: readonly string[];
@@ -355,7 +359,14 @@ export function TemplateVideoSlots({
   const visibleSwapPairs = choosingSwap || swapPairs.length === 1 ? swapPairs : [];
   return (
     <View style={styles.list}>
-      <ShotStoryboard shots={shots} selected={selected} busy={busy} onSelectSlot={onSelectSlot} />
+      <ShotStoryboard
+        shots={shots}
+        selected={selected}
+        busy={busy}
+        cueTimes={cueTimes}
+        onSelectSlot={onSelectSlot}
+        onCueShot={onCueShot}
+      />
       <View testID={`shot-inspector-${slot.id}`} style={[styles.panel, styles.slot]}>
         <View style={styles.slotCopy}>
           <Text accessibilityRole="header" style={styles.cardTitle}>

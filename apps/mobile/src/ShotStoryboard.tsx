@@ -1,8 +1,10 @@
+import { US_PER_SECOND } from "@stackreel/core";
 import { getVideoThumbnails } from "@stackreel/engine";
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
 import { useEffect, useRef, useState } from "react";
 import type { ComponentRef } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { timeLabel } from "./ClipPreview";
 import type { StoryboardShot } from "./template-storyboard";
 
 function ShotThumbnail({ uri, timeUs }: { uri: string; timeUs: number }) {
@@ -40,12 +42,16 @@ export function ShotStoryboard({
   shots,
   selected,
   busy,
+  cueTimes,
   onSelectSlot,
+  onCueShot,
 }: {
   shots: readonly StoryboardShot[];
   selected: StoryboardShot;
   busy: boolean;
+  cueTimes: Readonly<Record<string, number>>;
   onSelectSlot: (id: string) => void;
+  onCueShot: (timeUs: number) => void;
 }) {
   const strip = useRef<ComponentRef<typeof ScrollView>>(null);
   const [viewport, setViewport] = useState(0);
@@ -82,6 +88,8 @@ export function ShotStoryboard({
       >
         {shots.map(({ slot, number, clip, status, thumbnailTimeUs }) => {
           const chosen = selected.slot.id === slot.id;
+          const cueUs = status === "Ready" && Object.hasOwn(cueTimes, slot.id) ? cueTimes[slot.id] : undefined;
+          const cueLabel = cueUs === undefined ? undefined : timeLabel(cueUs / US_PER_SECOND);
           return (
             <Pressable
               key={slot.id}
@@ -89,12 +97,19 @@ export function ShotStoryboard({
               accessibilityRole="button"
               accessibilityLabel={`Shot ${number} of ${shots.length}, ${slot.label}, ${status}`}
               accessibilityState={{ selected: chosen, disabled: busy }}
-              accessibilityHint="Shows controls for this shot."
+              accessibilityHint={
+                cueLabel
+                  ? `Pauses the preview at ${cueLabel} and shows controls for this shot. Play continues from there.`
+                  : "Shows controls for this shot."
+              }
               disabled={busy}
               focusable={!busy}
               onFocus={() => setFocusedId(slot.id)}
               onBlur={() => setFocusedId(undefined)}
-              onPress={() => onSelectSlot(slot.id)}
+              onPress={() => {
+                onSelectSlot(slot.id);
+                if (cueUs !== undefined) onCueShot(cueUs);
+              }}
               style={({ pressed }) => [
                 styles.card,
                 { width },
@@ -103,13 +118,18 @@ export function ShotStoryboard({
                 pressed && styles.pressed,
               ]}
             >
-              <View style={styles.frame}>
+              <View style={[styles.frame, cueLabel && styles.cueFrame]}>
                 {clip && thumbnailTimeUs !== undefined ? (
                   <ShotThumbnail key={`${clip.uri}/${thumbnailTimeUs}`} uri={clip.uri} timeUs={thumbnailTimeUs} />
                 ) : (
                   <Text style={[styles.placeholder, status === "Missing" && styles.missing]}>
                     {status === "Missing" ? "!" : "+"}
                   </Text>
+                )}
+                {cueLabel && (
+                  <View style={styles.cueBadge}>
+                    <Text style={styles.cueTime}>{cueLabel}</Text>
+                  </View>
                 )}
               </View>
               <View style={styles.caption}>
@@ -159,6 +179,16 @@ const styles = StyleSheet.create({
     backgroundColor: darkColors.elevated,
     padding: space[1],
   },
+  cueFrame: { justifyContent: "flex-end", gap: space[1] },
+  cueBadge: {
+    alignSelf: "flex-end",
+    maxWidth: "100%",
+    borderRadius: radius.sm,
+    paddingHorizontal: space[1],
+    paddingVertical: 2,
+    backgroundColor: darkColors.bg,
+  },
+  cueTime: { color: darkColors.text, fontSize: fontSize.sm, fontWeight: "600", fontVariant: ["tabular-nums"] },
   placeholder: { color: darkColors.textMuted, fontWeight: "500", fontSize: fontSize["2xl"] },
   fallback: { color: darkColors.textMuted, fontSize: fontSize.sm, textAlign: "center" },
   caption: { paddingVertical: space[1], paddingHorizontal: space[2], gap: 2 },

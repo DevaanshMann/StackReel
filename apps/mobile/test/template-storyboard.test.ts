@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mobileTemplates } from "../src/template-editor";
 import type { TemplateClip } from "../src/template-editor";
-import { getSelectedShot, getStoryboardShots } from "../src/template-storyboard";
+import { getSelectedShot, getStoryboardCueTimes, getStoryboardShots } from "../src/template-storyboard";
 
 const slots = ["intro", "detail", "reveal"].map((id) => ({
   id,
@@ -20,6 +21,47 @@ const clip: TemplateClip = {
 };
 
 describe("template storyboard", () => {
+  it("cues the shipped shots on the first frame after their incoming transitions", () => {
+    expect(mobileTemplates.map(getStoryboardCueTimes)).toEqual([
+      { before: 0, after: 3_800_000 },
+      { clip1: 0, clip2: 3_266_667, clip3: 5_200_000 },
+      { item5: 0, item4: 5_300_000, item3: 9_800_000, item2: 14_300_000, item1: 18_766_667 },
+    ]);
+  });
+
+  it("uses the earliest playable occurrence and keeps a full-length transition inside the shot", () => {
+    const template = mobileTemplates[0]!;
+    const cues = getStoryboardCueTimes({
+      ...template,
+      canvas: { ...template.canvas, fps: 24 },
+      slots: [
+        ...template.slots,
+        { id: "unused", kind: "video", label: "Unused" },
+        { id: "still", kind: "image", label: "Still" },
+        { id: "short", kind: "video", label: "Short" },
+      ],
+      tracks: [
+        {
+          type: "video",
+          id: "clips",
+          items: [
+            { slot: "after", startUs: 4_000_000, durationUs: 500_000 },
+            { slot: "before", startUs: 50_000, durationUs: 500_000, transitionIn: { type: "cut", durationUs: 0 } },
+            { slot: "short", startUs: 800_000, durationUs: 1 },
+            {
+              slot: "after",
+              startUs: 1_000_000,
+              durationUs: 125_000,
+              transitionIn: { type: "crossfade", durationUs: 125_000 },
+            },
+            { slot: "still", startUs: 2_000_000, durationUs: 1_000_000 },
+          ],
+        },
+      ],
+    });
+    expect(cues).toEqual({ before: 41_667, after: 1_083_333 });
+  });
+
   it("keeps template order and excludes missing media from ready progress and thumbnail requests", () => {
     const shots = getStoryboardShots(slots, { reveal: clip, intro: clip, obsolete: clip }, ["intro"]);
     expect(
