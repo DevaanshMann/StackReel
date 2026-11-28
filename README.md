@@ -470,7 +470,8 @@ _Runs in parallel with Phase 3._
 3. **Fill slots**
    - [x] Select iOS videos from Photos in slot order and replace an invalid pick within the same import
    - [ ] Select Android videos in order and assign them to template slots
-   - [ ] Slot strip: tap a slot to replace its clip, long-press to reorder
+   - [x] Select shots from an iOS storyboard to trim, reframe, adjust volume, or replace footage
+   - [ ] Long-press to reorder clips in the slot strip
    - [x] iOS trim sheet with a source filmstrip and a draggable window for longer clips. Clips that meet the template minimum can hold their last frame through the rest of the slot.
    - [x] Trim either end of a single video on iOS before preview and export
    - [x] Fit a single clip inside the iOS reel or fill the vertical frame and adjust the crop with drag and zoom

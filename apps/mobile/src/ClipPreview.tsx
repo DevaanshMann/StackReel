@@ -51,12 +51,14 @@ export function ClipPreview({
   source,
   suspended,
   viewport,
+  storyboard = false,
   safeZoneGuide,
   fullScreen,
 }: {
   canvas: PreviewCanvas;
   source: string;
   suspended: boolean;
+  storyboard?: boolean;
   viewport?: { maxWidth: number; props: ViewProps; videoStyle: ViewStyle };
   safeZoneGuide?: SafeZoneGuide | null;
   fullScreen?: { active: boolean; disabled: boolean; onChange: (expanded: boolean) => void };
@@ -105,6 +107,37 @@ export function ClipPreview({
   const fullHeight = Math.max(0, windowFrame.height - insets.top - insets.bottom);
   const seekDisabled = suspended || duration <= 0;
   const visiblePosition = scrubPosition ?? position;
+  const inlineStoryboard = storyboard && !expanded;
+  const fullScreenControl = fullScreen && (
+    <Action
+      testID={expanded ? "preview-fullscreen-close" : "preview-fullscreen-open"}
+      label={expanded ? "Exit full screen" : "Full screen"}
+      accessibilityLabel={expanded ? "Close full-screen preview" : "Open full-screen preview"}
+      onPress={() => fullScreen.onChange(!expanded)}
+      disabled={fullScreen.disabled}
+    />
+  );
+  const safeZoneControl = safeZoneGuide && (
+    <View style={styles.safeZoneControl}>
+      <Text accessibilityElementsHidden style={[textStyles.body, styles.safeZoneLabel]}>
+        Safe zones
+      </Text>
+      <Switch
+        testID="template-safe-zones-toggle"
+        accessibilityLabel="Safe zones"
+        accessibilityRole="switch"
+        accessibilityHint={
+          safeZoneGuide.safe
+            ? "Shows where platform controls may cover the video."
+            : "Shows that platform controls may cover the entire video."
+        }
+        hitSlop={7}
+        trackColor={{ true: darkColors.accent }}
+        value={showSafeZones}
+        onValueChange={setShowSafeZones}
+      />
+    </View>
+  );
   const playbackControls = (
     <>
       <View style={styles.transport}>
@@ -159,26 +192,13 @@ export function ClipPreview({
           </View>
         </View>
       </View>
-      {safeZoneGuide && (
-        <View style={styles.safeZoneControl}>
-          <Text accessibilityElementsHidden style={[textStyles.body, styles.safeZoneLabel]}>
-            Safe zones
-          </Text>
-          <Switch
-            testID="template-safe-zones-toggle"
-            accessibilityLabel="Safe zones"
-            accessibilityRole="switch"
-            accessibilityHint={
-              safeZoneGuide.safe
-                ? "Shows where platform controls may cover the video."
-                : "Shows that platform controls may cover the entire video."
-            }
-            hitSlop={7}
-            trackColor={{ true: darkColors.accent }}
-            value={showSafeZones}
-            onValueChange={setShowSafeZones}
-          />
+      {inlineStoryboard ? (
+        <View style={styles.previewOptions}>
+          {safeZoneControl}
+          {fullScreenControl}
         </View>
+      ) : (
+        safeZoneControl
       )}
       {error && (
         <Text accessibilityRole="alert" style={textStyles.error}>
@@ -192,20 +212,14 @@ export function ClipPreview({
       collapsable={false}
       accessibilityViewIsModal={expanded}
       onAccessibilityEscape={expanded ? () => fullScreen?.onChange(false) : undefined}
-      style={expanded ? [styles.fullPreview, { height: fullHeight }] : styles.controls}
+      style={
+        expanded ? [styles.fullPreview, { height: fullHeight }] : [styles.controls, storyboard && styles.storyboard]
+      }
     >
-      {fullScreen && (
-        <Action
-          testID={expanded ? "preview-fullscreen-close" : "preview-fullscreen-open"}
-          label={expanded ? "Exit full screen" : "Full screen"}
-          accessibilityLabel={expanded ? "Close full-screen preview" : "Open full-screen preview"}
-          onPress={() => fullScreen.onChange(!expanded)}
-          disabled={fullScreen.disabled}
-        />
-      )}
+      {!inlineStoryboard && fullScreenControl}
       <PreviewFrame
         canvas={canvas}
-        maxWidth={viewport?.maxWidth ?? previewMaxWidth}
+        maxWidth={viewport?.maxWidth ?? (storyboard ? 152 : previewMaxWidth)}
         expanded={expanded}
         testID={fullScreen ? "preview-frame" : undefined}
       >
@@ -279,6 +293,19 @@ const styles = StyleSheet.create({
   fullTransport: { flexGrow: 0, maxHeight: "45%", paddingHorizontal: space[3] },
   viewport: { alignItems: "center", justifyContent: "center" },
   controls: { gap: space[3] },
+  storyboard: {
+    backgroundColor: darkColors.surface,
+    borderRadius: radius.xl,
+    padding: space[3],
+    gap: space[1],
+  },
+  previewOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space[2],
+  },
   transport: { flexDirection: "row", alignItems: "center", gap: space[3] },
   timeline: { flex: 1 },
   slider: { height: 44 },

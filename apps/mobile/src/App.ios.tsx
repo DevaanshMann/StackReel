@@ -242,6 +242,7 @@ export default function App() {
   const currentDraftSession = useRef<ReturnType<typeof openDraftSession>>(null);
   const [discoveryErrors, setDiscoveryErrors] = useState<string[]>([]);
   const [editor, setEditor] = useState<Editor>(firstScreen);
+  const [selectedSlotId, setSelectedSlotId] = useState<string>();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [singleDrafts, setSingleDrafts] = useState<SingleDrafts>({});
   const currentSingleDrafts = useRef(singleDrafts);
@@ -372,6 +373,7 @@ export default function App() {
     if (!mounted.current || activeOperation.current || currentEditor.current !== editor) return;
     resetDraftSession(next);
     currentEditor.current = next;
+    setSelectedSlotId(undefined);
     setFeedback(null);
     setEditor(next);
   }
@@ -747,6 +749,7 @@ export default function App() {
     } catch (cause) {
       if (isCurrentOperation(operation)) {
         if (cause instanceof SlotImportError) {
+          setSelectedSlotId(cause.slot.id);
           setFeedback({ kind: "error", slotId: cause.slot.id, message: cause.message });
         } else {
           const summary = relink
@@ -1179,10 +1182,38 @@ export default function App() {
   const editingText = activity?.kind === "text";
   const clip = singleDraft.clip;
   const { undoLabel, redoLabel } = historyLabels;
-  const editorDetails = (
+  const backAction = (
+    <Action
+      label={template ? (fromProjects ? "‹ Projects" : "‹ Templates") : backLabel}
+      accessibilityLabel={backLabel}
+      onPress={() => navigate({ ...editor.home })}
+      disabled={busy}
+    />
+  );
+  const historyControls = (
+    <View role="toolbar" accessibilityLabel="Edit history" style={styles.buttonRow}>
+      {(["undo", "redo"] as const).map((direction) => {
+        const name = direction === "undo" ? "Undo" : "Redo";
+        const edit = direction === "undo" ? undoLabel : redoLabel;
+        const label = edit ? `${name} ${edit}` : name;
+        return (
+          <Action
+            key={direction}
+            label={template ? name : label}
+            accessibilityLabel={label}
+            testID={`${editor.kind}-${direction}`}
+            onPress={() => applyDraftHistory(direction)}
+            disabled={busy || !edit}
+          />
+        );
+      })}
+    </View>
+  );
+  const editorHeader = (
     <>
-      <View style={styles.navigation}>
-        <Action label={backLabel} onPress={() => navigate({ ...editor.home })} disabled={busy} />
+      <View style={template ? styles.storyboardNavigation : styles.navigation}>
+        {backAction}
+        {template && historyControls}
       </View>
       <View style={styles.details}>
         <Text accessibilityRole="header" style={textStyles.heading}>
@@ -1194,42 +1225,21 @@ export default function App() {
         {singleProjectLabel && <Text style={textStyles.body}>{singleProjectLabel}</Text>}
         {clip && <Text style={textStyles.muted}>Original audio {clip.volumePercent}%</Text>}
       </View>
-      {(editor.kind === "template" || clip) && (
-        <>
-          <View role="toolbar" accessibilityLabel="Edit history" style={styles.buttonRow}>
-            <Action
-              label={undoLabel ? `Undo ${undoLabel}` : "Undo"}
-              testID={`${editor.kind}-undo`}
-              onPress={() => applyDraftHistory("undo")}
-              disabled={busy || !undoLabel}
-            />
-            <Action
-              label={redoLabel ? `Redo ${redoLabel}` : "Redo"}
-              testID={`${editor.kind}-redo`}
-              onPress={() => applyDraftHistory("redo")}
-              disabled={busy || !redoLabel}
-            />
-          </View>
-          {feedback?.scope === "history" && (
-            <Text accessibilityRole="alert" style={textStyles.error}>
-              {feedback.message}
-            </Text>
-          )}
-        </>
+      {!template && clip && historyControls}
+      {feedback?.scope === "history" && (
+        <Text accessibilityRole="alert" style={textStyles.error}>
+          {feedback.message}
+        </Text>
       )}
-      {editor.kind === "template" && textFields.length > 0 && (
-        <View style={styles.navigation}>
-          <Action
-            label="Edit text"
-            testID="edit-template-text"
-            onPress={() => begin({ kind: "text", editor, textOverrides: templateDraft.textOverrides })}
-            disabled={busy}
-          />
-        </View>
-      )}
+    </>
+  );
+  const editorDetails = (
+    <>
       {editor.kind === "template" && (
         <TemplateVideoSlots
           slots={editor.slots}
+          selectedSlotId={selectedSlotId}
+          onSelectSlot={setSelectedSlotId}
           clips={templateDraft.clips}
           missingSlots={templateDraft.missingSlots}
           recoverableSlots={templateDraft.recoverableSlots}
@@ -1253,6 +1263,16 @@ export default function App() {
           }
           onCancelSwap={swapping ? () => finish(activity) : undefined}
         />
+      )}
+      {editor.kind === "template" && textFields.length > 0 && (
+        <View style={styles.navigation}>
+          <Action
+            label="Edit text"
+            testID="edit-template-text"
+            onPress={() => begin({ kind: "text", editor, textOverrides: templateDraft.textOverrides })}
+            disabled={busy}
+          />
+        </View>
       )}
       {singleDraft.recovery && (
         <Text accessibilityRole="alert" style={textStyles.body}>
@@ -1451,7 +1471,7 @@ export default function App() {
     </>
   );
   const editorScreen = (
-    <Screen ref={editorScreenRef} page={editor.draftId} fullScreen={fullScreen}>
+    <Screen ref={editorScreenRef} page={editor.draftId} title={template ? null : "StackReel"} fullScreen={fullScreen}>
       {activity?.kind === "single-reframe" && (
         <ReframeSheet
           id="single"
@@ -1578,10 +1598,12 @@ export default function App() {
           onCancel={() => finish(activity)}
         />
       )}
-      {!fullScreen && editorDetails}
+      {!fullScreen && editorHeader}
+      {!fullScreen && !template && editorDetails}
       {source && (
         <ClipPreview
           key={source}
+          storyboard={!!template}
           canvas={canvas}
           source={source}
           suspended={busy && !exporting}
@@ -1599,6 +1621,7 @@ export default function App() {
           safeZoneGuide={template ? getTemplateSafeZoneGuide(template) : null}
         />
       )}
+      {!fullScreen && template && editorDetails}
       {!fullScreen && editorActions}
     </Screen>
   );
@@ -1706,6 +1729,13 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.55 },
   tabLabel: { color: darkColors.textMuted, fontSize: fontSize.md, fontWeight: "600", textAlign: "center" },
   activeTabLabel: { color: darkColors.accent },
+  storyboardNavigation: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space[2],
+  },
   navigation: { alignSelf: "flex-start" },
   details: { gap: space[1] },
   buttonRow: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },

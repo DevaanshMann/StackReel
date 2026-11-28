@@ -21,7 +21,7 @@ export function Screen({
   children: ReactNode;
   footer?: ReactNode;
   page?: string;
-  title?: string;
+  title?: string | null;
   scrollEnabled?: boolean;
   adjustForKeyboard?: boolean;
   fullScreen?: boolean;
@@ -90,7 +90,7 @@ export function Screen({
           keyboardShouldPersistTaps={adjustForKeyboard ? "always" : "never"}
         >
           <View style={fullScreen ? undefined : styles.content}>
-            {!fullScreen && (
+            {!fullScreen && title && (
               <Text accessibilityRole="header" style={styles.title}>
                 {title}
               </Text>

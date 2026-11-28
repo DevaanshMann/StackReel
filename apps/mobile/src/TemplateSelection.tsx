@@ -1,8 +1,11 @@
 import { darkColors, fontSize, radius, space } from "@stackreel/ui";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getDraftProjects } from "./draft-names";
 import { Action, textStyles } from "./Screen";
+import { ShotStoryboard } from "./ShotStoryboard";
+import { getSelectedShot, getStoryboardShots } from "./template-storyboard";
 import { trimTimeLabel } from "./TemplateTrim";
 import { VideoImportActions } from "./VideoImportActions";
 import { getEmptyVideoSlots, getVideoSlots, mobileTemplates } from "./template-editor";
@@ -284,6 +287,8 @@ function GalleryCard({
 export type ImportRecovery = { error: SlotImportError; answer: (replace: boolean) => void };
 
 export function TemplateVideoSlots({
+  selectedSlotId,
+  onSelectSlot,
   slots,
   clips,
   missingSlots,
@@ -306,6 +311,8 @@ export function TemplateVideoSlots({
   onSwap,
   onCancelSwap,
 }: {
+  selectedSlotId: string | undefined;
+  onSelectSlot: (slotId: string) => void;
   slots: readonly TemplateVideoSlot[];
   clips: Readonly<Record<string, TemplateClip>>;
   missingSlots: readonly string[];
@@ -328,9 +335,19 @@ export function TemplateVideoSlots({
   onSwap: (first: TemplateVideoSlot, second: TemplateVideoSlot) => void;
   onCancelSwap: (() => void) | undefined;
 }) {
+  const shots = getStoryboardShots(slots, clips, missingSlots);
+  const selected = getSelectedShot(shots, selectedSlotId);
+  const effectiveId = selected?.slot.id;
+  useEffect(() => {
+    if (effectiveId !== undefined && selectedSlotId !== effectiveId) onSelectSlot(effectiveId);
+  }, [effectiveId, selectedSlotId, onSelectSlot]);
+
+  if (!selected) return null;
+  const { slot, clip } = selected;
+  const missing = selected.status === "Missing";
+  const recoverable = missing && Object.hasOwn(recoverableSlots, slot.id);
   const emptySlots = getEmptyVideoSlots(slots, clips, missingSlots);
-  const nextSlot = slots.find((slot) => !clips[slot.id]);
-  const filledSlots = slots.filter(({ id }) => Object.hasOwn(clips, id));
+  const filledSlots = shots.filter(({ status }) => status === "Ready").map(({ slot }) => slot);
   const swapPairs = filledSlots.flatMap((first, index) =>
     filledSlots.slice(index + 1).map((second) => ({ first, second })),
   );
@@ -338,31 +355,103 @@ export function TemplateVideoSlots({
   const visibleSwapPairs = choosingSwap || swapPairs.length === 1 ? swapPairs : [];
   return (
     <View style={styles.list}>
-      <Text accessibilityRole="header" style={styles.cardTitle}>
-        Required videos
-      </Text>
-      {swapPairs.length > 1 && !choosingSwap && (
-        <Action label="Swap clips" testID="swap-video-slots" onPress={onChooseSwap} disabled={busy} />
-      )}
-      {visibleSwapPairs.map(({ first, second }) => (
-        <Action
-          key={`${first.id}-${second.id}`}
-          label={`Swap ${first.label} and ${second.label}`}
-          testID={`swap-${first.id}-${second.id}`}
-          onPress={() => onSwap(first, second)}
-          disabled={busy && !choosingSwap}
+      <ShotStoryboard shots={shots} selected={selected} busy={busy} onSelectSlot={onSelectSlot} />
+      <View testID={`shot-inspector-${slot.id}`} style={[styles.panel, styles.slot]}>
+        <View style={styles.slotCopy}>
+          <Text accessibilityRole="header" style={styles.cardTitle}>
+            Shot {selected.number} · {slot.label}
+          </Text>
+          {clip && (
+            <>
+              <Text selectable style={textStyles.body}>
+                {clip.name}
+              </Text>
+              <Text style={textStyles.muted}>
+                Source {trimTimeLabel(clip.trimInUs)} to {trimTimeLabel(clip.trimOutUs)}
+                {!missing && ` · Original audio ${clip.volumePercent ?? 100}%`}
+              </Text>
+            </>
+          )}
+          <Text style={textStyles.muted}>
+            At least {secondsLabel(slot.minDurationUs)}
+            {slot.minDurationUs < slot.trimDurationUs &&
+              `. Clips under ${secondsLabel(slot.trimDurationUs)} hold their final frame.`}
+          </Text>
+          {missing && (
+            <Text accessibilityRole="alert" style={textStyles.error}>
+              {recoverable
+                ? `“${recoverableSlots[slot.id]}” is unavailable. Relink the original to keep your trim, framing, and audio level.`
+                : "Saved video is missing. Replace it or clear this slot."}
+            </Text>
+          )}
+        </View>
+        {clip && !missing && (
+          <View style={styles.slotAction}>
+            <Action
+              label="Trim"
+              accessibilityLabel={`Trim ${slot.label}`}
+              onPress={() => onTrim(slot)}
+              disabled={busy}
+            />
+            <Action
+              label="Reframe"
+              accessibilityLabel={`Reframe ${slot.label}`}
+              testID={`reframe-${slot.id}`}
+              onPress={() => onReframe(slot)}
+              disabled={busy}
+            />
+            <Action
+              label="Volume"
+              accessibilityLabel={`Volume for ${slot.label}`}
+              testID={`volume-${slot.id}`}
+              onPress={() => onVolume(slot)}
+              disabled={busy}
+            />
+          </View>
+        )}
+        {recoverable && (
+          <VideoImportActions
+            action="Relink"
+            importingFrom={relinking && importingSlotId === slot.id ? importingFrom : undefined}
+            busy={busy}
+            primary
+            slotLabel={slot.label}
+            onSelect={(source) => onRelink(slot, source)}
+          />
+        )}
+        <VideoImportActions
+          action={clip || missing ? "Replace" : "Choose"}
+          importingFrom={!relinking && importingSlotId === slot.id ? importingFrom : undefined}
+          busy={busy}
+          primary={!recoverable && (missing || (!clip && emptySlots.length < 2))}
+          slotLabel={slot.label}
+          onSelect={(source) => onSelect(slot, source)}
         />
-      ))}
-      {choosingSwap && <Action label="Cancel" testID="cancel-swap" onPress={onCancelSwap} />}
-      {swapError && (
+        {(clip || missing) && (
+          <View style={styles.slotAction}>
+            <Action
+              label="Clear video"
+              accessibilityLabel={`Clear video for ${slot.label}`}
+              testID={`clear-video-${slot.id}`}
+              onPress={() => onClear(slot)}
+              disabled={busy}
+            />
+          </View>
+        )}
+      </View>
+      {slotError && (
         <Text accessibilityRole="alert" style={textStyles.error}>
-          {swapError}
+          {slotError.message}
         </Text>
       )}
       {emptySlots.length >= 2 && (
         <View style={[styles.panel, styles.slot]}>
           <Text style={textStyles.body}>
-            Pick in slot order · {emptySlots.map(({ label }, index) => `${index + 1}. ${label}`).join(" · ")}
+            Pick in slot order ·{" "}
+            {shots
+              .filter(({ status }) => status === "Empty")
+              .map(({ slot, number }) => `${number}. ${slot.label}`)
+              .join(" · ")}
           </Text>
           {recovery ? (
             <>
@@ -391,103 +480,24 @@ export function TemplateVideoSlots({
           )}
         </View>
       )}
-      {slots.map((slot) => {
-        const clip = clips[slot.id];
-        const missing = missingSlots.includes(slot.id);
-        const recoverable = missing && Object.hasOwn(recoverableSlots, slot.id);
-        return (
-          <View key={slot.id} style={[styles.panel, styles.slot]}>
-            <View style={styles.slotCopy}>
-              <Text accessibilityRole="header" style={styles.slotTitle}>
-                {slot.label}
-              </Text>
-              <Text style={textStyles.muted}>
-                At least {secondsLabel(slot.minDurationUs)}
-                {slot.minDurationUs < slot.trimDurationUs &&
-                  `. Clips under ${secondsLabel(slot.trimDurationUs)} hold their final frame.`}
-              </Text>
-              {clip && (
-                <>
-                  <Text numberOfLines={1} style={textStyles.body}>
-                    {clip.name}
-                  </Text>
-                  <Text style={textStyles.muted}>
-                    Source {trimTimeLabel(clip.trimInUs)} to {trimTimeLabel(clip.trimOutUs)}
-                  </Text>
-                  {!missing && <Text style={textStyles.muted}>Original audio {clip.volumePercent ?? 100}%</Text>}
-                </>
-              )}
-              {missing && (
-                <Text accessibilityRole="alert" style={textStyles.error}>
-                  {recoverable
-                    ? `“${recoverableSlots[slot.id]}” is unavailable. Relink the original to keep your trim, framing, and audio level.`
-                    : "Saved video is missing. Replace it or clear this slot."}
-                </Text>
-              )}
-            </View>
-            {recoverable && (
-              <VideoImportActions
-                action="Relink"
-                importingFrom={relinking && importingSlotId === slot.id ? importingFrom : undefined}
-                busy={busy}
-                primary
-                slotLabel={slot.label}
-                onSelect={(source) => onRelink(slot, source)}
-              />
-            )}
-            <VideoImportActions
-              action={clip || missing ? "Replace" : "Choose"}
-              importingFrom={!relinking && importingSlotId === slot.id ? importingFrom : undefined}
-              busy={busy}
-              primary={!recoverable && emptySlots.length < 2 && slot === nextSlot}
-              slotLabel={slot.label}
-              onSelect={(source) => onSelect(slot, source)}
-            />
-            {(clip || missing) && (
-              <View style={styles.slotAction}>
-                {clip && (
-                  <>
-                    <Action
-                      label="Trim"
-                      accessibilityLabel={`Trim ${slot.label}`}
-                      onPress={() => onTrim(slot)}
-                      disabled={busy}
-                    />
-                    <Action
-                      label="Reframe"
-                      accessibilityLabel={`Reframe ${slot.label}`}
-                      testID={`reframe-${slot.id}`}
-                      onPress={() => onReframe(slot)}
-                      disabled={busy}
-                    />
-                    {!missing && (
-                      <Action
-                        label="Volume"
-                        accessibilityLabel={`Volume for ${slot.label}`}
-                        testID={`volume-${slot.id}`}
-                        onPress={() => onVolume(slot)}
-                        disabled={busy}
-                      />
-                    )}
-                  </>
-                )}
-                <Action
-                  label="Clear video"
-                  accessibilityLabel={`Clear video for ${slot.label}`}
-                  testID={`clear-video-${slot.id}`}
-                  onPress={() => onClear(slot)}
-                  disabled={busy}
-                />
-              </View>
-            )}
-            {slotError?.slotId === slot.id && (
-              <Text accessibilityRole="alert" style={textStyles.error}>
-                {slotError.message}
-              </Text>
-            )}
-          </View>
-        );
-      })}
+      {swapPairs.length > 1 && !choosingSwap && (
+        <Action label="Swap clips" testID="swap-video-slots" onPress={onChooseSwap} disabled={busy} />
+      )}
+      {visibleSwapPairs.map(({ first, second }) => (
+        <Action
+          key={`${first.id}-${second.id}`}
+          label={`Swap ${first.label} and ${second.label}`}
+          testID={`swap-${first.id}-${second.id}`}
+          onPress={() => onSwap(first, second)}
+          disabled={busy && !choosingSwap}
+        />
+      ))}
+      {choosingSwap && <Action label="Cancel" testID="cancel-swap" onPress={onCancelSwap} />}
+      {swapError && (
+        <Text accessibilityRole="alert" style={textStyles.error}>
+          {swapError}
+        </Text>
+      )}
     </View>
   );
 }
@@ -530,5 +540,4 @@ const styles = StyleSheet.create({
   slot: { padding: space[3], gap: space[2] },
   slotCopy: { gap: space[1] },
   slotAction: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
-  slotTitle: { color: darkColors.text, fontSize: fontSize.md, fontWeight: "700" },
 });
