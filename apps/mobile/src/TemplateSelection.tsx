@@ -385,7 +385,7 @@ export function TemplateVideoSlots({
             </Text>
           )}
         </View>
-        {clip && !missing && (
+        {clip && (
           <View style={styles.slotAction}>
             <Action
               label="Trim"
@@ -400,13 +400,15 @@ export function TemplateVideoSlots({
               onPress={() => onReframe(slot)}
               disabled={busy}
             />
-            <Action
-              label="Volume"
-              accessibilityLabel={`Volume for ${slot.label}`}
-              testID={`volume-${slot.id}`}
-              onPress={() => onVolume(slot)}
-              disabled={busy}
-            />
+            {!missing && (
+              <Action
+                label="Volume"
+                accessibilityLabel={`Volume for ${slot.label}`}
+                testID={`volume-${slot.id}`}
+                onPress={() => onVolume(slot)}
+                disabled={busy}
+              />
+            )}
           </View>
         )}
         {recoverable && (
@@ -439,7 +441,7 @@ export function TemplateVideoSlots({
           </View>
         )}
       </View>
-      {slotError && (
+      {slotError?.slotId === slot.id && (
         <Text accessibilityRole="alert" style={textStyles.error}>
           {slotError.message}
         </Text>

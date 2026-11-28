@@ -1192,21 +1192,18 @@ export default function App() {
   );
   const historyControls = (
     <View role="toolbar" accessibilityLabel="Edit history" style={styles.buttonRow}>
-      {(["undo", "redo"] as const).map((direction) => {
-        const name = direction === "undo" ? "Undo" : "Redo";
-        const edit = direction === "undo" ? undoLabel : redoLabel;
-        const label = edit ? `${name} ${edit}` : name;
-        return (
-          <Action
-            key={direction}
-            label={template ? name : label}
-            accessibilityLabel={label}
-            testID={`${editor.kind}-${direction}`}
-            onPress={() => applyDraftHistory(direction)}
-            disabled={busy || !edit}
-          />
-        );
-      })}
+      <Action
+        label={undoLabel ? `Undo ${undoLabel}` : "Undo"}
+        testID={`${editor.kind}-undo`}
+        onPress={() => applyDraftHistory("undo")}
+        disabled={busy || !undoLabel}
+      />
+      <Action
+        label={redoLabel ? `Redo ${redoLabel}` : "Redo"}
+        testID={`${editor.kind}-redo`}
+        onPress={() => applyDraftHistory("redo")}
+        disabled={busy || !redoLabel}
+      />
     </View>
   );
   const editorHeader = (
@@ -1738,7 +1735,7 @@ const styles = StyleSheet.create({
   },
   navigation: { alignSelf: "flex-start" },
   details: { gap: space[1] },
-  buttonRow: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
+  buttonRow: { flexDirection: "row", flexWrap: "wrap", maxWidth: "100%", gap: space[2] },
   actions: { gap: space[2] },
   progress: { gap: space[2], marginBottom: space[1] },
   progressTrack: { height: 6, borderRadius: radius.full, backgroundColor: darkColors.border, overflow: "hidden" },

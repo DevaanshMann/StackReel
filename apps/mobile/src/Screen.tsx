@@ -90,7 +90,7 @@ export function Screen({
           keyboardShouldPersistTaps={adjustForKeyboard ? "always" : "never"}
         >
           <View style={fullScreen ? undefined : styles.content}>
-            {!fullScreen && title && (
+            {!fullScreen && title !== null && (
               <Text accessibilityRole="header" style={styles.title}>
                 {title}
               </Text>
