@@ -113,10 +113,13 @@ the template’s mix, lower it to soften the clip, or tap **Mute** to silence it
 in the reel and its next export. The level follows the clip when you swap slots and stays saved when you reopen
 or duplicate the draft. [See the clip volume control on iOS](../../docs/ios-template-clip-volume.png).
 
-Choose **Single-clip editor** from the gallery and pick a video from Photos or Files. Tap **Trim clip** to set where
-it starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f** to adjust by one frame. Play the
+Choose **Single-clip editor** from the gallery and pick a video from Photos or Files. The editor opens on your
+footage. Play or scrub the preview, or use the bottom toolbar to trim the clip, change its framing, adjust its
+volume, or add a caption. The same tools are available when you reopen the draft from **Projects**.
+
+Tap **Trim** to set where the clip starts and ends. Drag either slider for a rough cut, then use **−1f** or **+1f** to adjust by one frame. Play the
 selection to check its picture and sound. **Apply trim** uses that selection for preview and export. To bring back
-footage, reopen **Trim clip** and extend the range, or tap **Reset trim** to select the full video.
+footage, reopen **Trim** and extend the range, or tap **Reset trim** to select the full video.
 [See the single-clip trim controls on iPhone](../../docs/ios-single-clip-trim.png).
 
 Under **Export resolution**, choose **720p** (720 × 1280) or **1080p** (1080 × 1920), then tap **Export MP4**.
